@@ -1,0 +1,71 @@
+---
+- name: Provision Base System for Packer Template
+  hosts: all
+  become: true
+  tasks:
+    - name: Configure password-less sudo for the user
+      ansible.builtin.copy:
+        content: "{{ ansible_user }} ALL=(ALL) NOPASSWD:ALL"
+        dest: "/etc/sudoers.d/99_{{ ansible_user }}"
+        owner: root
+        group: root
+        mode: '0440'
+        validate: 'visudo -cf %s'
+
+    - name: Disable release-upgrades prompt
+      ansible.builtin.lineinfile:
+        path: /etc/update-manager/release-upgrades
+        regexp: '^Prompt=.*$'
+        line: 'Prompt=never'
+
+    - name: Disable and mask systemd apt timers/services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: stopped
+        enabled: false
+        masked: true
+      loop:
+        - apt-daily.timer
+        - apt-daily-upgrade.timer
+        - apt-daily.service
+        - apt-daily-upgrade.service
+
+    - name: Disable periodic activities of apt
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/10periodic
+        content: |
+          APT::Periodic::Enable "0";
+          APT::Periodic::Update-Package-Lists "0";
+          APT::Periodic::Download-Upgradeable-Packages "0";
+          APT::Periodic::AutocleanInterval "0";
+          APT::Periodic::Unattended-Upgrade "0";
+        mode: '0644'
+
+    - name: Remove unattended-upgrades log directory
+      ansible.builtin.file:
+        path: /var/log/unattended-upgrades
+        state: absent
+
+    - name: Purge unattended-upgrades and related packages
+      ansible.builtin.apt:
+        name:
+          - unattended-upgrades
+          - ubuntu-release-upgrader-core
+        state: absent
+        purge: true
+
+    - name: Update APT package cache and upgrade all packages
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+        dpkg_options: 'force-confnew'
+
+    - name: Clean up unnecessary packages
+      ansible.builtin.apt:
+        autoremove: true
+        purge: true
+
+    - name: Clean APT cache to reduce image size
+      ansible.builtin.apt:
+        clean: true
+      changed_when: false

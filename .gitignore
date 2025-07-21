@@ -1,0 +1,14 @@
+# Ignore Packer and Terraform secret variable files
+*.pkrvars.hcl
+*.tfvars
+
+# Ignore folder for output *.vdi
+packer/output
+
+# Ignore Terraform state files
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+
+# VSCode
+.vscode

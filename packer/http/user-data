@@ -1,0 +1,39 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+
+  # Storage Configuration
+  storage:
+    layout:
+      name: direct
+
+  # Network Configuration
+  network:
+    version: 2
+    ethernets:
+      enp0s3:
+        dhcp4: true
+
+  # User and Hostname Configuration
+  identity:
+    hostname: ubuntu-server-24-template
+    username: ${username}
+    password: ${password_hash}
+
+  # SSH Server Configuration
+  ssh:
+    install-server: true
+    allow-pw: true
+
+  # Package Management Configuration
+  package_upgrade: false
+
+  # packages:
+  #   - vim
+  #   - curl
+  #   - git
+  # late-commands:
+  #   - echo "Ubuntu autoinstall complete." > /etc/motd
