@@ -58,10 +58,10 @@ variable "user_password_hash" {
   sensitive   = true
 }
 
-variable "boot_command" {
-  type        = list(string)
-  description = "Commands to pass to gui session to initiate automated install. Incorrect boot commands can cause the build to block or fail."
-}
+# variable "boot_command" {
+#   type        = list(string)
+#   description = "Commands to pass to gui session to initiate automated install. Incorrect boot commands can cause the build to block or fail."
+# }
 
 variable "scripts" {
   type        = list(string)

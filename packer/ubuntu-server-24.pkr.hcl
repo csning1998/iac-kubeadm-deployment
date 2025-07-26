@@ -66,8 +66,5 @@ build {
     ]
   }
 
-  # Post-Processor to compress the artifact (optional)
-  post-processor "compress" {
-    output = "output/ubuntu-24.04/golden-image.ova.gz"
-  }
+  
 }
