@@ -35,13 +35,18 @@ source "virtualbox-iso" "ubuntu-server" {
     "/meta-data" = file("${path.root}/http/meta-data")
   }
 
-  # Final Boot Command based on your discovery
-  boot_wait = "5s"
+  # Boot Command with wait time
   boot_command = [
-    "<wait>e<wait>",
+    "<wait5s>",
+    "e<wait>",
     "<down><down><down><end>",
     " autoinstall ds=nocloud-net\\;s=http://{{.HTTPIP}}:{{.HTTPPort}}/",
     "<f10>"
+  ]
+
+  # Explicitly manage all storage on a single, modern SATA controller.
+  vboxmanage = [
+    ["storageattach", "{{.Name}}", "--storagectl", "IDE Controller", "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", "/usr/share/virtualbox/VBoxGuestAdditions.iso"]
   ]
 
   # SSH Configuration for Provisioning
@@ -59,12 +64,9 @@ build {
   sources = ["source.virtualbox-iso.ubuntu-server"]
 
   provisioner "ansible" {
-    playbook_file = "./playbooks/provision.yml"
-    # Pass the sudo password to Ansible
+    playbook_file   = "./playbooks/provision.yml"
     extra_arguments = [
       "-e", format("ansible_become_pass=%s", var.user_password)
     ]
   }
-
-  
 }

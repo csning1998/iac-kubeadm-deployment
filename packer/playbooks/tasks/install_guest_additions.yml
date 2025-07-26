@@ -1,0 +1,43 @@
+---
+# This task will only run if guest_additions_installed is still false
+- name: "Attempt to install from {{ current_device }}"
+  when: not guest_additions_installed
+  block:
+    - name: "Attempting to mount {{ current_device }}"
+      ansible.posix.mount:
+        path: /mnt/VBoxGuestAdditions
+        src: "{{ current_device }}"
+        fstype: iso9660
+        opts: ro
+        state: mounted
+      register: mount_result
+      ignore_errors: true
+
+    - name: Check for installer script on the mounted device
+      ansible.builtin.stat:
+        path: /mnt/VBoxGuestAdditions/VBoxLinuxAdditions.run
+      register: installer_script
+      when: mount_result is succeeded
+
+    - name: Install if the script is found
+      when: installer_script.stat.exists is defined and installer_script.stat.exists
+      block:
+        - name: "Running installation from device: {{ current_device }}"
+          ansible.builtin.command:
+            cmd: /mnt/VBoxGuestAdditions/VBoxLinuxAdditions.run --nox11
+            creates: /opt/VBoxGuestAdditions
+
+        - name: "Unmount after installation from device: {{ current_device }}"
+          ansible.posix.mount:
+            path: /mnt/VBoxGuestAdditions
+            state: absent # This also removes fstab entry
+
+        - name: Set installation status to success to stop the loop
+          ansible.builtin.set_fact:
+            guest_additions_installed: true
+
+    - name: Unmount if it was the wrong device
+      ansible.posix.mount:
+        path: /mnt/VBoxGuestAdditions
+        state: unmounted
+      when: (installer_script.stat.exists is not defined or not installer_script.stat.exists) and mount_result is succeeded

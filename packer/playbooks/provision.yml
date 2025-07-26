@@ -9,14 +9,14 @@
         dest: "/etc/sudoers.d/99_{{ ansible_user }}"
         owner: root
         group: root
-        mode: '0440'
-        validate: 'visudo -cf %s'
+        mode: "0440"
+        validate: "visudo -cf %s"
 
     - name: Disable release-upgrades prompt
       ansible.builtin.lineinfile:
         path: /etc/update-manager/release-upgrades
-        regexp: '^Prompt=.*$'
-        line: 'Prompt=never'
+        regexp: "^Prompt=.*$"
+        line: "Prompt=never"
 
     - name: Disable and mask systemd apt timers/services
       ansible.builtin.systemd:
@@ -39,7 +39,7 @@
           APT::Periodic::Download-Upgradeable-Packages "0";
           APT::Periodic::AutocleanInterval "0";
           APT::Periodic::Unattended-Upgrade "0";
-        mode: '0644'
+        mode: "0644"
 
     - name: Remove unattended-upgrades log directory
       ansible.builtin.file:
@@ -58,7 +58,8 @@
       ansible.builtin.apt:
         update_cache: true
         upgrade: dist
-        dpkg_options: 'force-confnew'
+        dpkg_options: "force-confnew"
+      notify: Reboot after system upgrade
 
     - name: Clean up unnecessary packages
       ansible.builtin.apt:
@@ -69,3 +70,48 @@
       ansible.builtin.apt:
         clean: true
       changed_when: false
+
+    - name: Install VirtualBox Guest Additions build dependencies
+      ansible.builtin.apt:
+        name:
+          - build-essential
+          - dkms
+          - linux-headers-{{ ansible_kernel }}
+        state: present
+        update_cache: true
+
+    - name: Initialize guest additions installation status
+      ansible.builtin.set_fact:
+        guest_additions_installed: false
+
+    - name: Find all potential CD/DVD block devices (/dev/sr*)
+      ansible.builtin.find:
+        paths: /dev
+        patterns: "sr*"
+      register: cdrom_devices
+
+    - name: Loop through devices and attempt to mount and install
+      ansible.builtin.include_tasks: tasks/install_guest_additions.yml
+      loop: "{{ cdrom_devices.files | map(attribute='path') | list }}"
+      loop_control:
+        loop_var: current_device
+      when: cdrom_devices.files | length > 0
+
+    - name: Add user to vboxsf group for shared folder access
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: vboxsf
+        append: true
+      notify: Reboot after system upgrade
+      when: guest_additions_installed
+
+    - name: Clean up Guest Additions mount point
+      ansible.builtin.file:
+        path: /mnt/VBoxGuestAdditions
+        state: absent
+
+  handlers:
+    - name: Reboot after system upgrade
+      ansible.builtin.reboot:
+        msg: "Rebooting machine after system upgrade or Guest Additions installation."
+        reboot_timeout: 600
