@@ -4,6 +4,7 @@
 
 # Ignore folder for output *.vdi
 packer/output
+packer-playground/output
 
 # Ignore Terraform state files
 .terraform/
