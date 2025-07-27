@@ -4,7 +4,7 @@
 
 variable "vm_name" {
   type        = string
-  default     = "packer-ubuntu-template"
+  default     = "ubuntu-server-24-template"
   description = "Name of the VM in VirtualBox during the build."
 }
 

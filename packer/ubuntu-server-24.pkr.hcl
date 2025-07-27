@@ -26,6 +26,15 @@ source "virtualbox-iso" "ubuntu-server" {
   disk_size = var.disk_size
   headless  = false
 
+  # Hardware Interfaces
+  hard_drive_interface     = "sata"
+  hard_drive_discard       = true
+  hard_drive_nonrotational = true
+  gfx_controller           = "vboxsvga"
+
+  guest_additions_mode = "upload"
+  guest_additions_path = "/tmp/VBoxGuestAdditions.iso"
+  
   # HTTP Content Delivery for cloud-init
   http_content = {
     "/user-data" = templatefile("${path.root}/http/user-data", {
@@ -44,11 +53,6 @@ source "virtualbox-iso" "ubuntu-server" {
     "<f10>"
   ]
 
-  # Explicitly manage all storage on a single, modern SATA controller.
-  vboxmanage = [
-    ["storageattach", "{{.Name}}", "--storagectl", "IDE Controller", "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", "/usr/share/virtualbox/VBoxGuestAdditions.iso"]
-  ]
-
   # SSH Configuration for Provisioning
   ssh_username = var.ssh_username
   ssh_password = var.user_password
@@ -56,7 +60,7 @@ source "virtualbox-iso" "ubuntu-server" {
 
   # Shutdown & Output Configuration
   shutdown_command = "sudo /sbin/shutdown -hP now"
-  output_directory = "output/ubuntu-24.04"
+  output_directory = "output/ubuntu-24"
   format           = "ova"
 }
 

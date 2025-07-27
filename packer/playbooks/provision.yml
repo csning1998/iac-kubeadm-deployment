@@ -1,117 +1,138 @@
 ---
-- name: Provision Base System for Packer Template
+- name: "Install VirtualBox Guest Additions using Packer's uploaded ISO"
   hosts: all
   become: true
   tasks:
-    - name: Configure password-less sudo for the user
-      ansible.builtin.copy:
-        content: "{{ ansible_user }} ALL=(ALL) NOPASSWD:ALL"
-        dest: "/etc/sudoers.d/99_{{ ansible_user }}"
-        owner: root
-        group: root
-        mode: "0440"
-        validate: "visudo -cf %s"
-
-    - name: Disable release-upgrades prompt
-      ansible.builtin.lineinfile:
-        path: /etc/update-manager/release-upgrades
-        regexp: "^Prompt=.*$"
-        line: "Prompt=never"
-
-    - name: Disable and mask systemd apt timers/services
-      ansible.builtin.systemd:
-        name: "{{ item }}"
-        state: stopped
-        enabled: false
-        masked: true
-      loop:
-        - apt-daily.timer
-        - apt-daily-upgrade.timer
-        - apt-daily.service
-        - apt-daily-upgrade.service
-
-    - name: Disable periodic activities of apt
-      ansible.builtin.copy:
-        dest: /etc/apt/apt.conf.d/10periodic
-        content: |
-          APT::Periodic::Enable "0";
-          APT::Periodic::Update-Package-Lists "0";
-          APT::Periodic::Download-Upgradeable-Packages "0";
-          APT::Periodic::AutocleanInterval "0";
-          APT::Periodic::Unattended-Upgrade "0";
-        mode: "0644"
-
-    - name: Remove unattended-upgrades log directory
-      ansible.builtin.file:
-        path: /var/log/unattended-upgrades
-        state: absent
-
-    - name: Purge unattended-upgrades and related packages
-      ansible.builtin.apt:
-        name:
-          - unattended-upgrades
-          - ubuntu-release-upgrader-core
-        state: absent
-        purge: true
-
-    - name: Update APT package cache and upgrade all packages
+    - name: "[1.1] Action: Update APT cache and upgrade all packages"
       ansible.builtin.apt:
         update_cache: true
         upgrade: dist
         dpkg_options: "force-confnew"
-      notify: Reboot after system upgrade
 
-    - name: Clean up unnecessary packages
-      ansible.builtin.apt:
-        autoremove: true
-        purge: true
-
-    - name: Clean APT cache to reduce image size
-      ansible.builtin.apt:
-        clean: true
-      changed_when: false
-
-    - name: Install VirtualBox Guest Additions build dependencies
+    - name: "[2.1] Action: Install build dependencies"
       ansible.builtin.apt:
         name:
           - build-essential
           - dkms
           - linux-headers-{{ ansible_kernel }}
+          - perl
+          - libelf-dev
         state: present
-        update_cache: true
 
-    - name: Initialize guest additions installation status
-      ansible.builtin.set_fact:
-        guest_additions_installed: false
+    - name: "[2.2] Verify: All build dependencies are installed"
+      ansible.builtin.shell:
+        cmd: "set -o pipefail && dpkg-query -W -f='${Status}' {{ item }} | grep -q 'install ok installed'"
+        executable: /bin/bash
+      loop:
+        - build-essential
+        - dkms
+        - linux-headers-{{ ansible_kernel }}
+        - perl
+        - libelf-dev
+      changed_when: false
 
-    - name: Find all potential CD/DVD block devices (/dev/sr*)
-      ansible.builtin.find:
-        paths: /dev
-        patterns: "sr*"
-      register: cdrom_devices
+    - name: "[3.1] Verify: Guest Additions ISO exists (uploaded by Packer)"
+      ansible.builtin.stat:
+        path: "/tmp/VBoxGuestAdditions.iso"
+      register: iso_stat_result
+      failed_when: not iso_stat_result.stat.exists or not iso_stat_result.stat.isreg
+      changed_when: false
 
-    - name: Loop through devices and attempt to mount and install
-      ansible.builtin.include_tasks: tasks/install_guest_additions.yml
-      loop: "{{ cdrom_devices.files | map(attribute='path') | list }}"
-      loop_control:
-        loop_var: current_device
-      when: cdrom_devices.files | length > 0
+    - name: "[4.1] Action: Create mount point"
+      ansible.builtin.file:
+        path: "/mnt/VBoxGuestAdditions"
+        state: directory
+        mode: "0755"
 
-    - name: Add user to vboxsf group for shared folder access
+    - name: "[5.1] Action: Mount the ISO"
+      ansible.posix.mount:
+        src: "/tmp/VBoxGuestAdditions.iso"
+        path: "/mnt/VBoxGuestAdditions"
+        fstype: "iso9660"
+        opts: "ro,loop"
+        state: mounted
+
+    - name: "[5.2] Verify: ISO is mounted correctly"
+      ansible.builtin.command:
+        cmd: "findmnt --verify --source /tmp/VBoxGuestAdditions.iso"
+      register: findmnt_result
+      failed_when: findmnt_result.rc != 0
+      changed_when: false
+
+    - name: "[6] Attempt to Install, Verify, and Cleanup"
+      block:
+        - name: "[6.1] Action: Run the Guest Additions installer"
+          ansible.builtin.command:
+            cmd: "/mnt/VBoxGuestAdditions/VBoxLinuxAdditions.run --nox11 --force install"
+          register: guest_additions_install_result
+          # As in the Reddit case, we handle the return code manually
+          # We only accept 0 (success) and 2 (success but unable to reload the module immediately)
+          failed_when: "guest_additions_install_result.rc not in [0, 2]"
+          changed_when: true
+
+        - name: "[6.2] DEBUG: Show full installer result"
+          ansible.builtin.debug:
+            var: guest_additions_install_result
+            verbosity: 2
+
+        - name: "[6.3] Verify: Guest Additions directory was created"
+          ansible.builtin.stat:
+            path: /opt/VBoxGuestAdditions
+          register: final_dir_check
+          failed_when: not final_dir_check.stat.exists
+          changed_when: false
+
+        - name: "[6.4] Verify: vboxguest kernel module is loaded"
+          ansible.builtin.command:
+            cmd: "lsmod | grep vboxguest"
+            # Do not consider it a fatal error if the module doesn't load immediately after installation
+            # since it will load after reboot.
+          failed_when: false
+          changed_when: false
+
+      always:
+        - name: "[Cleanup] Unmount and clean up ISO resources"
+          block:
+            - name: "Unmount the ISO"
+              ansible.posix.mount:
+                path: "/mnt/VBoxGuestAdditions"
+                state: unmounted
+              register: unmount_result
+              failed_when:
+                - unmount_result.failed
+                - "'not mounted' not in unmount_result.msg"
+                - "'not a mount point' not in unmount_result.msg"
+
+            - name: "Remove ISO and mount point"
+              ansible.builtin.file:
+                path: "{{ item }}"
+                state: absent
+              loop:
+                - "/tmp/VBoxGuestAdditions.iso"
+                - "/mnt/VBoxGuestAdditions"
+
+    - name: "[7.1] Action: Add user to vboxsf group for shared folder access"
       ansible.builtin.user:
         name: "{{ ansible_user }}"
         groups: vboxsf
         append: true
-      notify: Reboot after system upgrade
-      when: guest_additions_installed
+      # We only execute this step if the verification succeeds
+      when: final_dir_check is defined and final_dir_check.stat.exists
 
-    - name: Clean up Guest Additions mount point
-      ansible.builtin.file:
-        path: /mnt/VBoxGuestAdditions
-        state: absent
+    - name: "[8.1] Action: Configure host-only network interface"
+      ansible.builtin.copy:
+        dest: /etc/netplan/60-hostonly.yaml
+        content: |
+          network:
+            version: 2
+            ethernets:
+              enp0s3:
+                dhcp4: true
+              enp0s8:
+                dhcp4: true
+        mode: "0644"
 
-  handlers:
-    - name: Reboot after system upgrade
-      ansible.builtin.reboot:
-        msg: "Rebooting machine after system upgrade or Guest Additions installation."
-        reboot_timeout: 600
+    - name: "[9.1] Action: Final APT cleanup"
+      ansible.builtin.apt:
+        autoremove: true
+        purge: true
