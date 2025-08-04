@@ -35,6 +35,19 @@ resource "virtualbox_vm" "k8s_nodes" {
     host_interface = "vboxnet0"
     device         = "VirtIO"
   }
+  
+  user_data = <<-EOT
+#cloud-config
+hostname: ${each.key}
+network:
+  version: 2
+  ethernets:
+    enp0s3:
+      dhcp4: true
+    enp0s8:
+      dhcp4: no
+      addresses: [${each.value}/24]
+EOT
 }
 
 output "instance_ips" {

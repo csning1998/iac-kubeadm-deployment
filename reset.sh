@@ -30,19 +30,14 @@ echo ">>> STEP 3: Cleaning output directory and starting new Packer build..."
 cd "${PACKER_DIR}"
 rm -rf output/ubuntu-server
 
-packer build .
-
-echo "Packer build complete. New base image is ready."
-echo "--------------------------------------------------"
-
-
 # --- Step 4: Deploy New VMs with Terraform ---
 echo ">>> STEP 4: Initializing Terraform and applying configuration..."
 
 cd "${TERRAFORM_DIR}"
-terraform init
-terraform apply -auto-approve
-echo "Terraform apply complete. New VMs are running."
+rm -rf .terraform
+rm -r .terraform.lock.hcl
+rm -r terraform.tf*
+
 echo "--------------------------------------------------"
 
-echo "Full rebuild workflow completed successfully."
+echo "Full reset workflow completed successfully."

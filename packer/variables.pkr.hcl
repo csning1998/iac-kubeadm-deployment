@@ -43,6 +43,7 @@ variable "disk_size" {
 
 variable "ssh_username" {
   type        = string
+  default     = "test-username"
   description = "Specifying the username for ssh. Default username is 'test-username'"
 }
 

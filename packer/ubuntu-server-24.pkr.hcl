@@ -53,7 +53,7 @@ source "virtualbox-iso" "ubuntu-server" {
   ssh_timeout  = "99m"
 
   # Shutdown & Output Configuration
-  shutdown_command = ""
+  shutdown_command = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
   output_directory = "output/ubuntu-server"
   format = "ova"
   keep_registered = true
