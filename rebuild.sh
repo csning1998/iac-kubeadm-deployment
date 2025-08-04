@@ -9,6 +9,7 @@ readonly PACKER_DIR="${SCRIPT_DIR}/packer"
 # --- Step 1: Destroy Existing Terraform Resources ---
 echo ">>> STEP 1: Destroying existing Terraform-managed VMs..."
 cd "${TERRAFORM_DIR}"
+terraform init -upgrade
 terraform destroy -auto-approve
 echo "Terraform destroy complete."
 echo "--------------------------------------------------"
@@ -18,7 +19,7 @@ echo "--------------------------------------------------"
 echo ">>> STEP 2: Cleaning old artifacts and starting new Packer build..."
 cd "${PACKER_DIR}"
 
-rm -rf output/ubuntu-24
+rm -rf output/ubuntu-server
 
 packer build .
 

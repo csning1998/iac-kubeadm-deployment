@@ -53,11 +53,11 @@ source "virtualbox-iso" "ubuntu-server" {
   ssh_timeout  = "99m"
 
   # Shutdown & Output Configuration
-  shutdown_command = "echo 'VM is ready for testing. Keeping it running.' && exit 0"
+  shutdown_command = ""
   output_directory = "output/ubuntu-server"
   format = "ova"
   keep_registered = true
-  skip_export     = true
+  skip_export     = false
 }
 
 build {
