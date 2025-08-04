@@ -1,15 +1,3 @@
-packer {
-  required_plugins {
-    virtualbox = {
-      version = "~> 1"
-      source  = "github.com/hashicorp/virtualbox"
-    }
-    ansible = {
-      version = "~> 1"
-      source  = "github.com/hashicorp/ansible"
-    }
-  }
-}
 
 source "virtualbox-iso" "ubuntu-server" {
   # Guest OS & VM Naming
@@ -39,38 +27,52 @@ source "virtualbox-iso" "ubuntu-server" {
   http_content = {
     "/user-data" = templatefile("${path.root}/http/user-data", {
       username      = var.ssh_username
-      password_hash = var.user_password_hash
+      password_hash = var.ssh_password_hash
     })
     "/meta-data" = file("${path.root}/http/meta-data")
   }
 
   # Boot Command with wait time
+  boot_wait    = "5s"
   boot_command = [
-    "<wait5s>",
+    "<wait2s>",
     "e<wait>",
     "<down><down><down><end>",
     " autoinstall ds=nocloud-net\\;s=http://{{.HTTPIP}}:{{.HTTPPort}}/",
     "<f10>"
   ]
 
+  vboxmanage = [
+    ["modifyvm", "{{.Name}}", "--vram", "20"],
+    ["modifyvm", "{{.Name}}", "--nic2", "hostonly", "--hostonlyadapter2", "vboxnet0"]
+  ]
+
   # SSH Configuration for Provisioning
   ssh_username = var.ssh_username
-  ssh_password = var.user_password
-  ssh_timeout  = "30m"
+  ssh_password = var.ssh_password
+  ssh_timeout  = "99m"
 
   # Shutdown & Output Configuration
-  shutdown_command = "sudo /sbin/shutdown -hP now"
-  output_directory = "output/ubuntu-24"
-  format           = "ova"
+  shutdown_command = "echo 'VM is ready for testing. Keeping it running.' && exit 0"
+  output_directory = "output/ubuntu-server"
+  format = "ova"
+  keep_registered = true
+  skip_export     = true
 }
 
 build {
   sources = ["source.virtualbox-iso.ubuntu-server"]
 
+  provisioner "breakpoint" {
+    note    = "Pausing for manual debugging. SSH into the VM now."
+    disable = true // To run a normal build without pausing, set this to true
+  }
+
   provisioner "ansible" {
-    playbook_file   = "./playbooks/provision.yml"
+    playbook_file = "./playbooks/provision.yml"
+    user = var.ssh_username
     extra_arguments = [
-      "-e", format("ansible_become_pass=%s", var.user_password)
+      "--extra-vars", "ansible_become_pass=${var.ssh_password}"
     ]
   }
 }

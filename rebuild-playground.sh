@@ -14,7 +14,7 @@ echo "Cleaning old playground artifacts..."
 rm -rf output/playground
 
 echo "Starting Packer build for playground..."
-packer build .
+packer build . 
 
 echo "Packer build for playground complete. New base image is ready."
 echo "--------------------------------------------------"

@@ -37,10 +37,22 @@ resource "virtualbox_vm" "k8s_nodes" {
   }
 }
 
-output "instance_ips" {
-  description = "Host-Only IP addresses of the deployed VMs"
+# New to Test
+output "instance_ips_from_guest_properties" {
+  description = "Host-Only IP addresses of the deployed VMs, retrieved via Guest Additions"
   value = {
     for name, vm in virtualbox_vm.k8s_nodes :
-    name => vm.network_adapter[1].ipv4_address
+    // vm.network_adapter[1] 對應第二張網卡 (索引從 0 開始)
+    // Guest Additions 會將其 IP 報告在 Net/1/V4/IP 這個屬性路徑下
+    name => vm.network_adapter[1].guest_property["/VirtualBox/GuestInfo/Net/1/V4/IP"]
   }
 }
+
+# Old
+# output "instance_ips_from_dhcp" {
+#   description = "IP addresses from DHCP lease files (likely empty for static config)"
+#   value = {
+#     for name, vm in virtualbox_vm.k8s_nodes :
+#     name => vm.network_adapter[1].ipv4_address
+#   }
+# }

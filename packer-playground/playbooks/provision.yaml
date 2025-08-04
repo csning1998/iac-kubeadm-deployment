@@ -33,12 +33,12 @@
     - name: "4. Meta: Force all notified handlers to run now"
       ansible.builtin.meta: flush_handlers
 
-    - name: "5.a Verify: Get list of loaded kernel modules"
+    - name: "[5a] Verify: Get list of loaded kernel modules"
       ansible.builtin.command: lsmod
       register: lsmod_result
       changed_when: false
 
-    - name: "5.b Verify: Assert that 'vboxguest' is in the list of loaded modules"
+    - name: "[5b] Verify: Assert that 'vboxguest' is in the list of loaded modules"
       ansible.builtin.assert:
         that:
           - "'vboxguest' in lsmod_result.stdout"

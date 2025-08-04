@@ -17,7 +17,7 @@ autoinstall:
       enp0s3:
         dhcp4: true
       enp0s8:
-        dhcp4: true
+        dhcp4: false
         addresses:
           - 192.168.56.88/24
 
@@ -34,10 +34,3 @@ autoinstall:
 
   # Package Management Configuration
   package_upgrade: false
-
-  # packages:
-  #   - vim
-  #   - curl
-  #   - git
-  # late-commands:
-  #   - echo "Ubuntu autoinstall complete." > /etc/motd

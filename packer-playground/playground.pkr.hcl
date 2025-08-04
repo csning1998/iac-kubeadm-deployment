@@ -25,13 +25,14 @@ source "virtualbox-iso" "playground" {
   # HTTP Content Delivery for cloud-init
   http_content = {
     "/user-data" = templatefile("${path.root}/http/user-data", {
-      username      = var.ssh_username
-      password_hash = var.user_password_hash
+      username = var.ssh_username
+      password_hash = var.ssh_password_hash
     })
     "/meta-data" = file("${path.root}/http/meta-data")
   }
 
   # Boot Command with wait time
+  boot_wait    = "5s"
   boot_command = [
     "<wait2s>",
     "e<wait>",
@@ -47,7 +48,7 @@ source "virtualbox-iso" "playground" {
 
   # SSH Configuration for Provisioning
   ssh_username = var.ssh_username
-  ssh_password = var.user_password
+  ssh_password = var.ssh_password
   ssh_timeout  = "99m"
 
   # Shutdown & Output Configuration
@@ -59,4 +60,17 @@ source "virtualbox-iso" "playground" {
 
 build {
   sources = ["source.virtualbox-iso.playground"]
+
+  provisioner "breakpoint" {
+    note    = "Pausing for manual debugging. SSH into the VM now."
+    disable = true // To run a normal build without pausing, set this to true
+  }
+
+  provisioner "ansible" {
+    playbook_file = "./playbooks/provision.yaml"
+    user = var.ssh_username
+    extra_arguments = [
+      "--extra-vars", "ansible_become_pass=${var.ssh_password}"
+    ]
+  }
 }
