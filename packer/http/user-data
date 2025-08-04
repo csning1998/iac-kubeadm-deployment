@@ -23,7 +23,7 @@ autoinstall:
 
   # User and Hostname Configuration
   identity:
-    hostname: ubuntu-server-24-playground
+    hostname: ubuntu-server-24
     username: ${username}
     password: ${password_hash}
 

@@ -54,7 +54,7 @@ variable "ssh_password" {
 
 variable "ssh_password_hash" {
   type        = string
-  description = "The hashed password for the playground packer."
+  description = "The hashed password used for autoinstall (cloud-init)."
   sensitive   = true
 }
 
