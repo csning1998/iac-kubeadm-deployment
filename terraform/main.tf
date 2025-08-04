@@ -17,8 +17,9 @@ locals {
 resource "virtualbox_vm" "k8s_nodes" {
   for_each = local.nodes
 
-  image = "../packer/output/ubuntu-server/ubuntu-server-24-template.ova"
-  
+  # image = "../packer/output/ubuntu-server/ubuntu-server-24-template.ova"
+  image = abspath("${path.root}/../packer/output/ubuntu-server/ubuntu-server-24-template.ovf")
+
   name   = each.key
   
   cpus   = 2

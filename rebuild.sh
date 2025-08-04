@@ -6,6 +6,7 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
 readonly PACKER_DIR="${SCRIPT_DIR}/packer"
 readonly PACKER_VM_NAME="ubuntu-server-24-template"
+readonly PACKER_OUTPUT_DIR="${PACKER_DIR}/output/ubuntu-server"
 
 # --- STEP 0: Purging all Inaccessible VirtualBox Hard Disks ---
 echo ">>> STEP 0: Purging all inaccessible VirtualBox hard disks..."
@@ -45,9 +46,16 @@ packer build .
 echo "Packer build complete. New base image is ready."
 echo "--------------------------------------------------"
 
+# --- STEP 4: Unpack the OVA artifact ---
+echo ">>> STEP 4: Unpacking OVA to bypass provider bug..."
+cd "${PACKER_OUTPUT_DIR}"
+tar -xvf ./*.ova # An .ova file is a tar archive. We unpack it in place.
+echo "Unpacking complete. .ovf and .vmdk are now available."
+cd "${SCRIPT_DIR}" # Return to the project root
+echo "--------------------------------------------------"
 
-# --- Step 4: Deploy New VMs with Terraform ---
-echo ">>> STEP 4: Initializing Terraform and applying configuration..."
+# --- Step 5: Deploy New VMs with Terraform ---
+echo ">>> STEP 5: Initializing Terraform and applying configuration..."
 
 cd "${TERRAFORM_DIR}"
 rm -rf ~/.terraform/virtualbox

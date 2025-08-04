@@ -56,7 +56,7 @@ source "virtualbox-iso" "ubuntu-server" {
   shutdown_command = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
   output_directory = "output/ubuntu-server"
   format = "ova"
-  keep_registered = true
+  keep_registered = false
   skip_export     = false
 }
 
