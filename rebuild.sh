@@ -7,6 +7,15 @@ readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
 readonly PACKER_DIR="${SCRIPT_DIR}/packer"
 readonly PACKER_VM_NAME="ubuntu-server-24-template"
 
+# --- STEP 0: Purging all Inaccessible VirtualBox Hard Disks ---
+echo ">>> STEP 0: Purging all inaccessible VirtualBox hard disks..."
+VBoxManage list hdds | awk -v RS= '/inaccessible/ {print $2}' | while read -r uuid; do
+    echo "Removing inaccessible HDD with UUID: $uuid"
+    VBoxManage closemedium disk "$uuid" --delete || echo "Warning: Failed to remove medium $uuid. It might already be gone."
+done
+echo "VirtualBox media registry cleaned."
+echo "--------------------------------------------------"
+
 # --- Step 1: Destroy Existing Terraform Resources ---
 echo ">>> STEP 1: Destroying existing Terraform-managed VMs..."
 cd "${TERRAFORM_DIR}"
@@ -28,6 +37,7 @@ fi
 # --- STEP 3: Cleaning output directory and starting new Packer build ---
 echo ">>> STEP 3: Cleaning output directory and starting new Packer build..."
 cd "${PACKER_DIR}"
+find ~/.cache/packer -mindepth 1 ! -name '*.iso' -exec rm -rf {} +
 rm -rf output/ubuntu-server
 
 packer build .
@@ -40,6 +50,9 @@ echo "--------------------------------------------------"
 echo ">>> STEP 4: Initializing Terraform and applying configuration..."
 
 cd "${TERRAFORM_DIR}"
+rm -rf ~/.terraform/virtualbox
+mkdir -p ~/.terraform/virtualbox/gold
+
 terraform init
 terraform apply -auto-approve
 echo "Terraform apply complete. New VMs are running."
