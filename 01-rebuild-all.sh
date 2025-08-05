@@ -50,7 +50,14 @@ echo "--------------------------------------------------"
 # --- STEP 4: Unpack the OVA artifact ---
 echo ">>> STEP 4: Unpacking OVA to bypass provider bug..."
 cd "${PACKER_OUTPUT_DIR}"
-tar -xvf ./*.ova # An .ova file is a tar archive. We unpack it in place.
+shopt -s nullglob
+ova_files=(./*.ova)
+shopt -u nullglob
+if [ ${#ova_files[@]} -ne 1 ]; then
+  echo "Error: Expected exactly one OVA file in ${PACKER_OUTPUT_DIR}, but found ${#ova_files[@]}." >&2
+  exit 1
+fi
+tar -xvf "${ova_files[0]}" # An .ova file is a tar archive. We unpack it in place.
 echo "Unpacking complete. .ovf and .vmdk are now available."
 cd "${SCRIPT_DIR}" # Return to the project root
 echo "--------------------------------------------------"
@@ -61,8 +68,8 @@ echo ">>> STEP 5: Initializing Terraform and applying configuration..."
 cd "${TERRAFORM_DIR}"
 rm -rf ~/.terraform/virtualbox
 rm -rf .terraform
-rm -r .terraform.lock.hcl
-rm -r terraform.tfstate
+rm -f .terraform.lock.hcl
+rm -f terraform.tfstate
 
 terraform init
 terraform apply -auto-approve

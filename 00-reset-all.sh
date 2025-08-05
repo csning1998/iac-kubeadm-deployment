@@ -49,8 +49,8 @@ echo ">>> STEP 4: Resetting Terraform ..."
 cd "${TERRAFORM_DIR}"
 rm -rf ~/.terraform/virtualbox
 rm -rf .terraform
-rm -r .terraform.lock.hcl
-rm -r terraform.tfstate
+rm -f .terraform.lock.hcl
+rm -f terraform.tfstate
 echo "--------------------------------------------------"
 
 echo "Full reset workflow completed successfully."

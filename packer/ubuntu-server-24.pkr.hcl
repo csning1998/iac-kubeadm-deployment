@@ -20,8 +20,8 @@ source "virtualbox-iso" "ubuntu-server" {
   hard_drive_nonrotational = true
   gfx_controller           = "vboxsvga"
 
-  guest_additions_mode = "upload"
-  guest_additions_path = "/tmp/VBoxGuestAdditions.iso"
+  # guest_additions_mode = "upload"
+  # guest_additions_path = "/tmp/VBoxGuestAdditions.iso"
   
   # HTTP Content Delivery for cloud-init
   http_content = {
@@ -53,7 +53,7 @@ source "virtualbox-iso" "ubuntu-server" {
   ssh_timeout  = "99m"
 
   # Shutdown & Output Configuration
-  shutdown_command = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
+  shutdown_command = "sudo shutdown -P now"
   output_directory = "output/ubuntu-server"
   format           = "ova"
   keep_registered  = false

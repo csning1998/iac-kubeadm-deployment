@@ -46,8 +46,8 @@ echo ">>> STEP 3: Initializing Terraform and applying configuration..."
 cd "${TERRAFORM_DIR}"
 rm -rf ~/.terraform/virtualbox
 rm -rf .terraform
-rm -r .terraform.lock.hcl
-rm -r terraform.tfstate
+rm -f .terraform.lock.hcl
+rm -f terraform.tfstate
 
 terraform init
 terraform apply -parallelism=1 -auto-approve
