@@ -12,14 +12,16 @@ locals {
     "node-1" = "192.168.56.101"
     "node-2" = "192.168.56.102"
   }
+  # Ensure the path to the OVA is absolute to avoid any ambiguity for the provider.
+  ova_image_path = abspath("${path.root}/../packer/output/ubuntu-server/ubuntu-server-24-template.ova")
 }
 
 resource "virtualbox_vm" "k8s_nodes" {
   for_each = local.nodes
 
-  # image = "../packer/output/ubuntu-server/ubuntu-server-24-template.ova"
-  image = abspath("${path.root}/../packer/output/ubuntu-server/ubuntu-server-24-template.ovf")
-
+  # Use the absolute path to the OVA file.
+  image = local.ova_image_path
+  
   name   = each.key
   
   cpus   = 2

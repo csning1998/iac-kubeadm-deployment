@@ -55,22 +55,16 @@ source "virtualbox-iso" "ubuntu-server" {
   # Shutdown & Output Configuration
   shutdown_command = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
   output_directory = "output/ubuntu-server"
-  format = "ova"
-  keep_registered = false
-  skip_export     = false
+  format           = "ova"
+  keep_registered  = false
 }
 
 build {
   sources = ["source.virtualbox-iso.ubuntu-server"]
 
-  provisioner "breakpoint" {
-    note    = "Pausing for manual debugging. SSH into the VM now."
-    disable = true // To run a normal build without pausing, set this to true
-  }
-
   provisioner "ansible" {
     playbook_file = "./playbooks/provision.yml"
-    user = var.ssh_username
+    user          = var.ssh_username
     extra_arguments = [
       "--extra-vars", "ansible_become_pass=${var.ssh_password}"
     ]
