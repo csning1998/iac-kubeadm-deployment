@@ -23,7 +23,7 @@ autoinstall:
 
   # User and Hostname Configuration
   identity:
-    hostname: ubuntu-server-24
+    hostname: ubuntu-template
     username: ${username}
     password: ${password_hash}
 
@@ -34,3 +34,7 @@ autoinstall:
 
   # Package Management Configuration
   package_upgrade: false
+
+  late-commands:
+    - curtin in-target -- /bin/bash -c "echo '${username} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/99-packer-user"
+    - curtin in-target -- /bin/bash -c "chmod 0440 /etc/sudoers.d/99-packer-user"
