@@ -1,15 +1,3 @@
-packer {
-  required_plugins {
-    virtualbox = {
-      version = "~> 1"
-      source  = "github.com/hashicorp/virtualbox"
-    }
-    ansible = {
-      version = "~> 1"
-      source  = "github.com/hashicorp/ansible"
-    }
-  }
-}
 
 source "virtualbox-iso" "ubuntu-server" {
   # Guest OS & VM Naming
@@ -26,33 +14,49 @@ source "virtualbox-iso" "ubuntu-server" {
   disk_size = var.disk_size
   headless  = false
 
+  # Hardware Interfaces
+  hard_drive_interface     = "sata"
+  hard_drive_discard       = true
+  hard_drive_nonrotational = true
+  gfx_controller           = "vboxsvga"
+
+  # guest_additions_mode = "upload"
+  # guest_additions_path = "/tmp/VBoxGuestAdditions.iso"
+  
   # HTTP Content Delivery for cloud-init
   http_content = {
     "/user-data" = templatefile("${path.root}/http/user-data", {
       username      = var.ssh_username
-      password_hash = var.user_password_hash
+      password_hash = var.ssh_password_hash
     })
     "/meta-data" = file("${path.root}/http/meta-data")
   }
 
-  # Final Boot Command based on your discovery
-  boot_wait = "5s"
+  # Boot Command with wait time
+  boot_wait    = "5s"
   boot_command = [
-    "<wait>e<wait>",
+    "<wait2s>",
+    "e<wait>",
     "<down><down><down><end>",
     " autoinstall ds=nocloud-net\\;s=http://{{.HTTPIP}}:{{.HTTPPort}}/",
     "<f10>"
   ]
 
+  vboxmanage = [
+    ["modifyvm", "{{.Name}}", "--vram", "20"],
+    ["modifyvm", "{{.Name}}", "--nic2", "hostonly", "--hostonlyadapter2", "vboxnet0"]
+  ]
+
   # SSH Configuration for Provisioning
   ssh_username = var.ssh_username
-  ssh_password = var.user_password
-  ssh_timeout  = "30m"
+  ssh_password = var.ssh_password
+  ssh_timeout  = "99m"
 
   # Shutdown & Output Configuration
-  shutdown_command = "sudo /sbin/shutdown -hP now"
-  output_directory = "output/ubuntu-24.04"
+  shutdown_command = "sudo shutdown -P now"
+  output_directory = "output/ubuntu-server"
   format           = "ova"
+  keep_registered  = false
 }
 
 build {
@@ -60,14 +64,9 @@ build {
 
   provisioner "ansible" {
     playbook_file = "./playbooks/provision.yml"
-    # Pass the sudo password to Ansible
+    user          = var.ssh_username
     extra_arguments = [
-      "-e", format("ansible_become_pass=%s", var.user_password)
+      "--extra-vars", "ansible_become_pass=${var.ssh_password}"
     ]
-  }
-
-  # Post-Processor to compress the artifact (optional)
-  post-processor "compress" {
-    output = "output/ubuntu-24.04/golden-image.ova.gz"
   }
 }

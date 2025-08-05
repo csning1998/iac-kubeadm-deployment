@@ -4,7 +4,7 @@
 
 variable "vm_name" {
   type        = string
-  default     = "packer-ubuntu-template"
+  default     = "ubuntu-server-24-template"
   description = "Name of the VM in VirtualBox during the build."
 }
 
@@ -43,24 +43,20 @@ variable "disk_size" {
 
 variable "ssh_username" {
   type        = string
+  default     = "test-username"
   description = "Specifying the username for ssh. Default username is 'test-username'"
 }
 
-variable "user_password" {
-  type        = string
-  description = "The default password for the default user."
-  sensitive   = true
-}
-
-variable "user_password_hash" {
+variable "ssh_password" {
   type        = string
   description = "The hashed password for the default user."
   sensitive   = true
 }
 
-variable "boot_command" {
-  type        = list(string)
-  description = "Commands to pass to gui session to initiate automated install. Incorrect boot commands can cause the build to block or fail."
+variable "ssh_password_hash" {
+  type        = string
+  description = "The hashed password used for autoinstall (cloud-init)."
+  sensitive   = true
 }
 
 variable "scripts" {
