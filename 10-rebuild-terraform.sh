@@ -6,8 +6,11 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
 readonly PACKER_DIR="${SCRIPT_DIR}/packer"
 readonly PACKER_VM_NAME="ubuntu-server-24-template"
+# This variable is currently unused but kept for consistency
+readonly PACKER_OUTPUT_DIR="${PACKER_DIR}/output/ubuntu-server"
 
 # --- STEP 0: Purging all Inaccessible VirtualBox Hard Disks ---
+# This step is good practice for VirtualBox maintenance and does not conflict with Terraform.
 echo ">>> STEP 0: Purging all inaccessible VirtualBox hard disks..."
 VBoxManage list hdds | awk -v RS= '/inaccessible/ {print $2}' | while read -r uuid; do
     echo "Removing inaccessible HDD with UUID: $uuid"
@@ -17,10 +20,13 @@ echo "VirtualBox media registry cleaned."
 echo "--------------------------------------------------"
 
 # --- Step 1: Destroy Existing Terraform Resources ---
+# This is the primary change. We let Terraform read its state file and handle the destruction of the VMs it manages.
 echo ">>> STEP 1: Destroying existing Terraform-managed VMs..."
 cd "${TERRAFORM_DIR}"
 terraform init -upgrade
-terraform destroy -auto-approve
+# Let Terraform handle the destruction based on its state file.
+# This will correctly power off, unregister, and delete the VMs.
+terraform destroy -auto-approve -lock=false
 echo "Terraform destroy complete."
 echo "--------------------------------------------------"
 
@@ -33,22 +39,20 @@ if VBoxManage showvminfo "$PACKER_VM_NAME" >/dev/null 2>&1; then
 else
   echo "No leftover Packer VM found. Skipping VirtualBox cleanup."
 fi
+echo "--------------------------------------------------"
 
-# --- STEP 3: Cleaning output directory and starting new Packer build ---
-echo ">>> STEP 3: Cleaning output directory"
-cd "${PACKER_DIR}"
-find ~/.cache/packer -mindepth 1 ! -name '*.iso' -exec rm -rf {} +
-rm -rf output/ubuntu-server
-
-# --- Step 4: Deploy New VMs with Terraform ---
-echo ">>> STEP 4: Resetting Terraform ..."
-
+# --- Step 3: Deploy New VMs with Terraform ---
+echo ">>> STEP 3: Initializing Terraform and applying configuration..."
 cd "${TERRAFORM_DIR}"
 rm -rf ~/.terraform/virtualbox
 rm -rf .terraform
 rm -r .terraform.lock.hcl
 rm -r terraform.tf*
 
+terraform init
+terraform apply -auto-approve
+
+echo "Terraform apply complete. New VMs are running."
 echo "--------------------------------------------------"
 
-echo "Full reset workflow completed successfully."
+echo "Terraform rebuild workflow completed successfully."

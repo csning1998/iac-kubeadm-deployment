@@ -21,7 +21,7 @@ echo "--------------------------------------------------"
 echo ">>> STEP 1: Destroying existing Terraform-managed VMs..."
 cd "${TERRAFORM_DIR}"
 terraform init -upgrade
-terraform destroy -auto-approve
+terraform destroy -auto-approve -lock=false
 echo "Terraform destroy complete."
 echo "--------------------------------------------------"
 
@@ -34,6 +34,7 @@ if VBoxManage showvminfo "$PACKER_VM_NAME" >/dev/null 2>&1; then
 else
   echo "No leftover Packer VM found. Skipping VirtualBox cleanup."
 fi
+echo "--------------------------------------------------"
 
 # --- STEP 3: Cleaning output directory and starting new Packer build ---
 echo ">>> STEP 3: Cleaning output directory and starting new Packer build..."
@@ -59,10 +60,13 @@ echo ">>> STEP 5: Initializing Terraform and applying configuration..."
 
 cd "${TERRAFORM_DIR}"
 rm -rf ~/.terraform/virtualbox
-mkdir -p ~/.terraform/virtualbox/gold
+rm -rf .terraform
+rm -r .terraform.lock.hcl
+rm -r terraform.tf*
 
 terraform init
 terraform apply -auto-approve
+
 echo "Terraform apply complete. New VMs are running."
 echo "--------------------------------------------------"
 
