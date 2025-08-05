@@ -45,6 +45,12 @@
         fail_msg: "Verification failed: vboxguest kernel module is not loaded."
         success_msg: "Verification successful: vboxguest kernel module is loaded."
 
+    - name: "6. Harden: Ensure sshd service is enabled and starts on boot"
+      ansible.builtin.systemd:
+        name: ssh  # or ssh.service
+        state: started
+        enabled: true
+
   handlers:
     - name: "Reboot the machine"
       listen: "Reboot the machine"
