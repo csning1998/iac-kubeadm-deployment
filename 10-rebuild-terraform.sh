@@ -26,7 +26,7 @@ cd "${TERRAFORM_DIR}"
 terraform init -upgrade
 # Let Terraform handle the destruction based on its state file.
 # This will correctly power off, unregister, and delete the VMs.
-terraform destroy -auto-approve -lock=false
+terraform destroy -parallelism=1 -auto-approve -lock=false
 echo "Terraform destroy complete."
 echo "--------------------------------------------------"
 
@@ -47,10 +47,10 @@ cd "${TERRAFORM_DIR}"
 rm -rf ~/.terraform/virtualbox
 rm -rf .terraform
 rm -r .terraform.lock.hcl
-rm -r terraform.tf*
+rm -r terraform.tfstate
 
 terraform init
-terraform apply -auto-approve
+terraform apply -parallelism=1 -auto-approve
 
 echo "Terraform apply complete. New VMs are running."
 echo "--------------------------------------------------"

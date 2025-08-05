@@ -50,7 +50,7 @@ cd "${TERRAFORM_DIR}"
 rm -rf ~/.terraform/virtualbox
 rm -rf .terraform
 rm -r .terraform.lock.hcl
-rm -r terraform.tf*
+rm -r terraform.tfstate
 echo "--------------------------------------------------"
 
 echo "Full reset workflow completed successfully."

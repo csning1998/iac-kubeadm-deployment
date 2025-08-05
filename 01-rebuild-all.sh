@@ -62,7 +62,7 @@ cd "${TERRAFORM_DIR}"
 rm -rf ~/.terraform/virtualbox
 rm -rf .terraform
 rm -r .terraform.lock.hcl
-rm -r terraform.tf*
+rm -r terraform.tfstate
 
 terraform init
 terraform apply -auto-approve
