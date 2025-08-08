@@ -1,5 +1,5 @@
 
-source "virtualbox-iso" "ubuntu-server" {
+source "vmware-iso" "ubuntu-server" {
   # Guest OS & VM Naming
   guest_os_type = var.guest_os_type
   vm_name       = var.vm_name
@@ -15,13 +15,10 @@ source "virtualbox-iso" "ubuntu-server" {
   headless  = false
 
   # Hardware Interfaces
-  hard_drive_interface     = "sata"
-  hard_drive_discard       = true
-  hard_drive_nonrotational = true
-  gfx_controller           = "vboxsvga"
-
-  # guest_additions_mode = "upload"
-  # guest_additions_path = "/tmp/VBoxGuestAdditions.iso"
+  disk_type_id         = "0" # Growable virtual disk contained in a single file (monolithic sparse).
+  disk_adapter_type    = "scsi"
+  network              = "nat" # For external internet connection during installation.
+  network_adapter_type = "e1000" # Recommended values are e1000 and vmxnet3. Defaults to e1000.
   
   # HTTP Content Delivery for cloud-init
   http_content = {
@@ -42,11 +39,6 @@ source "virtualbox-iso" "ubuntu-server" {
     "<f10>"
   ]
 
-  vboxmanage = [
-    ["modifyvm", "{{.Name}}", "--vram", "20"],
-    ["modifyvm", "{{.Name}}", "--nic2", "hostonly", "--hostonlyadapter2", "vboxnet0"]
-  ]
-
   # SSH Configuration for Provisioning
   ssh_username = var.ssh_username
   ssh_password = var.ssh_password
@@ -54,13 +46,13 @@ source "virtualbox-iso" "ubuntu-server" {
 
   # Shutdown & Output Configuration
   shutdown_command = "sudo shutdown -P now"
-  output_directory = "output/ubuntu-server"
-  format           = "ova"
+  output_directory = "output/ubuntu-server-vmware"
+  format           = "vmx"
   keep_registered  = false
 }
 
 build {
-  sources = ["source.virtualbox-iso.ubuntu-server"]
+  sources = ["source.vmware-iso.ubuntu-server"]
 
   provisioner "ansible" {
     playbook_file = "./playbooks/provision.yml"

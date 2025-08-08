@@ -1,5 +1,5 @@
 ---
-- name: "Test installing Guest Additions from Ubuntu's official repository"
+- name: "Install and configure VMware Tools for Ubuntu"
   hosts: all
   become: true
   tasks:
@@ -21,10 +21,10 @@
         state: present
         update_cache: true
 
-    - name: "3. Action: Install Guest Additions from Ubuntu repository"
+    - name: "3. Action: Install open-vm-tools from Ubuntu repository"
       ansible.builtin.apt:
         name:
-          - virtualbox-guest-utils
+          - open-vm-tools
         state: present
         update_cache: true
       notify:
@@ -38,16 +38,16 @@
       register: lsmod_result
       changed_when: false
 
-    - name: "5.b Verify: Assert that 'vboxguest' is in the list of loaded modules"
+    - name: "5.b Verify: Assert that 'vmw_balloon' is in the list of loaded modules"
       ansible.builtin.assert:
         that:
-          - "'vboxguest' in lsmod_result.stdout"
-        fail_msg: "Verification failed: vboxguest kernel module is not loaded."
-        success_msg: "Verification successful: vboxguest kernel module is loaded."
+          - "'vmw_balloon' in lsmod_result.stdout"
+        fail_msg: "Verification failed: vmw_balloon kernel module is not loaded."
+        success_msg: "Verification successful: vmw_balloon kernel module is loaded."
 
     - name: "6. Harden: Ensure sshd service is enabled and starts on boot"
       ansible.builtin.systemd:
-        name: ssh  # or ssh.service
+        name: ssh
         state: started
         enabled: true
 
@@ -55,7 +55,7 @@
     - name: "Reboot the machine"
       listen: "Reboot the machine"
       ansible.builtin.reboot:
-        msg: "Rebooting machine to finalize Guest Additions installation."
+        msg: "Rebooting machine to finalize open-vm-tools installation."
         connect_timeout: 5
         reboot_timeout: 600
         pre_reboot_delay: 0
