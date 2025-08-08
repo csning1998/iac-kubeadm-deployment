@@ -6,8 +6,11 @@ set -e -u
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
 readonly PACKER_DIR="${SCRIPT_DIR}/packer"
-readonly PACKER_VM_NAME="vmware-ubuntu-server-24-template"
+readonly PACKER_VM_NAME="ubuntu-server-24-template-vmware"
 readonly PACKER_OUTPUT_DIR="${PACKER_DIR}/output/ubuntu-server-vmware"
+
+# Record start time at the beginning of the script
+readonly START_TIME=$(date +%s)
 
 # Function: Clean up VMware Workstation VM registrations
 cleanup_vmware_vms() {
@@ -60,6 +63,7 @@ destroy_terraform_resources() {
   cd "${TERRAFORM_DIR}"
   terraform init -upgrade
   terraform destroy -parallelism=1 -auto-approve -lock=false
+  rm -rf "${TERRAFORM_DIR}/vms"
   echo "Terraform destroy complete."
   echo "--------------------------------------------------"
 }
@@ -91,7 +95,8 @@ verify_ssh() {
       echo "known_hosts file does not exist: $known_hosts_file"
     fi
     echo "Connecting to $host via SSH and executing command..."
-    ssh -o ConnectTimeout=10 "$user@$host" "ip a show ens37 | grep 'inet ' && hostname" || echo "Failed to connect to $host or command execution failed."
+    ssh -o ConnectTimeout=10 "$user@$host" "ip a show ens32 | grep 'inet ' && hostname" || echo "Failed to connect to $host or command execution failed."
+    sleep 5
   done
   echo "--------------------------------------------------"
 }
@@ -106,6 +111,18 @@ prompt_verify_ssh() {
   fi
 }
 
+# Function: Report execution time
+report_execution_time() {
+  local END_TIME DURATION MINUTES SECONDS
+  END_TIME=$(date +%s)
+  DURATION=$((END_TIME - START_TIME))
+  MINUTES=$((DURATION / 60))
+  SECONDS=$((DURATION % 60))
+  echo "--------------------------------------------------"
+  echo ">>> Execution time before SSH prompt: ${MINUTES}m ${SECONDS}s"
+  echo "--------------------------------------------------"
+}
+
 # Main menu
 echo "VMware Workstation VM Management Script"
 PS3="Please select an action: "
@@ -118,6 +135,7 @@ select opt in "${options[@]}"; do
       destroy_terraform_resources
       cleanup_packer_output
       reset_terraform_state
+      report_execution_time
       echo "Reset All workflow completed successfully."
       break
       ;;
@@ -129,6 +147,7 @@ select opt in "${options[@]}"; do
       build_packer
       reset_terraform_state
       apply_terraform
+      report_execution_time
       prompt_verify_ssh
       echo "Rebuild All workflow completed successfully."
       break
@@ -138,6 +157,7 @@ select opt in "${options[@]}"; do
       cleanup_vmware_vms
       cleanup_packer_output
       build_packer
+      report_execution_time
       break
       ;;
     "Rebuild Terraform")
@@ -145,6 +165,7 @@ select opt in "${options[@]}"; do
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform
+      report_execution_time
       prompt_verify_ssh
       echo "Rebuild Terraform workflow completed successfully."
       break

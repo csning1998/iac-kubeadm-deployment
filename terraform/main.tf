@@ -1,9 +1,5 @@
 terraform {
   required_providers {
-    virtualbox = {
-      source  = "terra-farm/virtualbox"
-      version = "0.2.2-alpha.1"
-    }
     null = {
       source  = "hashicorp/null"
       version = "3.2.2"
@@ -12,103 +8,134 @@ terraform {
 }
 
 locals {
-  ip_list = ["192.168.56.101", "192.168.56.102", "192.168.56.103"]
-  temp_ip = "192.168.56.88"
-  ova_image_path = abspath("${path.root}/../packer/output/ubuntu-server/ubuntu-server-24-template.ova")
+  ip_list = ["172.16.134.101", "172.16.134.102", "172.16.134.103"]
+  vmx_image_path = abspath("${path.root}/../packer/output/ubuntu-server-vmware/ubuntu-server-24-template-vmware.vmx")
+  vms_dir = "${path.root}/vms"
 
   nodes_list = [
     for idx in range(length(local.ip_list)) : {
       key     = "node-${idx + 1}"
       ip      = local.ip_list[idx]
-      temp_ip = local.temp_ip
     }
   ]
 }
 
-resource "virtualbox_vm" "k8s_nodes" {
+resource "null_resource" "k8s_nodes" {
   for_each = { for idx, node in local.nodes_list : node.key => node }
 
-  image  = local.ova_image_path
-  name   = each.key
-  cpus   = 2
-  memory = "2048 mib"
-  status = "poweroff" # Initially powered off, started by local-exec
-
-  network_adapter {
-    type   = "nat"
-    device = "VirtIO"
-  }
-
-  network_adapter {
-    type           = "hostonly"
-    host_interface = "vboxnet0"
-    device         = "VirtIO"
-  }
-}
-
-# Shut down all VMs first
-resource "null_resource" "shutdown_all_vms" {
+  # Clean up existing VM directory and clone VM
   provisioner "local-exec" {
-    command = join(" && ", [
-      for node in local.nodes_list : "for i in {1..3}; do ( VBoxManage showvminfo ${node.key} --machinereadable 2>/dev/null | grep 'VMState=\"running\"' && VBoxManage controlvm ${node.key} poweroff || true ) && sleep 5; done"
-    ])
+    command = <<EOT
+      rm -rf ${local.vms_dir}/${each.key}
+      mkdir -p ${local.vms_dir}/${each.key}
+      vmrun -T ws clone ${local.vmx_image_path} ${local.vms_dir}/${each.key}/${each.key}.vmx full -cloneName=${each.key}
+      # Add host-only network adapter (vmnet1) mimicking GUI
+      sed -i '/^ethernet1\./d' ${local.vms_dir}/${each.key}/${each.key}.vmx
+      echo 'ethernet1.present = "TRUE"' >> ${local.vms_dir}/${each.key}/${each.key}.vmx
+      echo 'ethernet1.connectionType = "hostonly"' >> ${local.vms_dir}/${each.key}/${each.key}.vmx
+      echo 'ethernet1.virtualDev = "e1000"' >> ${local.vms_dir}/${each.key}/${each.key}.vmx
+    EOT
   }
-}
 
-resource "null_resource" "sequential_provisioner" {
-  for_each = { for idx, node in local.nodes_list : node.key => node }
-
-  triggers = {
-    vm_id = virtualbox_vm.k8s_nodes[each.key].id
-  }
-
-  depends_on = [null_resource.shutdown_all_vms]
-
-  # Start the current VM (only if it's powered off)
+  # Shut down VM if running
   provisioner "local-exec" {
-    command = "VBoxManage showvminfo ${each.key} --machinereadable 2>/dev/null | grep 'VMState=\"poweroff\"' && VBoxManage startvm ${each.key} --type headless && sleep 20 || true"
+    command = <<EOT
+      vmrun -T ws list | grep ${each.key} && vmrun -T ws stop ${local.vms_dir}/${each.key}/${each.key}.vmx hard || true
+      sleep 10
+    EOT
   }
 
-  # Configure IP and hostname
+  # Start the VM to initialize
+  provisioner "local-exec" {
+    command = <<EOT
+      vmrun -T ws start ${local.vms_dir}/${each.key}/${each.key}.vmx nogui
+      sleep 10
+    EOT
+  }
+
+  # Restart VM to ensure network adapter is loaded
+  provisioner "local-exec" {
+    command = <<EOT
+      vmrun -T ws stop ${local.vms_dir}/${each.key}/${each.key}.vmx hard || true
+      sleep 10
+      vmrun -T ws start ${local.vms_dir}/${each.key}/${each.key}.vmx nogui
+      sleep 10
+    EOT
+  }
+
+  # Get NAT IP dynamically
+  provisioner "local-exec" {
+    command = <<EOT
+      vmrun -T ws getGuestIPAddress ${local.vms_dir}/${each.key}/${each.key}.vmx -wait > ${local.vms_dir}/${each.key}/nat_ip.txt || true
+    EOT
+  }
+
+  # Configure network and hostname
   provisioner "remote-exec" {
     connection {
       type     = "ssh"
       user     = var.vm_username
       password = var.vm_password
-      host     = each.value.temp_ip
+      host     = try(trimspace(file("${local.vms_dir}/${each.key}/nat_ip.txt")), "failed")
       port     = 22
       timeout  = "10m"
-      agent    = true
+      agent    = false
     }
     inline = [
       # Wait for SSH and network to stabilize
-      "sleep 20",
+      "sleep 10",
       # Clear cloud-init state to prevent reset
       "sudo cloud-init clean --logs || true",
       "sudo systemctl disable cloud-init || true",
       "sudo systemctl stop cloud-init || true",
       "sudo touch /etc/cloud/cloud-init.disabled || true",
-      # Back up and remove the enp0s8 configuration from 50-cloud-init.yaml
-      "sudo cp /etc/netplan/50-cloud-init.yaml /etc/netplan/50-cloud-init.yaml.bak || true",
-      "sudo sed -i '/enp0s8:/,+4d' /etc/netplan/50-cloud-init.yaml || true",
-      # Verify removal
-      "sudo cat /etc/netplan/50-cloud-init.yaml || true",
-      # Create 99-custom.yaml
-      "echo 'network:\n  version: 2\n  ethernets:\n    enp0s8:\n      dhcp4: no\n      addresses: [${each.value.ip}/24]\n      routes:\n        - to: default\n          via: 192.168.56.1\n      nameservers:\n        addresses: [8.8.8.8]' | sudo tee /etc/netplan/99-custom.yaml",
-      "sudo chmod 600 /etc/netplan/99-custom.yaml",
+      # Reload network drivers and bring up host-only interface
+      "sudo modprobe e1000 || true",
+      "sudo udevadm trigger || true",
+      # Detect all network interfaces and find host-only
+      "INTERFACES=$(ip -o link show | awk -F': ' '{print $2}' | grep -v ens33 | grep -v lo)",
+      "if [ -z \"$INTERFACES\" ]; then echo 'Error: No additional interfaces found'; ip -o link show; exit 1; fi",
+      # Configure Netplan with delay for IP assignment
+      "echo 'network:\n  version: 2\n  ethernets:\n    ens33:\n      dhcp4: true\n    ens32:\n      dhcp4: false\n      addresses: [${each.value.ip}/24]\n      routes:\n        - to: default\n          via: 172.16.134.1\n      nameservers:\n        addresses: [8.8.8.8]' | sudo tee /etc/netplan/00-hostonly.yaml",
+      "sudo chmod 600 /etc/netplan/00-hostonly.yaml",
+      # Apply Netplan configuration with error checking and delay
+      "if ! sudo netplan apply; then echo 'Error: netplan apply failed'; cat /etc/netplan/00-hostonly.yaml; exit 1; fi",
+      "sleep 5",
+      # Set hostname
       "sudo hostnamectl set-hostname ${each.key}",
       # Verify hostname
       "echo 'Verifying hostname for ${each.key}'",
       "hostname | grep -i ${each.key} || echo 'Warning: Hostname mismatch for ${each.key}'",
-      # Verify 99-custom.yaml
-      "sudo cat /etc/netplan/50-cloud-init.yaml || true",
-      # Apply Netplan configuration
-      "sudo netplan apply || true",
+      # Verify network interfaces
+      "ip a show ens33 || echo 'Warning: ens33 not found'",
+      "ip a show ens32 || echo 'Warning: host-only interface not found'",
       # Verify IP
       "sleep 10",
-      "ip a show enp0s8 | grep ${each.value.ip} || true"
+      "ip a show ens32 | grep ${each.value.ip} || echo 'Warning: host-only IP not set'"
     ]
     on_failure = continue # Bypass SSH disconnection errors
+  }
+
+  # Ensure VM is stopped after configuration
+  provisioner "local-exec" {
+    command = <<EOT
+      vmrun -T ws stop ${local.vms_dir}/${each.key}/${each.key}.vmx hard || true
+    EOT
+  }
+}
+
+# Global provisioner to start all VMs after configuration
+resource "null_resource" "start_all_vms" {
+  depends_on = [null_resource.k8s_nodes]
+
+  provisioner "local-exec" {
+    command = <<EOT
+      echo ">>> STEP: Starting all VMs after configuration..."
+      ${join("\n", [for node in local.nodes_list : "vmrun -T ws start ${local.vms_dir}/${node.key}/${node.key}.vmx nogui || echo 'Warning: Failed to start ${node.key}'"])}
+      # Add delay to ensure network stability
+      sleep 20
+      echo "All VMs started."
+    EOT
   }
 }
 
