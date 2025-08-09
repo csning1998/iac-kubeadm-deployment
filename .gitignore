@@ -1,5 +1,5 @@
 # Ignore Packer and Terraform secret variable files
-*.pkrvars.hcl
+packer/secret.auto.pkrvars.hcl
 *.tfvars
 
 # Ignore folder for output *.vdi
@@ -10,6 +10,8 @@ packer-playground/output
 .terraform/
 terraform.tfstate
 terraform.tfstate.backup
+
+terraform/vms
 
 # VSCode
 .vscode

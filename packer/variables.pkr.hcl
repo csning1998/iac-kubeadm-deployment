@@ -10,7 +10,6 @@ variable "vm_name" {
 
 variable "guest_os_type" {
   type        = string
-  default     = "Ubuntu_64"
   description = "The guest OS type for VirtualBox."
 }
 
