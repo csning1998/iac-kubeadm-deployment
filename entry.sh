@@ -2,6 +2,12 @@
 
 set -e -u
 
+# Define Kubernetes Cluster IP Endings
+
+IP_ENDINGS=(200 210 211 212)
+
+### READONLY: DO NOT MODIFY
+
 # Define global variables
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
@@ -87,14 +93,17 @@ verify_ssh() {
   echo ">>> STEP: Pruning and reconfiguring SSH connections..."
   user=$(whoami)
   known_hosts_file="/home/$user/.ssh/known_hosts"
-  start_ip=101
-  end_ip=103
-  for ip in $(seq $start_ip $end_ip); do
+
+  if [ ${#IP_ENDINGS[@]} -eq 0 ]; then
+    echo "Error: IP_ENDINGS array is not set or is empty. Set the IP list at the top of the script"
+    return 1
+  fi
+  for ip in "${IP_ENDINGS[@]}"; do
     host="172.16.134.$ip"
     echo "Processing host: $host"
     if [ -f "$known_hosts_file" ]; then
       echo "Removing old keys for $host from $known_hosts_file..."
-      ssh-keygen -f "$known_hosts_file" -R "$host"
+      ssh-keygen -f "$known_hosts_file" -R "$host" || true
     else
       echo "known_hosts file does not exist: $known_hosts_file"
     fi
