@@ -15,7 +15,7 @@ locals {
 
   master_config = [
     for idx, ip in local.master_ip_list : {
-      key       = "k8s-master"
+      key       = "k8s-master-${format("%02d", idx)}"
       ip        = ip
       vcpu      = var.master_vcpu
       ram       = var.master_ram
