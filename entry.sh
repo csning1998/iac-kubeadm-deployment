@@ -29,6 +29,10 @@ cleanup_vmware_vms() {
 cleanup_packer_output() {
   echo ">>> STEP: Cleaning Packer output directory..."
   cd "${PACKER_DIR}"
+  if [ -d ~/.cache/packer ]; then
+    echo "Cleaning Packer cache, preserving ISOs..."
+    find ~/.cache/packer -mindepth 1 ! -name '*.iso' -exec rm -rf {} + || true
+  fi
   rm -rf "${PACKER_OUTPUT_DIR}"
   echo "Packer output directory cleaned."
   echo "--------------------------------------------------"

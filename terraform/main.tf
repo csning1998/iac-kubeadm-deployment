@@ -41,7 +41,7 @@ resource "null_resource" "k8s_nodes" {
   provisioner "local-exec" {
     command = <<EOT
       vmrun -T ws list | grep ${each.key} && vmrun -T ws stop ${local.vms_dir}/${each.key}/${each.key}.vmx hard || true
-      sleep 10
+      sleep 5
     EOT
   }
 
@@ -49,17 +49,7 @@ resource "null_resource" "k8s_nodes" {
   provisioner "local-exec" {
     command = <<EOT
       vmrun -T ws start ${local.vms_dir}/${each.key}/${each.key}.vmx nogui
-      sleep 10
-    EOT
-  }
-
-  # Restart VM to ensure network adapter is loaded
-  provisioner "local-exec" {
-    command = <<EOT
-      vmrun -T ws stop ${local.vms_dir}/${each.key}/${each.key}.vmx hard || true
-      sleep 10
-      vmrun -T ws start ${local.vms_dir}/${each.key}/${each.key}.vmx nogui
-      sleep 10
+      sleep 5
     EOT
   }
 
@@ -81,9 +71,9 @@ resource "null_resource" "k8s_nodes" {
       timeout  = "10m"
       agent    = false
     }
-    inline = [
+        inline = [
       # Wait for SSH and network to stabilize
-      "sleep 10",
+      "sleep 5",
       # Clear cloud-init state to prevent reset
       "sudo cloud-init clean --logs || true",
       "sudo systemctl disable cloud-init || true",
@@ -92,11 +82,11 @@ resource "null_resource" "k8s_nodes" {
       # Reload network drivers and bring up host-only interface
       "sudo modprobe e1000 || true",
       "sudo udevadm trigger || true",
-      # Detect all network interfaces and find host-only
-      "INTERFACES=$(ip -o link show | awk -F': ' '{print $2}' | grep -v ens33 | grep -v lo)",
-      "if [ -z \"$INTERFACES\" ]; then echo 'Error: No additional interfaces found'; ip -o link show; exit 1; fi",
-      # Configure Netplan with delay for IP assignment
-      "echo 'network:\n  version: 2\n  ethernets:\n    ens33:\n      dhcp4: true\n    ens32:\n      dhcp4: false\n      addresses: [${each.value.ip}/24]\n      routes:\n        - to: default\n          via: 172.16.134.1\n      nameservers:\n        addresses: [8.8.8.8]' | sudo tee /etc/netplan/00-hostonly.yaml",
+      # Detect the host-only network interface
+      "HOSTONLY_IFACE=$(ip -o link show | awk -F': ' '{print $2}' | grep -v -e '^lo$' -e '^ens33$' | head -n 1)",
+      "if [ -z \"$HOSTONLY_IFACE\" ]; then echo 'Error: Host-only network interface not found'; ip -o link show; exit 1; fi",
+      # Configure Netplan with NAT handling external traffic
+      "echo 'network:\n  version: 2\n  ethernets:\n    ens33:\n      dhcp4: true\n      dhcp6: false\n    ens32:\n      dhcp4: false\n      addresses: [${each.value.ip}/24]' | sudo tee /etc/netplan/00-hostonly.yaml",
       "sudo chmod 600 /etc/netplan/00-hostonly.yaml",
       # Apply Netplan configuration with error checking and delay
       "if ! sudo netplan apply; then echo 'Error: netplan apply failed'; cat /etc/netplan/00-hostonly.yaml; exit 1; fi",
@@ -108,10 +98,10 @@ resource "null_resource" "k8s_nodes" {
       "hostname | grep -i ${each.key} || echo 'Warning: Hostname mismatch for ${each.key}'",
       # Verify network interfaces
       "ip a show ens33 || echo 'Warning: ens33 not found'",
-      "ip a show ens32 || echo 'Warning: host-only interface not found'",
+      "ip a show \"$HOSTONLY_IFACE\" || echo 'Warning: host-only interface not found'",
       # Verify IP
-      "sleep 10",
-      "ip a show ens32 | grep ${each.value.ip} || echo 'Warning: host-only IP not set'"
+      "sleep 5",
+      "ip a show \"$HOSTONLY_IFACE\" | grep ${each.value.ip} || echo 'Warning: host-only IP not set'"
     ]
     on_failure = continue # Bypass SSH disconnection errors
   }
@@ -133,7 +123,7 @@ resource "null_resource" "start_all_vms" {
       echo ">>> STEP: Starting all VMs after configuration..."
       ${join("\n", [for node in local.nodes_list : "vmrun -T ws start ${local.vms_dir}/${node.key}/${node.key}.vmx nogui || echo 'Warning: Failed to start ${node.key}'"])}
       # Add delay to ensure network stability
-      sleep 20
+      sleep 10
       echo "All VMs started."
     EOT
   }
