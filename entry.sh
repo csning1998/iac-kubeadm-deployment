@@ -24,7 +24,7 @@ cleanup_vmware_vms() {
   if vmrun list | grep -q "$PACKER_VM_NAME"; then
     echo "Found leftover Packer VM '$PACKER_VM_NAME'. Stopping and deleting..."
     vmrun stop "${PACKER_OUTPUT_DIR}/${PACKER_VM_NAME}.vmx" hard || true
-    vmrun delete "${PACKER_OUTPUT_DIR}/${PACKER_VM_NAME}.vmx" || true
+    vmrun deleteVM "${PACKER_OUTPUT_DIR}/${PACKER_VM_NAME}.vmx" || true
   else
     echo "No leftover Packer VM found. Skipping VMware cleanup."
   fi
