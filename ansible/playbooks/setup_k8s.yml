@@ -1,0 +1,17 @@
+---
+- name: Setup Kubernetes cluster
+  hosts: all
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+  tasks:
+    - name: "1. Action: Execute system update"
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+        cache_valid_time: 3600
+      register: apt_result
+      retries: 3
+      delay: 5
+      until: apt_result is success
+      changed_when: apt_result.changed
