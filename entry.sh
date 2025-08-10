@@ -5,6 +5,8 @@ set -e -u
 # Define Kubernetes Cluster IP Endings
 
 IP_ENDINGS=(200 210 211 212)
+
+### Edit `TF_VAR_vm_username` if you want to set the other username. Default is $(whoami)
 TF_VAR_vm_username=$(whoami)
 user="${TF_VAR_vm_username:-$(whoami)}"
 
@@ -21,21 +23,27 @@ readonly PACKER_OUTPUT_DIR="${PACKER_DIR}/output/ubuntu-server-vmware"
 # Record start time at the beginning of the script
 readonly START_TIME=$(date +%s)
 
-# Function: Check IaC environment and return status
-check_iac_environment() {
-  echo ">>> STEP: Checking IaC environment..."
-  local all_installed=true
-  local vmware_version packer_version terraform_version ansible_version
-
+# Function: Check if VMWare Workstation is installed
+check_vmware_workstation() {
   # Check VMware Workstation
   if command -v vmware >/dev/null 2>&1; then
     vmware_version=$(vmware --version 2>/dev/null || echo "Unknown")
     echo "#### VMware Workstation: Installed (Version: $vmware_version)"
   else
     vmware_version="Not installed"
-    all_installed=false
     echo "#### VMware Workstation: Not installed"
+    echo "Prior to executing other options, registration is required on Broadcom.com to download and install VMWare Workstation Pro 17.5+."
+    echo "Link: https://support.broadcom.com/group/ecx/my-dashboard"
+    read -n 1 -s -r -p "Press any key to continue..."
+    exit 1
   fi
+}
+
+# Function: Check IaC environment and return status
+check_iac_environment() {
+  echo ">>> STEP: Checking IaC environment..."
+  local all_installed=true
+  local packer_version terraform_version ansible_version
 
   # Check Packer
   if command -v packer >/dev/null 2>&1; then
@@ -88,43 +96,38 @@ check_iac_environment() {
 
 # Function: Setup IaC Environment
 setup_iac_environment() {
-    echo ">>> STEP: Setting up IaC environment..."
+  echo ">>> STEP: Setting up IaC environment..."
 
-    # Install VMware Workstation
-    echo "#### Installing VMware Workstation..."
-    sudo apt update
-    sudo apt install wget gnupg2 -y
-    wget https://www.vmware.com/go/getworkstation-linux -O vmware-workstation.bundle
-    chmod +x vmware-workstation.bundle
-    sudo ./vmware-workstation.bundle --eulas-agreed --required
-    echo "#### VMware Workstation installation completed."
+  echo "Prior to executing other options, registration is required on Broadcom.com to download and install VMWare Workstation Pro 17.5+."
+  echo "Link: https://support.broadcom.com/group/ecx/my-dashboard"
+  echo
 
-    # Install HashiCorp Toolkits (Terraform and Packer)
-    echo "#### Installing HashiCorp Toolkits (Terraform and Packer)..."
-    wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-    sudo apt update && sudo apt install terraform packer -y
-    echo "#### Terraform and Packer installation completed."
+  read -n 1 -s -r -p "Press any key to continue..."
 
-    # Install Ansible
-    echo "#### Installing Ansible..."
-    sudo apt install software-properties-common -y
-    sudo add-apt-repository --yes --update ppa:ansible/ansible
-    sudo apt install ansible -y
-    echo "#### Ansible installation completed."
+  # Install HashiCorp Toolkits (Terraform and Packer)
+  echo "#### Installing HashiCorp Toolkits (Terraform and Packer)..."
+  wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+  sudo apt update && sudo apt install terraform packer -y
+  echo "#### Terraform and Packer installation completed."
 
-    # Verify installations
-    echo "#### Verifying installed tools..."
-    echo "###### VMware Workstation version:"
-    vmware --version
-    echo "###### Packer version:"
-    packer --version
-    echo "###### Terraform version:"
-    terraform --version
-    echo "###### Ansible version:"
-    ansible --version
-    echo "#### IaC environment setup and verification completed."
-    echo "--------------------------------------------------"
+  # Install Ansible
+  echo "#### Installing Ansible..."
+  sudo apt install software-properties-common -y
+  sudo add-apt-repository --yes --update ppa:ansible/ansible
+  sudo apt install ansible -y
+  echo "#### Ansible installation completed."
+
+  # Verify installations
+  echo "#### Verifying installed tools..."
+  echo "###### Packer version:"
+  packer --version
+  echo "###### Terraform version:"
+  terraform --version
+  echo "###### Ansible version:"
+  ansible --version
+  echo "#### IaC environment setup and verification completed."
+  echo "--------------------------------------------------"
 }
 
 # Function: Configure network setting of VMWare after environment setup
@@ -232,6 +235,89 @@ apply_terraform() {
   echo "--------------------------------------------------"
 }
 
+setup_ansible_vault() {
+  echo ">>> STEP: Set up Ansible Vault ..."
+
+  # Step 1: Check if ansible-vault is installed
+  vault_pass_file="${SCRIPT_DIR}/vault_pass.txt"
+  vault_file="${ANSIBLE_DIR}/group_vars/vault.yml"
+
+  # Step 2: Get vm_username from terraform.tfvars or TF_VAR_vm_username
+  if ! command -v ansible-vault >/dev/null 2>&1; then
+    echo "#### Error: ansible-vault is not installed. Please install ansible (e.g., pip install ansible)"
+    return 1
+  fi
+
+  if [ -f "${TERRAFORM_DIR}/terraform.tfvars" ]; then
+    vm_username=$(grep '^vm_username' "${TERRAFORM_DIR}/terraform.tfvars" | grep -oP '"\K[^"]+' || true)
+  fi
+
+  vm_username="${vm_username:-${TF_VAR_vm_username:-$(whoami)}}"
+  if [ -z "$vm_username" ]; then
+    echo "#### Error: vm_username not found in terraform.tfvars or TF_VAR_vm_username"
+    return 1
+  fi
+
+  # Step 3: Create vault_pass.txt
+  echo "#### Enter Ansible Vault password:"
+  read -s vault_password
+  echo "$vault_password" > "$vault_pass_file"
+  chmod 600 "$vault_pass_file"
+  echo "#### Created $vault_pass_file"
+
+  # Step 4: Create `ansible/group_vars/vault.yml`
+  mkdir -p "${ANSIBLE_DIR}/group_vars"
+  echo "vault_vm_username: $vm_username" | ansible-vault encrypt --vault-password-file "$vault_pass_file" > "$vault_file"
+  if [ $? -eq 0 ]; then
+    echo "#### Created and encrypted $vault_file"
+  else
+    echo "#### Error: Failed to create $vault_file"
+    return 1
+  fi
+  chmod 600 "$vault_file"
+  echo "#### Set permissions for $vault_file"
+
+  # Step 5: Update .gitignore
+  gitignore_file="${SCRIPT_DIR}/.gitignore"
+  for file in "$vault_pass_file" "$vault_file"; do
+    relative_file="${file#${SCRIPT_DIR}/}"
+    if ! grep -Fx "$relative_file" "$gitignore_file" >/dev/null 2>&1; then
+      echo -e "\n$relative_file" >> "$gitignore_file"
+      echo "#### Added $relative_file to $gitignore_file"
+    fi
+  done
+
+  # Step 6: Verify vault file and prompt for confirmation
+  echo -e "#### Verifying $vault_file contents:\n"
+  ansible-vault view --vault-password-file "$vault_pass_file" "$vault_file"
+  if [ $? -eq 0 ]; then
+    echo -e "\n #### AWARE!!! Confirm if this is the expected username for Ansible working on the VMs."
+    read -p "#### If not, enter 'n' to edit, or 'y' to continue (y/n): " answer
+    case "$answer" in
+      [Yy])
+      ;;
+    *)
+      echo "#### Editing $vault_file..."
+      ansible-vault edit --vault-password-file "$vault_pass_file" "$vault_file"
+      if [ $? -eq 0 ]; then
+        echo "#### Updated $vault_file. Verifying new contents:"
+        ansible-vault view --vault-password-file "$vault_pass_file" "$vault_file"
+      else
+        echo "#### Error: Failed to edit $vault_file"
+        return 1
+      fi
+      ;;
+    esac
+  else
+    echo "#### Error: Failed to verify $vault_file"
+    return 1
+  fi
+
+  echo "Ansible Vault setup completed successfully."
+  echo "--------------------------------------------------"
+}
+
+
 # Function: Verify SSH connections
 verify_ssh() {
   echo ">>> STEP: Pruning and reconfiguring SSH connections..."
@@ -291,13 +377,14 @@ report_execution_time() {
 # Main menu
 echo "VMware Workstation VM Management Script"
 PS3="Please select an action: "
-options=("Setup IaC Environment" "Reset All" "Rebuild All" "Rebuild Packer" "Rebuild Terraform" "Verify SSH" "Quit")
+options=("Setup IaC Environment" "Reset All" "Rebuild All" "Rebuild Packer" "Set up Ansible Vault" "Rebuild Terraform" "Verify SSH" "Quit")
 select opt in "${options[@]}"; do
   case $opt in
     "Setup IaC Environment")
       echo "# Executing Setup IaC Environment workflow..."
       check_iac_environment
       setup_iac_environment
+      check_vmware_workstation
       set_workstation_network
       report_execution_time
       echo "# Setup IaC Environment workflow completed successfully."
@@ -305,6 +392,7 @@ select opt in "${options[@]}"; do
       ;;
     "Reset All")
       echo "# Executing Reset All workflow..."
+      check_vmware_workstation
       cleanup_vmware_vms
       destroy_terraform_resources
       cleanup_packer_output
@@ -315,31 +403,38 @@ select opt in "${options[@]}"; do
       ;;
     "Rebuild All")
       echo "# Executing Rebuild All workflow..."
+      check_vmware_workstation
       cleanup_vmware_vms
       destroy_terraform_resources
       cleanup_packer_output
       build_packer
       reset_terraform_state
       apply_terraform
-      verify_ssh
       report_execution_time
       echo "# Rebuild All workflow completed successfully."
       break
       ;;
     "Rebuild Packer")
       echo "# Executing Rebuild Packer workflow..."
+      check_vmware_workstation
       cleanup_vmware_vms
       cleanup_packer_output
       build_packer
       report_execution_time
       break
       ;;
+    "Set up Ansible Vault")
+      echo "# Executing Set up Ansible Vault workflow..."
+      setup_ansible_vault
+      echo "# Set up Ansible Vault workflow completed successfully."
+      break
+      ;;
     "Rebuild Terraform")
       echo "# Executing Rebuild Terraform workflow..."
+      check_vmware_workstation
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform
-      verify_ssh
       report_execution_time
       echo "# Rebuild Terraform workflow completed successfully."
       break

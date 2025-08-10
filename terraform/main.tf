@@ -13,6 +13,7 @@ locals {
   worker_ip_list = var.worker_ip_list
   vmx_image_path = abspath("${path.root}/../packer/output/ubuntu-server-vmware/ubuntu-server-24-template-vmware.vmx")
   ansible_inventory_path = abspath("${path.root}/../ansible/")
+  vault_pass_path = abspath("${path.root}/../vault_pass.txt")
 
   master_config = [
     for idx, ip in local.master_ip_list : {
@@ -65,20 +66,19 @@ resource "null_resource" "generate_inventory" {
         for node in local.all_nodes :
         "ssh-keygen -f ~/.ssh/known_hosts -R ${node.ip} || true"
       ])}
-      echo "[master]" > ${local.ansible_inventory_path}/inventory.yml
-      ${join("\n", [
-        for node in local.master_config :
-        "echo 'vm${split(".", node.ip)[3]} ansible_host=${node.ip} ansible_ssh_user=${var.vm_username} ansible_ssh_private_key_file=~/.ssh/id_ed25519_k8s-cluster' >> ${local.ansible_inventory_path}/inventory.yml"
-      ])}
-      echo "\n[workers]" >> ${local.ansible_inventory_path}/inventory.yml
-      ${join("\n", [
-        for node in local.workers_config :
-        "echo 'vm${split(".", node.ip)[3]} ansible_host=${node.ip} ansible_ssh_user=${var.vm_username} ansible_ssh_private_key_file=~/.ssh/id_ed25519_k8s-cluster' >> ${local.ansible_inventory_path}/inventory.yml"
-      ])}
+      echo '${templatefile("${path.module}/../ansible/templates/inventory.yml.tftpl", {
+        master_hostname = "vm${split(".", local.master_config[0].ip)[3]}",
+        master_ip = local.master_config[0].ip,
+        worker_ips = local.workers_config[*].ip,
+        worker_hostname_prefix = "vm",
+        ssh_user = var.vm_username,
+        ssh_key_path = "~/.ssh/id_ed25519_k8s-cluster"
+      })}' > ${local.ansible_inventory_path}/inventory.yml
       chmod 644 ${local.ansible_inventory_path}/inventory.yml
     EOT
   }
 }
+
 resource "null_resource" "start_all_vms" {
   depends_on = [null_resource.generate_inventory]
 
@@ -88,6 +88,16 @@ resource "null_resource" "start_all_vms" {
       ${join("\n", [for node in local.all_nodes : "vmrun -T ws start ${node.path} || echo 'Warning: Failed to start ${node.key}'"])}
       sleep 10
       echo "All VMs started."
+    EOT
+  }
+}
+
+resource "null_resource" "execute_ansible" {
+  depends_on = [null_resource.start_all_vms]
+  provisioner "local-exec" {
+    command = <<EOT
+      ${join("\n", [for node in local.all_nodes : "ssh-keygen -f ~/.ssh/known_hosts -R ${node.ip} || true"])}
+      ansible-playbook -i ${local.ansible_inventory_path}/inventory.yml ${local.ansible_inventory_path}/playbooks/setup_k8s.yml --vault-password-file ${local.vault_pass_path} -e "ansible_ssh_extra_args='-o StrictHostKeyChecking=accept-new'"
     EOT
   }
 }

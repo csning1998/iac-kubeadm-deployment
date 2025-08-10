@@ -14,9 +14,11 @@ packer-playground/output
 .terraform/
 terraform.tfstate
 terraform.tfstate.backup
-
 terraform/vms
 
 # VSCode
 .vscode
 commit-messge.md
+vault_pass.txt
+
+ansible/group_vars/vault.yml
