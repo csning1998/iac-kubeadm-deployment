@@ -1,6 +1,6 @@
 output "master_details" {
   description = "Connection details and IP address for the Kubernetes master node"
-  sensitive   = true
+  sensitive   = false
   value = {
     for node in local.master_config : node.key => {
       ip_address  = node.ip
@@ -11,7 +11,7 @@ output "master_details" {
 
 output "workers_details" {
   description = "Connection details and IP addresses for the Kubernetes worker nodes"
-  sensitive   = true
+  sensitive   = false
   value = {
     for node in local.workers_config : node.key => {
       ip_address  = node.ip
