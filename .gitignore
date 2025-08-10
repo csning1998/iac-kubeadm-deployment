@@ -2,6 +2,10 @@
 packer/secret.auto.pkrvars.hcl
 *.tfvars
 
+# Ansible inventory
+ansible/inventory.yml
+ansible/inventory.yml.bak
+
 # Ignore folder for output *.vdi
 packer/output
 packer-playground/output
@@ -15,3 +19,4 @@ terraform/vms
 
 # VSCode
 .vscode
+commit-messge.md

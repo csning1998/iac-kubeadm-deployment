@@ -12,6 +12,7 @@ locals {
   master_ip_list = var.master_ip_list
   worker_ip_list = var.worker_ip_list
   vmx_image_path = abspath("${path.root}/../packer/output/ubuntu-server-vmware/ubuntu-server-24-template-vmware.vmx")
+  ansible_inventory_path = abspath("${path.root}/../ansible/")
 
   master_config = [
     for idx, ip in local.master_ip_list : {
@@ -53,8 +54,33 @@ resource "null_resource" "generate_ssh_config" {
   }
 }
 
-resource "null_resource" "start_all_vms" {
+resource "null_resource" "generate_inventory" {
   depends_on = [null_resource.configure_nodes]
+
+  provisioner "local-exec" {
+    command = <<EOT
+      mkdir -p ${local.ansible_inventory_path}
+      [ -f ${local.ansible_inventory_path}/inventory.yml ] && cp ${local.ansible_inventory_path}/inventory.yml ${local.ansible_inventory_path}/inventory.yml.bak || true
+      ${join("\n", [
+        for node in local.all_nodes :
+        "ssh-keygen -f ~/.ssh/known_hosts -R ${node.ip} || true"
+      ])}
+      echo "[master]" > ${local.ansible_inventory_path}/inventory.yml
+      ${join("\n", [
+        for node in local.master_config :
+        "echo 'vm${split(".", node.ip)[3]} ansible_host=${node.ip} ansible_ssh_user=${var.vm_username} ansible_ssh_private_key_file=~/.ssh/id_ed25519_k8s-cluster' >> ${local.ansible_inventory_path}/inventory.yml"
+      ])}
+      echo "\n[workers]" >> ${local.ansible_inventory_path}/inventory.yml
+      ${join("\n", [
+        for node in local.workers_config :
+        "echo 'vm${split(".", node.ip)[3]} ansible_host=${node.ip} ansible_ssh_user=${var.vm_username} ansible_ssh_private_key_file=~/.ssh/id_ed25519_k8s-cluster' >> ${local.ansible_inventory_path}/inventory.yml"
+      ])}
+      chmod 644 ${local.ansible_inventory_path}/inventory.yml
+    EOT
+  }
+}
+resource "null_resource" "start_all_vms" {
+  depends_on = [null_resource.generate_inventory]
 
   provisioner "local-exec" {
     command = <<EOT
