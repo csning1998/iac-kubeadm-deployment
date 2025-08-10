@@ -96,7 +96,6 @@ resource "null_resource" "execute_ansible" {
   depends_on = [null_resource.start_all_vms]
   provisioner "local-exec" {
     command = <<EOT
-      ${join("\n", [for node in local.all_nodes : "ssh-keygen -f ~/.ssh/known_hosts -R ${node.ip} || true"])}
       ansible-playbook -i ${local.ansible_inventory_path}/inventory.yml ${local.ansible_inventory_path}/playbooks/setup_k8s.yml --vault-password-file ${local.vault_pass_path} -e "ansible_ssh_extra_args='-o StrictHostKeyChecking=accept-new'"
     EOT
   }

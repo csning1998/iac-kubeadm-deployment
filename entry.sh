@@ -7,8 +7,8 @@ set -e -u
 IP_ENDINGS=(200 210 211 212)
 
 ### Edit `TF_VAR_vm_username` if you want to set the other username. Default is $(whoami)
-TF_VAR_vm_username=$(whoami)
-user="${TF_VAR_vm_username:-$(whoami)}"
+TF_VAR_vm_username=${TF_VAR_vm_username:-$(whoami)}
+user="$TF_VAR_vm_username"
 
 ### READONLY: DO NOT MODIFY
 
@@ -182,7 +182,7 @@ cleanup_packer_output() {
   echo ">>> STEP: Cleaning Packer output directory..."
   cd "${PACKER_DIR}"
   if [ -d ~/.cache/packer ]; then
-    echo "####Cleaning Packer cache, preserving ISOs..."
+    echo "#### Cleaning Packer cache, preserving ISOs..."
     find ~/.cache/packer -mindepth 1 ! -name '*.iso' -exec rm -rf {} + || true
   fi
   rm -rf "${PACKER_OUTPUT_DIR}"
@@ -382,8 +382,9 @@ select opt in "${options[@]}"; do
   case $opt in
     "Setup IaC Environment")
       echo "# Executing Setup IaC Environment workflow..."
-      check_iac_environment
-      setup_iac_environment
+      if check_iac_environment; then
+        setup_iac_environment
+      fi
       check_vmware_workstation
       set_workstation_network
       report_execution_time

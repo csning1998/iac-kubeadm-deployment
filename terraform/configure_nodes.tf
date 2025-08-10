@@ -44,10 +44,12 @@ resource "null_resource" "configure_nodes" {
       "sudo modprobe e1000 || true",
       "sudo udevadm trigger || true",
       # Detect the host-only network interface
+      # The script detects a HOSTONLY_IFACE but then proceeds to hardcode `ens32` in the Netplan configuration, and it assumes the NAT interface is ens33. 
+      # This could fail if the interface names are different on the guest OS. The detected interface name should be used in the Netplan configuration to ensure robustness.
       "HOSTONLY_IFACE=$(ip -o link show | awk -F': ' '{print $2}' | grep -v -e '^lo$' -e '^ens33$' | head -n 1)",
       "if [ -z \"$HOSTONLY_IFACE\" ]; then echo 'Error: Host-only network interface not found'; ip -o link show; exit 1; fi",
       # Configure Netplan with NAT handling external traffic
-      "echo 'network:\n  version: 2\n  ethernets:\n    ens33:\n      dhcp4: true\n      dhcp6: false\n    ens32:\n      dhcp4: false\n      addresses: [${each.value.ip}/24]' | sudo tee /etc/netplan/00-hostonly.yaml",
+      "echo 'network:\n  version: 2\n  ethernets:\n    ens33:\n      dhcp4: true\n      dhcp6: false\n    '$HOSTONLY_IFACE':\n      dhcp4: false\n      addresses: [${each.value.ip}/24]' | sudo tee /etc/netplan/00-hostonly.yaml",
       "sudo chmod 600 /etc/netplan/00-hostonly.yaml",
       # Apply Netplan configuration with error checking and delay
       "if ! sudo netplan apply; then echo 'Error: netplan apply failed'; cat /etc/netplan/00-hostonly.yaml; exit 1; fi",
