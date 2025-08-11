@@ -1,23 +1,29 @@
-# Ignore Packer and Terraform secret variable files
+### Ignore Packer and Terraform secret variable files
 packer/secret.auto.pkrvars.hcl
 *.tfvars
 
-# Ansible inventory
-ansible/inventory.yml
-ansible/inventory.yml.bak
-ansible/group_vars/vault.yml
 
-# Ignore folder for output *.vdi
+### Ansible inventory
+ansible/group_vars/vault.yml
+vault_pass.txt
+
+### Ignore folder for output *.vdi
 packer/output
 packer-playground/output
 
-# Ignore Terraform state files
+
+### Ignore Terraform state files
 .terraform/
 terraform.tfstate
 terraform.tfstate.backup
+# Ignore all VMWare files
 terraform/vms
+# This is processed while executing `entry.sh`
+terraform/setup_ansible.tf.bak
 
-# VSCode
+
+### VSCode
 .vscode
+# Only for recording by commit messages personally.
 commit-message.md
-vault_pass.txt
+entry.sh

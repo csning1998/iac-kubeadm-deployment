@@ -104,11 +104,15 @@ setup_iac_environment() {
 
   read -n 1 -s -r -p "Press any key to continue..."
 
+  sudo apt update
+  echo "#### Install necessary packages/libraries..."
+  sudo apt install -y jq openssh-client python3 software-properties-common wget gnupg lsb-release
+
   # Install HashiCorp Toolkits (Terraform and Packer)
   echo "#### Installing HashiCorp Toolkits (Terraform and Packer)..."
   wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-  sudo apt update && sudo apt install terraform packer -y
+  sudo apt install terraform packer -y
   echo "#### Terraform and Packer installation completed."
 
   # Install Ansible
@@ -224,14 +228,27 @@ destroy_terraform_resources() {
   echo "--------------------------------------------------"
 }
 
-# Function: Deploy Terraform
-apply_terraform() {
-  echo ">>> STEP: Initializing Terraform and applying configuration..."
+# Function: Deploy Terraform Stage 1
+apply_terraform_stage_1() {
+  echo ">>> STEP: Initializing Terraform and applying VM configuration..."
   cd "${TERRAFORM_DIR}"
   terraform init
   terraform validate
-  terraform apply -parallelism=1 -auto-approve
-  echo "#### Terraform apply complete. New VMs are running."
+  echo ">>> Stage 1: Applying VM creation and SSH configuration with parallelism=1..."
+  terraform apply -parallelism=1 -auto-approve -var-file=terraform.tfvars -target=null_resource.configure_nodes -target=null_resource.start_all_vms -target=local_file.ssh_config
+  echo "#### VM creation and SSH configuration complete."
+  echo "--------------------------------------------------"
+}
+
+# Function: Deploy Terraform Stage 2
+apply_terraform_stage_2() {
+  echo ">>> Stage 2: Applying Ansible configuration with default parallelism..."
+  cd "${TERRAFORM_DIR}"
+  terraform init
+  export TF_LOG=TRACE
+  terraform apply -auto-approve -var-file=terraform.tfvars -target=ansible_host.nodes -target=ansible_vault.secrets -target=ansible_playbook.setup_k8s
+  unset TF_LOG
+  echo "#### Ansible configuration complete."
   echo "--------------------------------------------------"
 }
 
@@ -322,17 +339,19 @@ setup_ansible_vault() {
 verify_ssh() {
   echo ">>> STEP: Pruning and reconfiguring SSH connections..."
   known_hosts_file="/home/$user/.ssh/known_hosts"
+  cd "${TERRAFORM_DIR}"
 
-  # Read host aliases from ansible/inventory.yml
-  hosts=$(grep -E '^vm[0-9]+' "${ANSIBLE_DIR}/inventory.yml" | awk '{print $1}')
-  if [ -z "$hosts" ]; then
-    echo "#### Error: No hosts found in ${ANSIBLE_DIR}/inventory.yml"
+  # Read host aliases and IPs from Terraform outputs
+  master_details=$(terraform output -json master_details | jq -r '. | to_entries[] | "vm${split(".", .value.ip_address)[3]} \(.value.ip_address)"')
+  worker_details=$(terraform output -json workers_details | jq -r '. | to_entries[] | "vm${split(".", .value.ip_address)[3]} \(.value.ip_address)"')
+  all_details=$(echo -e "$master_details\n$worker_details" | grep -v '^$')
+
+  if [ -z "$all_details" ]; then
+    echo "#### Error: No hosts found in Terraform outputs (master_details or workers_details)"
     return 1
   fi
 
-  for host in $hosts; do
-    # Extract IP from inventory.yml for known_hosts cleanup
-    ip=$(grep "^$host " "${ANSIBLE_DIR}/inventory.yml" | grep -oP 'ansible_host=\K[\d.]+')
+  while IFS=' ' read -r host ip; do
     echo "#### Processing host: $host ($ip)"
     if [ -f "$known_hosts_file" ]; then
       echo "###### Removing old keys for $host and $ip from $known_hosts_file..."
@@ -344,11 +363,9 @@ verify_ssh() {
     echo "#### Connecting to $host via SSH and executing command..."
     ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "$host" "ip a show ens32 | grep 'inet ' && hostname" || echo "Failed to connect to $host or command execution failed."
     sleep 2
-  done
+  done <<< "$all_details"
 
-  echo "#### Verifying Ansible connectivity..."
-  cd "${ANSIBLE_DIR}"
-  ansible -i inventory.yml all -m ping
+  echo "#### SSH verification complete."
   echo "--------------------------------------------------"
 }
 
@@ -377,7 +394,11 @@ report_execution_time() {
 # Main menu
 echo "VMware Workstation VM Management Script"
 PS3="Please select an action: "
-options=("Setup IaC Environment" "Reset All" "Rebuild All" "Rebuild Packer" "Set up Ansible Vault" "Rebuild Terraform" "Verify SSH" "Quit")
+options=("Setup IaC Environment" "Set up Ansible Vault" 
+        "Reset All" "Rebuild All" "Rebuild Packer" "Rebuild Terraform: All Stage" 
+        "Rebuild Terraform Stage 1: Configure Nodes" "Rebuild Terraform Stage 2: Ansible" 
+        "Verify SSH" "Quit"
+)
 select opt in "${options[@]}"; do
   case $opt in
     "Setup IaC Environment")
@@ -389,6 +410,12 @@ select opt in "${options[@]}"; do
       set_workstation_network
       report_execution_time
       echo "# Setup IaC Environment workflow completed successfully."
+      break
+      ;;
+    "Set up Ansible Vault")
+      echo "# Executing Set up Ansible Vault workflow..."
+      setup_ansible_vault
+      echo "# Set up Ansible Vault workflow completed successfully."
       break
       ;;
     "Reset All")
@@ -410,7 +437,9 @@ select opt in "${options[@]}"; do
       cleanup_packer_output
       build_packer
       reset_terraform_state
-      apply_terraform
+      apply_terraform_stage_1
+      verify_ssh
+      apply_terraform_stage_2
       report_execution_time
       echo "# Rebuild All workflow completed successfully."
       break
@@ -424,18 +453,33 @@ select opt in "${options[@]}"; do
       report_execution_time
       break
       ;;
-    "Set up Ansible Vault")
-      echo "# Executing Set up Ansible Vault workflow..."
-      setup_ansible_vault
-      echo "# Set up Ansible Vault workflow completed successfully."
-      break
-      ;;
-    "Rebuild Terraform")
+    "Rebuild Terraform: All Stage")
       echo "# Executing Rebuild Terraform workflow..."
       check_vmware_workstation
       destroy_terraform_resources
       reset_terraform_state
-      apply_terraform
+      apply_terraform_stage_1
+      # verify_ssh
+      apply_terraform_stage_2
+      report_execution_time
+      echo "# Rebuild Terraform workflow completed successfully."
+      break
+      ;;
+    "Rebuild Terraform Stage 1: Configure Nodes")
+      echo "# Executing Rebuild Terraform workflow..."
+      check_vmware_workstation
+      destroy_terraform_resources
+      reset_terraform_state
+      apply_terraform_stage_1
+      # verify_ssh
+      report_execution_time
+      echo "# Rebuild Terraform workflow completed successfully."
+      break
+      ;;
+    "Rebuild Terraform Stage 2: Ansible")
+      echo "# Executing Rebuild Terraform workflow..."
+      check_vmware_workstation
+      apply_terraform_stage_2
       report_execution_time
       echo "# Rebuild Terraform workflow completed successfully."
       break

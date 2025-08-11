@@ -1,3 +1,8 @@
+/*
+NOTE: Using `local-exec` and `remote-exec` to configure VMs as a workaround 
+due to the lack of a stable VMware Workstation provider. 
+This is a known technical debt.
+*/
 resource "null_resource" "configure_nodes" {
   depends_on = [local_file.ssh_config]
   for_each = { for node in local.all_nodes : node.key => node }
