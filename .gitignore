@@ -5,6 +5,7 @@ packer/secret.auto.pkrvars.hcl
 # Ansible inventory
 ansible/inventory.yml
 ansible/inventory.yml.bak
+ansible/group_vars/vault.yml
 
 # Ignore folder for output *.vdi
 packer/output
@@ -18,7 +19,5 @@ terraform/vms
 
 # VSCode
 .vscode
-commit-messge.md
+commit-message.md
 vault_pass.txt
-
-ansible/group_vars/vault.yml

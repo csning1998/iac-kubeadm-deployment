@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/null"
       version = "3.2.2"
     }
+    ansible = {
+      source  = "ansible/ansible"
+      version = ">= 1.3.0"
+    }
   }
 }
 
@@ -38,65 +42,74 @@ locals {
   all_nodes = concat(local.master_config, local.workers_config)
 }
 
-resource "null_resource" "generate_ssh_config" {
+/*
+Generate a `~/.ssh/config` file in the user's home directory with an alias and a specified public key
+such that it allows for passwordless SSH using the alias (e.g., ssh vm200).
+*/
+resource "local_file" "ssh_config" {
+  content = templatefile("${path.module}/templates/ssh_config.tftpl", {
+    nodes = local.all_nodes,
+    ssh_user = var.vm_username,
+    ssh_key_path = "~/.ssh/id_ed25519_k8s-cluster"
+  })
+  filename = pathexpand("~/.ssh/config")
+  file_permission = "0600"
+
   provisioner "local-exec" {
     command = <<EOT
       mkdir -p ~/.ssh
       if [ ! -f ~/.ssh/id_ed25519_k8s-cluster ]; then
         ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_k8s-cluster -N "" -C "k8s-cluster-key"
       fi
-      echo "# SSH configuration for Kubernetes cluster" > ~/.ssh/config
-      chmod 600 ~/.ssh/config
-      ${join("\n", [
-        for node in local.all_nodes :
-        "echo 'Host vm${split(".", node.ip)[3]}\n  HostName ${node.ip}\n  User ${var.vm_username}\n  IdentityFile ~/.ssh/id_ed25519_k8s-cluster' >> ~/.ssh/config"
-      ])}
     EOT
   }
 }
 
-resource "null_resource" "generate_inventory" {
-  depends_on = [null_resource.configure_nodes]
+resource "ansible_vault" "secrets" {
+  vault_file          = "${local.ansible_inventory_path}/group_vars/vault.yml"
+  vault_password_file = local.vault_pass_path
+}
 
-  provisioner "local-exec" {
-    command = <<EOT
-      mkdir -p ${local.ansible_inventory_path}
-      [ -f ${local.ansible_inventory_path}/inventory.yml ] && cp ${local.ansible_inventory_path}/inventory.yml ${local.ansible_inventory_path}/inventory.yml.bak || true
-      ${join("\n", [
-        for node in local.all_nodes :
-        "ssh-keygen -f ~/.ssh/known_hosts -R ${node.ip} || true"
-      ])}
-      echo '${templatefile("${path.module}/../ansible/templates/inventory.yml.tftpl", {
-        master_hostname = "vm${split(".", local.master_config[0].ip)[3]}",
-        master_ip = local.master_config[0].ip,
-        worker_ips = local.workers_config[*].ip,
-        worker_hostname_prefix = "vm",
-        ssh_user = var.vm_username,
-        ssh_key_path = "~/.ssh/id_ed25519_k8s-cluster"
-      })}' > ${local.ansible_inventory_path}/inventory.yml
-      chmod 644 ${local.ansible_inventory_path}/inventory.yml
-    EOT
+/*
+Dynamically generate an inventory.yml file such that Ansible can SSH to virtual machines and execute playbooks.
+*/
+resource "ansible_host" "nodes" {
+  for_each = { for node in local.all_nodes : node.key => node }
+  name     = "vm${split(".", each.value.ip)[3]}"
+  groups   = startswith(each.value.key, "k8s-master") ? ["master"] : ["workers"]
+  variables = {
+    ansible_host                  = each.value.ip
+    ansible_ssh_user              = var.vm_username
+    ansible_ssh_private_key_file  = "~/.ssh/id_ed25519_k8s-cluster"
+    ansible_ssh_extra_args        = "-o StrictHostKeyChecking=accept-new"
   }
 }
 
+/*
+NOTE: Using `local-exec` to start VMs as a workaround due to the lack of a stable
+VMware Workstation provider. This is a known technical debt.
+*/
 resource "null_resource" "start_all_vms" {
-  depends_on = [null_resource.generate_inventory]
+  depends_on = [null_resource.configure_nodes, local_file.ssh_config]
 
   provisioner "local-exec" {
     command = <<EOT
       echo ">>> STEP: Starting all VMs after configuration..."
       ${join("\n", [for node in local.all_nodes : "vmrun -T ws start ${node.path} || echo 'Warning: Failed to start ${node.key}'"])}
-      sleep 10
+      sleep 30
       echo "All VMs started."
     EOT
   }
 }
 
-resource "null_resource" "execute_ansible" {
-  depends_on = [null_resource.start_all_vms]
-  provisioner "local-exec" {
-    command = <<EOT
-      ansible-playbook -i ${local.ansible_inventory_path}/inventory.yml ${local.ansible_inventory_path}/playbooks/setup_k8s.yml --vault-password-file ${local.vault_pass_path} -e "ansible_ssh_extra_args='-o StrictHostKeyChecking=accept-new'"
-    EOT
+resource "ansible_playbook" "setup_k8s" {
+  depends_on = [null_resource.start_all_vms, ansible_vault.secrets]
+  playbook   = "${local.ansible_inventory_path}/playbooks/setup_k8s.yml"
+  name       = "vm${split(".", local.master_config[0].ip)[3]}"
+  groups     = ["master", "workers"]
+  extra_vars = {
+    ansible_python_interpreter = "/usr/bin/python3"
   }
+  vault_files         = ["${local.ansible_inventory_path}/group_vars/vault.yml"]
+  vault_password_file = local.vault_pass_path
 }

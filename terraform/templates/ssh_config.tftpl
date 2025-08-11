@@ -1,0 +1,7 @@
+%{~ for node in nodes ~}
+Host vm${split(".", node.ip)[3]}
+  HostName ${node.ip}
+  User ${ssh_user}
+  IdentityFile ~/.ssh/id_ed25519_k8s-cluster
+
+%{~ endfor ~}

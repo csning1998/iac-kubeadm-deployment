@@ -1,5 +1,5 @@
 resource "null_resource" "configure_nodes" {
-  depends_on = [null_resource.generate_ssh_config]
+  depends_on = [local_file.ssh_config]
   for_each = { for node in local.all_nodes : node.key => node }
 
   provisioner "local-exec" {
