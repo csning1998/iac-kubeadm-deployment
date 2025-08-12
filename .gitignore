@@ -6,6 +6,7 @@ packer/secret.auto.pkrvars.hcl
 ### Ansible inventory
 ansible/group_vars/vault.yml
 ansible/logs
+ansible/inventory.yml
 vault_pass.txt
 
 ### Ignore folder for output *.vdi

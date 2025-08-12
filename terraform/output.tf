@@ -24,12 +24,12 @@ output "workers_details" {
 
 # Quoting the output of ansible modules
 
-output "ansible_playbook_stdout" {
-  description = "Ansible Playbook CLI stdout output"
-  value       = module.ansible.ansible_playbook_stdout
-}
+# output "ansible_playbook_stdout" {
+#   description = "Ansible Playbook CLI stdout output"
+#   value       = module.ansible.ansible_playbook_stdout
+# }
 
-output "ansible_playbook_stderr" {
-  description = "Ansible Playbook CLI stderr output"
-  value       = module.ansible.ansible_playbook_stderr
-}
+# output "ansible_playbook_stderr" {
+#   description = "Ansible Playbook CLI stderr output"
+#   value       = module.ansible.ansible_playbook_stderr
+# }

@@ -1,0 +1,22 @@
+---
+# Ansible Inventory for Kubernetes cluster
+all:
+  children:
+    master:
+      hosts:
+%{ for i, ip in master_ips ~}
+        k8s-master-${format("%02d", i)}:
+          ansible_host: ${ip}
+%{ endfor ~}
+      vars:
+        ansible_ssh_user: ${ssh_user}
+        ansible_ssh_private_key_file: ~/.ssh/id_ed25519_k8s-cluster
+    workers:
+      hosts:
+%{ for i, ip in worker_ips ~}
+        k8s-worker-${format("%02d", i)}:
+          ansible_host: ${ip}
+%{ endfor ~}
+      vars:
+        ansible_ssh_user: ${ssh_user}
+        ansible_ssh_private_key_file: ~/.ssh/id_ed25519_k8s-cluster
