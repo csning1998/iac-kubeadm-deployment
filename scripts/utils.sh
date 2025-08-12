@@ -2,6 +2,8 @@
 
 # This script contains general utility and helper functions.
 
+SSH_CONFIG="$HOME/.ssh/config"
+
 # Function: Check if VMWare Workstation is installed
 check_vmware_workstation() {
   # Check VMware Workstation
@@ -71,6 +73,61 @@ prompt_verify_ssh() {
   fi
 }
 
+# Function: Add the Include directive to `~/.ssh/config` for the k8s cluster
+add_cluster_ssh() {
+  if [[ -z "$SSH_CONFIG" ]]; then
+    echo "Error: SSH_CONFIG is not defined"
+    exit 1
+  fi
+
+  mkdir -p "$(dirname "$SSH_CONFIG")" || {
+    echo "Error: Failed to create directory $(dirname "$SSH_CONFIG")"
+    exit 1
+  }
+
+  touch "$SSH_CONFIG" || {
+    echo "Error: Cannot touch $SSH_CONFIG"
+    exit 1
+  }
+
+  local include_line="Include $HOME/.ssh/k8s_cluster_config"
+  if ! grep -Fxq "$include_line" "$SSH_CONFIG"; then
+    echo "Appending '$include_line' to $SSH_CONFIG"
+    echo "$include_line" >> "$SSH_CONFIG" || {
+      echo "Error: Failed to append to $SSH_CONFIG"
+      exit 1
+    }
+  else
+    echo "Include line already exists in $SSH_CONFIG"
+  fi
+}
+
+# Function: Remove the Include directive from ~/.ssh/config for the k8s cluster
+remove_cluster_ssh() {
+  if [[ -z "$SSH_CONFIG" ]]; then
+    echo "Error: SSH_CONFIG is not defined"
+    exit 1
+  fi
+
+  local include_line="Include $HOME/.ssh/k8s_cluster_config"
+  if [[ -f "$SSH_CONFIG" ]]; then
+    echo "Removing '$include_line' from $SSH_CONFIG"
+    sed -i "\|$include_line|d" "$SSH_CONFIG" || {
+      echo "Error: Failed to remove line from $SSH_CONFIG"
+      exit 1
+    }
+  else
+    echo "Warning: $SSH_CONFIG does not exist, skipping removal"
+  fi
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  if [[ $# -eq 0 ]]; then
+    echo "Error: No function specified"
+    exit 1
+  fi
+  "$@"
+fi
 # Function: Report execution time
 report_execution_time() {
   local END_TIME DURATION MINUTES SECONDS

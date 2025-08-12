@@ -4,11 +4,11 @@
 */
 resource "local_file" "ssh_config" {
   content = templatefile("${path.module}/../../templates/ssh_config.tftpl", {
-    nodes = var.all_nodes,
-    ssh_user = var.vm_username,
+    nodes        = var.all_nodes,
+    ssh_user     = var.vm_username,
     ssh_key_path = "~/.ssh/id_ed25519_k8s-cluster"
   })
-  filename = pathexpand("~/.ssh/k8s_cluster_config")
+  filename        = pathexpand("~/.ssh/k8s_cluster_config")
   file_permission = "0600"
 
   provisioner "local-exec" {
@@ -22,33 +22,31 @@ resource "local_file" "ssh_config" {
 }
 
 /*
-* Add Include directive to ~/.ssh/config to load k8s_cluster_config
+* NOTE: Call functions in `utils.sh` via local-exec to manage the ~/.ssh/config file. 
+* This avoids deletion during `terraform destroy()` in `scripts/terraform.sh`.
 */
-resource "local_file" "ssh_config_include" {
+resource "null_resource" "ssh_config_include" {
   depends_on = [local_file.ssh_config]
-  content = join("\n", concat(
-    fileexists(pathexpand("~/.ssh/config")) 
-      ? split("\n", file(pathexpand("~/.ssh/config"))) 
-      : [],
-    contains(split("\n", fileexists(pathexpand("~/.ssh/config")) 
-      ? file(pathexpand("~/.ssh/config")) 
-      : ""), 
-    "Include ~/.ssh/k8s_cluster_config") 
-      ? [] 
-      : ["Include ~/.ssh/k8s_cluster_config"]
-  ))
-  filename = pathexpand("~/.ssh/config")
-  file_permission = "0600"
-}
 
+  provisioner "local-exec" {
+    command     = ". ${path.root}/../scripts/utils.sh && add_cluster_ssh"
+    interpreter = ["/bin/bash", "-c"]
+  }
+
+  provisioner "local-exec" {
+    when        = destroy
+    command     = ". ${path.root}/../scripts/utils.sh && remove_cluster_ssh"
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
 /*
 * NOTE: Using local-exec and remote-exec to configure VMs as a workaround 
 * due to the lack of a stable VMware Workstation provider. 
 * This is a known technical debt.
 */
 resource "null_resource" "configure_nodes" {
-  depends_on = [local_file.ssh_config, local_file.ssh_config_include]
-  for_each = { for node in var.all_nodes : node.key => node }
+  depends_on = [local_file.ssh_config, null_resource.ssh_config_include]
+  for_each   = { for node in var.all_nodes : node.key => node }
 
   provisioner "local-exec" {
     command = <<EOT
@@ -120,7 +118,7 @@ resource "null_resource" "configure_nodes" {
 * VMware Workstation provider. This is a known technical debt.
 */
 resource "null_resource" "start_all_vms" {
-  depends_on = [null_resource.configure_nodes, local_file.ssh_config, local_file.ssh_config_include]
+  depends_on = [null_resource.configure_nodes, local_file.ssh_config, null_resource.ssh_config_include]
 
   provisioner "local-exec" {
     command = <<EOT

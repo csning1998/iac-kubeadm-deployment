@@ -51,7 +51,6 @@ readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
 readonly PACKER_DIR="${SCRIPT_DIR}/packer"
 readonly PACKER_OUTPUT_DIR="${PACKER_DIR}/output/${PACKER_OUTPUT_SUBDIR}"
 readonly VMS_BASE_PATH="${TERRAFORM_DIR}/vms"
-
 # Record start time
 readonly START_TIME=$(date +%s)
 
@@ -157,6 +156,7 @@ select opt in "${options[@]}"; do
     "Rebuild Terraform Stage II: Ansible")
       echo "# Executing Rebuild Terraform workflow..."
       check_vmware_workstation
+      verify_ssh
       apply_terraform_stage_II
       report_execution_time
       echo "# Rebuild Terraform workflow completed successfully."

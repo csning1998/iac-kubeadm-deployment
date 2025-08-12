@@ -11,6 +11,7 @@ reset_terraform_state() {
   rm -f .terraform.lock.hcl
   rm -f terraform.tfstate
   rm -f terraform.tfstate.backup
+  rm -rf $HOME/.ssh/k8s_cluster_config
   echo "#### Terraform state reset."
   echo "--------------------------------------------------"
 }
