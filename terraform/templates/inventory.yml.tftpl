@@ -6,7 +6,7 @@ all:
       hosts:
 %{ for i, ip in master_ips ~}
         k8s-master-${format("%02d", i)}:
-          ansible_host: ${ip}
+          ansible_host: vm${split(".", ip)[3]}
 %{ endfor ~}
       vars:
         ansible_ssh_user: ${ssh_user}
@@ -15,7 +15,7 @@ all:
       hosts:
 %{ for i, ip in worker_ips ~}
         k8s-worker-${format("%02d", i)}:
-          ansible_host: ${ip}
+          ansible_host: vm${split(".", ip)[3]}
 %{ endfor ~}
       vars:
         ansible_ssh_user: ${ssh_user}

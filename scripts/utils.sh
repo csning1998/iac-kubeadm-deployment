@@ -2,7 +2,8 @@
 
 # This script contains general utility and helper functions.
 
-SSH_CONFIG="$HOME/.ssh/config"
+readonly SSH_CONFIG="$HOME/.ssh/config"
+readonly KNOWN_HOSTS_FILE="$HOME/.ssh/k8s_cluster_known_hosts"
 
 # Function: Check if VMWare Workstation is installed
 check_vmware_workstation() {
@@ -121,6 +122,30 @@ remove_cluster_ssh() {
   fi
 }
 
+prepare_ansible_known_hosts() {
+  if [ $# -eq 0 ]; then
+    echo "#### Error: No IP addresses provided to prepare_ansible_known_hosts."
+    return 1
+  fi
+  
+  echo ">>> Preparing for Ansible: Clearing old host keys and scanning new ones..."
+  mkdir -p "$HOME/.ssh"
+  rm -f "$KNOWN_HOSTS_FILE"
+  
+  echo "#### Waiting 15 seconds for SSH daemons to be ready..."
+  sleep 15
+  
+  echo "#### Scanning host keys for all nodes..."
+  # Iterate through all IP address parameters passed from `terraform/modules/ansible/main.tf`
+  for ip in "$@"; do
+    echo "      - Scanning $ip"
+    ssh-keyscan -H "$ip" >> "$KNOWN_HOSTS_FILE"
+  done
+  
+  echo "#### Host key scanning complete. File created at $KNOWN_HOSTS_FILE"
+  echo "--------------------------------------------------"
+}
+
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   if [[ $# -eq 0 ]]; then
     echo "Error: No function specified"
@@ -128,6 +153,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   fi
   "$@"
 fi
+
 # Function: Report execution time
 report_execution_time() {
   local END_TIME DURATION MINUTES SECONDS

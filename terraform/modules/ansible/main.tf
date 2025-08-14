@@ -7,7 +7,6 @@ terraform {
   }
 }
 
-
 /*
 * Dynamically generate an inventory for Ansible to SSH to virtual machines and execute playbooks.
 */
@@ -16,10 +15,10 @@ resource "ansible_host" "nodes" {
   name     = "vm${split(".", each.value.ip)[3]}"
   groups   = startswith(each.value.key, "k8s-master") ? ["master"] : ["workers"]
   variables = {
-    ansible_host                  = each.value.ip
-    ansible_ssh_user              = var.vm_username
-    ansible_ssh_private_key_file  = "~/.ssh/id_ed25519_k8s-cluster"
-    ansible_ssh_extra_args        = "-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=~/.ssh/k8s_cluster_config"
+    # ansible_host                 = each.value.ip
+    ansible_ssh_user             = var.vm_username
+    ansible_ssh_private_key_file = "~/.ssh/id_ed25519_k8s-cluster"
+    ansible_ssh_extra_args       = "-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=~/.ssh/k8s_cluster_config"
   }
 }
 
@@ -37,16 +36,20 @@ resource "local_file" "inventory" {
     worker_ips = var.worker_config[*].ip,
     ssh_user   = var.vm_username,
   })
-  filename = "${var.ansible_path}/inventory.yml"
+  filename        = "${var.ansible_path}/inventory.yml"
   file_permission = "0644"
 }
 
 resource "null_resource" "run_ansible" {
   depends_on = [var.vm_status, ansible_vault.secrets, local_file.inventory]
   provisioner "local-exec" {
-    command = <<EOT
+    command     = <<-EOT
+      set -e
+      . ${path.root}/../scripts/utils.sh && prepare_ansible_known_hosts ${join(" ", [for node in var.all_nodes : node.ip])}
+      export ANSIBLE_SSH_ARGS="-o UserKnownHostsFile=~/.ssh/k8s_cluster_known_hosts"
       ansible-playbook -i ${var.ansible_path}/inventory.yml ${var.ansible_path}/playbooks/00-provision_k8s.yml --vault-password-file ${var.vault_pass_path} -vv
     EOT
+    interpreter = ["/bin/bash", "-c"]
   }
 }
 
