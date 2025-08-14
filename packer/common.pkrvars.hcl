@@ -1,5 +1,5 @@
 
-vm_name       = "ubuntu-server-24-template-vmware"
+vm_name       = "ubuntu-server-k8s-based"
 guest_os_type = "ubuntu-64"
 
 iso_url      = "https://releases.ubuntu.com/noble/ubuntu-24.04.2-live-server-amd64.iso"

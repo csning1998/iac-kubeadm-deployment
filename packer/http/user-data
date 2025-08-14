@@ -19,7 +19,7 @@ autoinstall:
 
   # User and Hostname Configuration
   identity:
-    hostname: ubuntu-server-template
+    hostname: ubuntu-server-k8s-based
     username: ${username}
     password: ${password_hash}
 

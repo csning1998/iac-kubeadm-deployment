@@ -1,16 +1,14 @@
 ---
-- name: "Install and configure VMware Tools for Ubuntu"
-  hosts: all
-  become: true
-  tasks:
-    - name: "1. Action: Add Universe and Multiverse repositories"
+- name: Section A. Run OS prerequisites setup
+  block:
+    - name: "Step 1. Action: Add Universe and Multiverse repositories"
       ansible.builtin.apt_repository:
         repo: "deb http://archive.ubuntu.com/ubuntu {{ ansible_distribution_release }} main restricted universe multiverse"
         state: present
         filename: 'ubuntu-with-community'
         update_cache: true
 
-    - name: "2. Action: Install build dependencies"
+    - name: "Step 2. Action: Install build dependencies"
       ansible.builtin.apt:
         name:
           - build-essential
@@ -21,7 +19,7 @@
         state: present
         update_cache: true
 
-    - name: "3. Action: Install open-vm-tools from Ubuntu repository"
+    - name: "Step 3. Action: Install open-vm-tools from Ubuntu repository"
       ansible.builtin.apt:
         name:
           - open-vm-tools
@@ -30,15 +28,15 @@
       notify:
         - Reboot the machine
 
-    - name: "4. Meta: Force all notified handlers to run now"
+    - name: "Step 4. Meta: Force all notified handlers to run now"
       ansible.builtin.meta: flush_handlers
 
-    - name: "5.a Verify: Get list of loaded kernel modules"
+    - name: "Step 5.a Verify: Get list of loaded kernel modules"
       ansible.builtin.command: lsmod
       register: lsmod_result
       changed_when: false
 
-    - name: "5.b Verify: Assert that VMware modules are loaded"
+    - name: "Step 5.b Verify: Assert that VMware modules are loaded"
       ansible.builtin.assert:
         that:
           - "'vmw_balloon' in lsmod_result.stdout"
@@ -46,19 +44,8 @@
         fail_msg: "Verification failed: VMware kernel modules are not loaded."
         success_msg: "Verification successful: VMware kernel modules are loaded."
 
-    - name: "6. Harden: Ensure sshd service is enabled and starts on boot"
+    - name: "Step 6. Harden: Ensure sshd service is enabled and starts on boot"
       ansible.builtin.systemd:
         name: ssh
         state: started
         enabled: true
-
-  handlers:
-    - name: "Reboot the machine"
-      listen: "Reboot the machine"
-      ansible.builtin.reboot:
-        msg: "Rebooting machine to finalize open-vm-tools installation."
-        connect_timeout: 5
-        reboot_timeout: 600
-        pre_reboot_delay: 0
-        post_reboot_delay: 30
-        test_command: whoami
