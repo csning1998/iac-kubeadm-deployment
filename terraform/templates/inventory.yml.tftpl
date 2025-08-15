@@ -7,6 +7,7 @@ all:
 %{ for i, ip in master_ips ~}
         k8s-master-${format("%02d", i)}:
           ansible_host: vm${split(".", ip)[3]}
+          advertise_ip: ${ip}
 %{ endfor ~}
       vars:
         ansible_ssh_user: ${ssh_user}

@@ -43,3 +43,4 @@ terraform/setup_ansible.tf.bak
 # Only for recording by commit messages personally.
 commit-message.md
 entry.sh
+ansible/packer-provisioner-ansible352620792

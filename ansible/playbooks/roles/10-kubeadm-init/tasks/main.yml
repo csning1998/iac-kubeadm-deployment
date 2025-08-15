@@ -1,0 +1,3 @@
+---
+- name: Include master node initialization tasks
+  ansible.builtin.include_tasks: 11-master-node.yml

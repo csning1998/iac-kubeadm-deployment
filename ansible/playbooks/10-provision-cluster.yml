@@ -1,0 +1,12 @@
+---
+- name: "Play: Initialize the Kubernetes master node(s)"
+  hosts: master
+  become: true
+  roles:
+    - 10-kubeadm-init
+
+- name: "Play: Join the Kubernetes worker node(s) to the cluster"
+  hosts: workers
+  become: true
+  roles:
+    - 10-kubeadm-join
