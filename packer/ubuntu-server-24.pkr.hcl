@@ -55,7 +55,7 @@ build {
   sources = ["source.vmware-iso.ubuntu-server"]
 
   provisioner "ansible" {
-    playbook_file = "../ansible/playbooks/00-main.yml"
+    playbook_file = "../ansible/playbooks/00-provision-base-image.yml"
     inventory_directory = "../ansible/"
 
     user          = var.ssh_username

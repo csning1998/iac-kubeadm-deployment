@@ -29,7 +29,9 @@
 
     - name: "Step 3a. Add CRI-O apt repository"
       ansible.builtin.apt_repository:
-        repo: "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://pkgs.k8s.io/addons:/cri-o:/prerelease:/main/deb/ /"
+        repo: >
+          deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg]
+          https://pkgs.k8s.io/addons:/cri-o:/prerelease:/main/deb/ /
         state: present
         filename: crio
 
@@ -37,7 +39,8 @@
       ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600
-      changed_when: false # This task is only for update only, which does not change the states.
+      changed_when: false
+      # This task is only for update only, which does not change the states.
 
     - name: "Step 4. Install CRI-O"
       ansible.builtin.apt:
