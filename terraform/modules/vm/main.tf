@@ -39,6 +39,7 @@ resource "null_resource" "ssh_config_include" {
     interpreter = ["/bin/bash", "-c"]
   }
 }
+
 /*
 * NOTE: Using local-exec and remote-exec to configure VMs as a workaround 
 * due to the lack of a stable VMware Workstation provider. 
@@ -74,7 +75,7 @@ resource "null_resource" "configure_nodes" {
       password = var.vm_password
       host     = try(trimspace(file("${var.vms_dir}/${each.key}/nat_ip.txt")), "failed")
       port     = 22
-      timeout  = "10m"
+      timeout  = "3m"
       agent    = false
     }
 
@@ -84,14 +85,19 @@ resource "null_resource" "configure_nodes" {
       "sudo systemctl disable cloud-init || true",
       "sudo systemctl stop cloud-init || true",
       "sudo touch /etc/cloud/cloud-init.disabled || true",
+      "sudo rm -f /etc/machine-id",                      # Reset machine-id to avoid DUID conflicts
+      "sudo systemd-machine-id-setup",                   # Generate new machine-id
+      "sudo systemctl stop systemd-networkd || true",    # Stop networkd to prevent DHCP interference
+      "sudo systemctl disable systemd-networkd || true", # Disable networkd
       "sudo modprobe e1000 || true",
       "sudo udevadm trigger || true",
       "HOSTONLY_IFACE=$(ip -o link show | awk -F': ' '{print $2}' | grep -v -e '^lo$' -e '^ens33$' | head -n 1)",
       "if [ -z \"$HOSTONLY_IFACE\" ]; then echo 'Error: Host-only network interface not found'; ip -o link show; exit 1; fi",
-      "echo 'network:\n  version: 2\n  ethernets:\n    ens33:\n      dhcp4: true\n      dhcp6: false\n    '$HOSTONLY_IFACE':\n      dhcp4: false\n      addresses: [${each.value.ip}/24]' | sudo tee /etc/netplan/00-hostonly.yaml",
+      "echo 'network:\n  version: 2\n  ethernets:\n    ens33:\n      dhcp4: false\n      addresses: [172.16.86.${split(".", each.value.ip)[3]}/24]\n      nameservers:\n        addresses: [8.8.8.8, 8.8.4.4]\n      dhcp6: false\n    '$HOSTONLY_IFACE':\n      dhcp4: false\n      addresses: [${each.value.ip}/24]' | sudo tee /etc/netplan/00-hostonly.yaml",
       "sudo chmod 600 /etc/netplan/00-hostonly.yaml",
-      "if ! sudo netplan apply; then echo 'Error: netplan apply failed'; cat /etc/netplan/00-hostonly.yaml; exit 1; fi",
+      "sudo netplan apply || { echo 'Error: netplan apply failed'; cat /etc/netplan/00-hostonly.yaml; exit 1; }",
       "sleep 5",
+      "sudo ip link set $HOSTONLY_IFACE up", # Explicitly bring up host-only interface
       "sudo hostnamectl set-hostname ${each.key}",
       "mkdir -p ~/.ssh",
       "chmod 700 ~/.ssh",
@@ -102,7 +108,6 @@ resource "null_resource" "configure_nodes" {
       "sudo sed -i 's/#AuthorizedKeysFile/AuthorizedKeysFile/' /etc/ssh/sshd_config",
       "sudo systemctl restart sshd"
     ]
-
     on_failure = continue
   }
 
@@ -124,7 +129,7 @@ resource "null_resource" "start_all_vms" {
     command = <<EOT
       echo ">>> STEP: Starting all VMs after configuration..."
       ${join("\n", [for node in var.all_nodes : "vmrun -T ws start ${node.path} || echo 'Warning: Failed to start ${node.key}'"])}
-      sleep 60
+      sleep 20
       echo "All VMs started."
     EOT
   }

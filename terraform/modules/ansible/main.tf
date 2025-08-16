@@ -47,7 +47,7 @@ resource "null_resource" "run_ansible" {
       set -e
       . ${path.root}/../scripts/utils.sh && prepare_ansible_known_hosts ${join(" ", [for node in var.all_nodes : node.ip])}
       export ANSIBLE_SSH_ARGS="-o UserKnownHostsFile=~/.ssh/k8s_cluster_known_hosts"
-      ansible-playbook -i ${var.ansible_path}/inventory.yml ${var.ansible_path}/playbooks/00-provision_k8s.yml --vault-password-file ${var.vault_pass_path} -vv
+      ansible-playbook -i ${var.ansible_path}/inventory.yml ${var.ansible_path}/playbooks/10-provision-cluster.yml --vault-password-file ${var.vault_pass_path} -vv
     EOT
     interpreter = ["/bin/bash", "-c"]
   }
@@ -56,7 +56,7 @@ resource "null_resource" "run_ansible" {
 # resource "ansible_playbook" "provision_k8s" {
 #   for_each            = { for node in var.all_nodes : node.key => node }
 #   depends_on          = [var.vm_status, ansible_vault.secrets]
-#   playbook            = "${var.ansible_path}/playbooks/00-provision_k8s.yml"
+#   playbook            = "${var.ansible_path}/playbooks/10-provision-cluster.yml"
 #   name                = "vm${split(".", each.value.ip)[3]}"
 #   groups              = ["master", "workers"]
 #   vault_files         = ["${var.ansible_path}/group_vars/vault.yml"]

@@ -18,7 +18,7 @@
 VM_USERNAME=""
 
 # Packer template name. This is used for naming the output directory and for cleanup.
-PACKER_VM_NAME="ubuntu-server-24-template-vmware"
+PACKER_VM_NAME="ubuntu-server-k8s-based"
 
 # The subdirectory name within `packer/output/` where the built VM files will be stored.
 PACKER_OUTPUT_SUBDIR="ubuntu-server-vmware"

@@ -7,6 +7,7 @@ packer/secret.auto.pkrvars.hcl
 ansible/group_vars/vault.yml
 ansible/logs
 ansible/inventory.yml
+ansible/packer-provisioner-ansible352620792
 vault_pass.txt
 
 ### Ignore folder for output *.vdi
@@ -43,4 +44,3 @@ terraform/setup_ansible.tf.bak
 # Only for recording by commit messages personally.
 commit-message.md
 entry.sh
-ansible/packer-provisioner-ansible352620792
