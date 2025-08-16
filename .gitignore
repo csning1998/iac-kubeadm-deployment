@@ -1,24 +1,45 @@
-# Ignore Packer and Terraform secret variable files
+### Ignore Packer and Terraform secret variable files
 packer/secret.auto.pkrvars.hcl
 *.tfvars
 
-# Ansible inventory
-ansible/inventory.yml
-ansible/inventory.yml.bak
 
-# Ignore folder for output *.vdi
+### Ansible inventory
+ansible/group_vars/vault.yml
+ansible/logs
+ansible/inventory.yml
+ansible/packer-provisioner-ansible352620792
+vault_pass.txt
+
+### Ignore folder for output *.vdi
 packer/output
 packer-playground/output
 
-# Ignore Terraform state files
+
+### Ignore Terraform state files
 .terraform/
 terraform.tfstate
 terraform.tfstate.backup
+# Ignore all VMWare files
 terraform/vms
+# This is processed while executing `entry.sh`
+terraform/setup_ansible.tf.bak
 
-# VSCode
+
+### IDEs
 .vscode
-commit-messge.md
-vault_pass.txt
+.idea
 
-ansible/group_vars/vault.yml
+## From JetBrain
+# Default ignored files
+/shelf/
+/workspace.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Environment-dependent path to Maven home directory
+/mavenHomeManager.xml
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+
+# Only for recording by commit messages personally.
+commit-message.md

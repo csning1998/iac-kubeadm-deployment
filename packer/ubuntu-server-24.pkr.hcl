@@ -42,7 +42,7 @@ source "vmware-iso" "ubuntu-server" {
   # SSH Configuration for Provisioning
   ssh_username = var.ssh_username
   ssh_password = var.ssh_password
-  ssh_timeout  = "99m"
+  ssh_timeout  = "10m"
 
   # Shutdown & Output Configuration
   shutdown_command = "sudo shutdown -P now"
@@ -55,10 +55,18 @@ build {
   sources = ["source.vmware-iso.ubuntu-server"]
 
   provisioner "ansible" {
-    playbook_file = "./playbooks/provision.yml"
+    playbook_file = "../ansible/playbooks/00-provision-base-image.yml"
+    inventory_directory = "../ansible/"
+
     user          = var.ssh_username
+    
     extra_arguments = [
-      "--extra-vars", "ansible_become_pass=${var.ssh_password}"
+      "--extra-vars", "ansible_become_pass=${var.ssh_password}",
+      "--extra-vars", "expected_hostname=${var.vm_name}",
+      "--extra-vars", "ssh_user=${var.ssh_username}",
+      "-v",
+      # "-vv",
+      # "-vvv",
     ]
   }
 }

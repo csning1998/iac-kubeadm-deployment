@@ -4,8 +4,8 @@
 
 variable "vm_name" {
   type        = string
-  default     = "ubuntu-server-24-template"
-  description = "Name of the VM in VirtualBox during the build."
+  default     = "ubuntu-server-24-k8s-template"
+  description = "Name of the VM in VMWare Workstation during the build."
 }
 
 variable "guest_os_type" {
