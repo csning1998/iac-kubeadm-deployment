@@ -79,7 +79,57 @@ control_vms() {
       fi
       echo "--- All targeted VM stop procedures completed ---"
       ;;
-    status)
+    delete)
+      echo ">>> Deleting all VMs located under ${VMS_BASE_PATH}..."
+      # Find all .vmx files in the target directory
+      local vmx_files
+      vmx_files=$(find "${VMS_BASE_PATH}" -mindepth 2 -maxdepth 2 -type f -name "*.vmx")
+
+      if [ -z "$vmx_files" ]; then
+        echo "Warning: No .vmx files found in '${VMS_BASE_PATH}'."
+        return
+      fi
+
+      while IFS= read -r vmx_path; do
+        local vm_name
+        vm_name=$(basename "$(dirname "$vmx_path")")
+        # Check if VM is running
+        if vmrun list | grep -q -F "$vmx_path"; then
+          echo "VM '$vm_name' is running, attempting to stop..."
+          vmrun stop "$vmx_path" soft || {
+            echo "Warning: Failed to stop VM '$vm_name', attempting hard stop..."
+            vmrun stop "$vmx_path" hard || {
+              echo "Error: Failed to stop VM '$vm_name'. Skipping deletion."
+              continue
+            }
+          }
+          echo "VM '$vm_name' stopped successfully."
+        else
+          echo "VM '$vm_name' is not running."
+        fi
+
+        # Delete VM from VMware inventory
+        echo "Deleting VM '$vm_name' from VMware inventory..."
+        vmrun deleteVM "$vmx_path" || {
+          echo "Error: Failed to delete VM '$vm_name' from inventory."
+          continue
+        }
+
+        # Remove VM directory
+        local vm_dir
+        vm_dir=$(dirname "$vmx_path")
+        if [ -d "$vm_dir" ]; then
+          echo "Removing VM directory: $vm_dir..."
+          rm -rf "$vm_dir" || {
+            echo "Error: Failed to remove VM directory '$vm_dir'."
+            continue
+          }
+          echo "VM directory '$vm_dir' removed successfully."
+        fi
+      done <<< "$vmx_files"
+      echo "--- All VM deletion procedures completed ---"
+      ;;
+  status)
       echo ">>> Checking status of all running VMs..."
       vmrun list
       echo "--- Status check completed ---"

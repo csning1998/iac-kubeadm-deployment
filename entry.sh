@@ -74,6 +74,7 @@ options=(
     "Check VM Status"
     "Start All VMs"
     "Stop All VMs"
+    "Delete All VMs"
     "Quit"
 )
 select opt in "${options[@]}"; do
@@ -187,6 +188,13 @@ select opt in "${options[@]}"; do
       control_vms "stop"
       report_execution_time
       echo "# Stop All VMs completed."
+      break
+      ;;
+    "Delete All VMs")
+      echo "# Executing Deletion of All VMs..."
+      control_vms "delete"
+      report_execution_time
+      echo "# Start All VMs completed."
       break
       ;;
     "Quit")
