@@ -1,0 +1,13 @@
+---
+- name: Section D. Generate and register the cluster join command
+  block:
+    - name: "Step 1. Generate and store join command"
+      ansible.builtin.command: kubeadm token create --print-join-command
+      register: join_command
+      changed_when: false
+
+    - name: "Step 2. Register join command as a fact"
+      ansible.builtin.set_fact:
+        # Store the command in a variable that is visible to all hosts in subsequent plays.
+        kubeadm_join_command: "{{ join_command.stdout_lines[0] }}"
+      when: join_command.stdout_lines | length > 0
