@@ -23,6 +23,9 @@ PACKER_VM_NAME="ubuntu-server-k8s-based"
 # The subdirectory name within `packer/output/` where the built VM files will be stored.
 PACKER_OUTPUT_SUBDIR="ubuntu-server-vmware"
 
+# The generate_ssh_key function allows creating a key with a custom name.
+SSH_PRIVATE_KEY="$HOME/.ssh/id_ed25519_iac_automation"
+
 ###
 # Network Configuration
 ###

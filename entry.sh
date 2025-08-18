@@ -51,7 +51,7 @@ readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
 readonly PACKER_DIR="${SCRIPT_DIR}/packer"
 readonly PACKER_OUTPUT_DIR="${PACKER_DIR}/output/${PACKER_OUTPUT_SUBDIR}"
 readonly VMS_BASE_PATH="${TERRAFORM_DIR}/vms"
-readonly USER_HOME_DIR="/home/$(whoami)"
+readonly USER_HOME_DIR="${HOME}"
 
 
 ###
@@ -109,6 +109,7 @@ select opt in "${options[@]}"; do
       echo "# Executing Reset All workflow..."
       check_vmware_workstation
       cleanup_vmware_vms
+      control_terraform_vms "delete"
       destroy_terraform_resources
       cleanup_packer_output
       reset_terraform_state
@@ -186,28 +187,28 @@ select opt in "${options[@]}"; do
       ;;
     "Check VM Status")
       echo "# Executing Check VM Status..."
-      control_vms "status"
+      control_terraform_vms "status"
       report_execution_time
       echo "# Check VM Status completed."
       break
       ;;
     "Start All VMs")
       echo "# Executing Start All VMs..."
-      control_vms "start"
+      control_terraform_vms "start"
       report_execution_time
       echo "# Start All VMs completed."
       break
       ;;
     "Stop All VMs")
       echo "# Executing Stop All VMs..."
-      control_vms "stop"
+      control_terraform_vms "stop"
       report_execution_time
       echo "# Stop All VMs completed."
       break
       ;;
     "Delete All VMs")
       echo "# Executing Deletion of All VMs..."
-      control_vms "delete"
+      control_terraform_vms "delete"
       report_execution_time
       echo "# Start All VMs completed."
       break

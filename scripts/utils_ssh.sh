@@ -4,7 +4,6 @@
 
 readonly SSH_CONFIG="$HOME/.ssh/config"
 readonly KNOWN_HOSTS_FILE="$HOME/.ssh/k8s_cluster_known_hosts"
-readonly SSH_PRIVATE_KEY="$HOME/.ssh/id_ed25519_iac_automation"
 
 # Function: Check if VMWare Workstation is installed
 check_vmware_workstation() {
@@ -110,7 +109,7 @@ verify_ssh() {
         -o ConnectTimeout=10 \
         -o BatchMode=yes \
         -o PasswordAuthentication=no \
-        -o StrictHostKeyChecking=accept-new \
+        -o StrictHostKeyChecking=yes \
         -o UserKnownHostsFile="$known_hosts_file" \
       "$host" true
 
@@ -193,14 +192,21 @@ bootstrap_ssh_known_hosts() {
   mkdir -p "$HOME/.ssh"
   rm -f "$KNOWN_HOSTS_FILE"
   
-  echo "#### Waiting 10 seconds for SSH daemons to be ready..."
-  sleep 10
-  
   echo "#### Scanning host keys for all nodes..."
   # Iterate through all IP address parameters passed from `terraform/modules/ansible/main.tf`
   for ip in "$@"; do
-    echo "      - Scanning $ip"
-    ssh-keyscan -H "$ip" >> "$KNOWN_HOSTS_FILE"
+    echo "#### Waiting for SSH on ${ip} to be ready..."
+    for i in {1..30}; do # Wait for up to 30 seconds
+      if ssh-keyscan -H "$ip" >> "$KNOWN_HOSTS_FILE" 2>/dev/null; then
+        echo "      - Scanned key for ${ip}"
+        break
+      fi
+      if [ "$i" -eq 30 ]; then
+        echo "#### Error: Timed out waiting for SSH on ${ip}."
+        return 1
+      fi
+      sleep 1
+    done
   done
   
   echo "#### Host key scanning complete. File created at $KNOWN_HOSTS_FILE"

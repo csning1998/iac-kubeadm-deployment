@@ -10,5 +10,5 @@ all:
     workers:
       hosts:
 %{ for node in worker_nodes ~}
-        ${node.key}
+        ${node.key}:
 %{ endfor ~}

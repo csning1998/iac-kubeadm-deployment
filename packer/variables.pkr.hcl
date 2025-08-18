@@ -60,7 +60,7 @@ variable "ssh_password_hash" {
 
 variable "ssh_public_key_path" {
   type        = string
-  description = "Path tot he SSH Public Key for the automation user."
+  description = "Path to the SSH Public Key for the automation user."
 }
 
 variable "scripts" {
