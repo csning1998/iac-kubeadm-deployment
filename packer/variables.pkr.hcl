@@ -58,6 +58,11 @@ variable "ssh_password_hash" {
   sensitive   = true
 }
 
+variable "ssh_public_key_path" {
+  type        = string
+  description = "Path tot he SSH Public Key for the automation user."
+}
+
 variable "scripts" {
   type        = list(string)
   default     = null

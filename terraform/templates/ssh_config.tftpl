@@ -1,7 +1,9 @@
 %{~ for node in nodes ~}
-Host vm${split(".", node.ip)[3]}
+Host ${node.key}
   HostName ${node.ip}
   User ${ssh_user}
-  IdentityFile ~/.ssh/id_ed25519_k8s-cluster
+  IdentityFile ${ssh_private_key_path}
+  StrictHostKeyChecking yes
+  UserKnownHostsFile ~/.ssh/k8s_cluster_known_hosts
 
 %{~ endfor ~}

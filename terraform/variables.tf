@@ -12,13 +12,17 @@ variable "vm_password" {
   sensitive   = true
 }
 
+variable "ssh_private_key_path" {
+  type        = string
+  description = "Path to the SSH private key for connecting to the VMs."
+}
+
 ### Variables to Configure IP Addresses for Master Node(s) and Worker Nodes. 
 
 variable "master_ip_list" {
   description = "IP address list for the Kubernetes master node"
   type        = list(string)
-  # Add IP for setting up High Abilities
-  default     = ["172.16.134.200"]
+  default     = ["172.16.134.200"] # Add IP for setting up High Abilities
 }
 
 variable "worker_ip_list" {

@@ -15,15 +15,12 @@
         owner: "{{ ssh_user }}"
         group: "{{ ssh_user }}"
 
-    - name: "Step 2. Verify SSH public key"
-      ansible.builtin.lineinfile:
+    - name: "Step 2. Install the automated SSH public key for automation"
+      ansible.posix.authorized_key:
+        user: "{{ ssh_user }}"
+        key: "{{ lookup('file', public_key_file) }}"
         path: "/home/{{ ssh_user }}/.ssh/authorized_keys"
-        line: "{{ lookup('file', '~/.ssh/id_ed25519_k8s-cluster.pub') }}"
         state: present
-        mode: '0600'
-        owner: "{{ ssh_user }}"
-        group: "{{ ssh_user }}"
-        create: true
 
     - name: "Step 3. Clean up temporary files"
       ansible.builtin.file:

@@ -30,7 +30,7 @@ for lib in "${SCRIPTS_LIB_DIR}"/*.sh; do
     # shellcheck source=scripts/terraform.sh
     # shellcheck source=scripts/ansible.sh
     # shellcheck source=scripts/vm_control.sh
-    # shellcheck source=scripts/utils.sh
+    # shellcheck source=scripts/utils_ssh.sh
     source "$lib"
   else
     echo "Error: Cannot read function library file '$lib'." >&2
@@ -51,8 +51,8 @@ readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
 readonly PACKER_DIR="${SCRIPT_DIR}/packer"
 readonly PACKER_OUTPUT_DIR="${PACKER_DIR}/output/${PACKER_OUTPUT_SUBDIR}"
 readonly VMS_BASE_PATH="${TERRAFORM_DIR}/vms"
-# Record start time
-readonly START_TIME=$(date +%s)
+readonly USER_HOME_DIR="/home/$(whoami)"
+
 
 ###
 # MAIN EXECUTION MENU
@@ -62,7 +62,8 @@ readonly START_TIME=$(date +%s)
 echo "VMware Workstation VM Management Script"
 PS3="Please select an action: "
 options=(
-    "Setup IaC Environment" 
+    "Setup IaC Environment"
+    "Generate SSH Key"
     "Set up Ansible Vault" 
     "Reset All" 
     "Rebuild All" 
@@ -78,6 +79,8 @@ options=(
     "Quit"
 )
 select opt in "${options[@]}"; do
+  # Record start time
+  readonly START_TIME=$(date +%s)
   case $opt in
     "Setup IaC Environment")
       echo "# Executing Setup IaC Environment workflow..."
@@ -88,6 +91,12 @@ select opt in "${options[@]}"; do
       set_workstation_network
       report_execution_time
       echo "# Setup IaC Environment workflow completed successfully."
+      break
+      ;;
+    "Generate SSH Key")
+      echo "# Generate SSH Key for this project..."
+      generate_ssh_key
+      echo "# SSH Key successfully generated in the path '~/.ssh'."
       break
       ;;
     "Set up Ansible Vault")
@@ -110,6 +119,7 @@ select opt in "${options[@]}"; do
     "Rebuild All")
       echo "# Executing Rebuild All workflow..."
       check_vmware_workstation
+      if ! check_ssh_key_exists; then break; fi
       cleanup_vmware_vms
       destroy_terraform_resources
       cleanup_packer_output
@@ -125,6 +135,7 @@ select opt in "${options[@]}"; do
     "Rebuild Packer")
       echo "# Executing Rebuild Packer workflow..."
       check_vmware_workstation
+      if ! check_ssh_key_exists; then break; fi
       cleanup_vmware_vms
       cleanup_packer_output
       build_packer
@@ -134,6 +145,7 @@ select opt in "${options[@]}"; do
     "Rebuild Terraform: All Stage")
       echo "# Executing Rebuild Terraform workflow..."
       check_vmware_workstation
+      if ! check_ssh_key_exists; then break; fi
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform_stage_I
@@ -146,6 +158,7 @@ select opt in "${options[@]}"; do
     "Rebuild Terraform Stage I: Configure Nodes")
       echo "# Executing Rebuild Terraform workflow..."
       check_vmware_workstation
+      if ! check_ssh_key_exists; then break; fi
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform_stage_I
@@ -157,6 +170,7 @@ select opt in "${options[@]}"; do
     "Rebuild Terraform Stage II: Ansible")
       echo "# Executing Rebuild Terraform workflow..."
       check_vmware_workstation
+      if ! check_ssh_key_exists; then break; fi
       verify_ssh
       apply_terraform_stage_II
       report_execution_time
@@ -165,6 +179,7 @@ select opt in "${options[@]}"; do
       ;;
     "Verify SSH")
       echo "# Executing Verify SSH workflow..."
+      if ! check_ssh_key_exists; then break; fi
       prompt_verify_ssh
       echo "# Verify SSH workflow completed successfully."
       break

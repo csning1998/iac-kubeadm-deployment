@@ -1,0 +1,15 @@
+---
+network:
+  version: 2
+  ethernets:
+    ens33:
+      dhcp4: false
+      addresses:
+        - ${nat_ip_cidr}
+      nameservers:
+        addresses: [8.8.8.8, 8.8.4.4]
+      dhcp6: false
+    ${hostonly_iface}:
+      dhcp4: false
+      addresses:
+        - ${hostonly_ip_cidr}
