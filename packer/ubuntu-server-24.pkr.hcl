@@ -61,9 +61,10 @@ build {
     user          = var.ssh_username
     
     extra_arguments = [
-      "--extra-vars", "ansible_become_pass=${var.ssh_password}",
       "--extra-vars", "expected_hostname=${var.vm_name}",
       "--extra-vars", "ssh_user=${var.ssh_username}",
+      "--extra-vars", "ansible_become_pass=${var.ssh_password}",
+      "--extra-vars", "public_key_file=${var.ssh_public_key_path}",
       "-v",
       # "-vv",
       # "-vvv",

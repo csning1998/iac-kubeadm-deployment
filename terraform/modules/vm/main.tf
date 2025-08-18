@@ -3,39 +3,30 @@
 * for passwordless SSH using the alias (e.g., ssh vm200).
 */
 resource "local_file" "ssh_config" {
-  content = templatefile("${path.module}/../../templates/ssh_config.tftpl", {
-    nodes        = var.all_nodes,
-    ssh_user     = var.vm_username,
-    ssh_key_path = "~/.ssh/id_ed25519_k8s-cluster"
+  content = templatefile("${path.root}/templates/ssh_config.tftpl", {
+    nodes                = var.all_nodes,
+    ssh_user             = var.vm_username,
+    ssh_private_key_path = var.ssh_private_key_path
   })
   filename        = pathexpand("~/.ssh/k8s_cluster_config")
   file_permission = "0600"
-
-  provisioner "local-exec" {
-    command = <<EOT
-      mkdir -p ~/.ssh
-      if [ ! -f ~/.ssh/id_ed25519_k8s-cluster ]; then
-        ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_k8s-cluster -N "" -C "k8s-cluster-key"
-      fi
-    EOT
-  }
 }
 
 /*
-* NOTE: Call functions in `utils.sh` via local-exec to manage the ~/.ssh/config file. 
+* NOTE: Call functions in `utils_ssh.sh` via local-exec to manage the ~/.ssh/config file. 
 * This avoids deletion during `terraform destroy()` in `scripts/terraform.sh`.
 */
 resource "null_resource" "ssh_config_include" {
   depends_on = [local_file.ssh_config]
 
   provisioner "local-exec" {
-    command     = ". ${path.root}/../scripts/utils.sh && add_cluster_ssh"
+    command     = ". ${path.root}/../scripts/utils_ssh.sh && integrate_ssh_config"
     interpreter = ["/bin/bash", "-c"]
   }
 
   provisioner "local-exec" {
     when        = destroy
-    command     = ". ${path.root}/../scripts/utils.sh && remove_cluster_ssh"
+    command     = ". ${path.root}/../scripts/utils_ssh.sh && deintegrate_ssh_config"
     interpreter = ["/bin/bash", "-c"]
   }
 }
@@ -70,13 +61,13 @@ resource "null_resource" "configure_nodes" {
 
   provisioner "remote-exec" {
     connection {
-      type     = "ssh"
-      user     = var.vm_username
-      password = var.vm_password
-      host     = try(trimspace(file("${var.vms_dir}/${each.key}/nat_ip.txt")), "failed")
-      port     = 22
-      timeout  = "3m"
-      agent    = false
+      type        = "ssh"
+      user        = var.vm_username
+      private_key = file(var.ssh_private_key_path)
+      host        = try(trimspace(file("${var.vms_dir}/${each.key}/nat_ip.txt")), "failed")
+      port        = 22
+      timeout     = "3m"
+      agent       = false
     }
 
     inline = [
@@ -99,10 +90,6 @@ resource "null_resource" "configure_nodes" {
       "sleep 5",
       "sudo ip link set $HOSTONLY_IFACE up", # Explicitly bring up host-only interface
       "sudo hostnamectl set-hostname ${each.key}",
-      "mkdir -p ~/.ssh",
-      "chmod 700 ~/.ssh",
-      "echo '${file("~/.ssh/id_ed25519_k8s-cluster.pub")}' > ~/.ssh/authorized_keys",
-      "chmod 600 ~/.ssh/authorized_keys",
       "chmod 755 /home/${var.vm_username}",
       "sudo sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config",
       "sudo sed -i 's/#AuthorizedKeysFile/AuthorizedKeysFile/' /etc/ssh/sshd_config",
@@ -110,27 +97,23 @@ resource "null_resource" "configure_nodes" {
     ]
     on_failure = continue
   }
-
-  provisioner "local-exec" {
-    command = <<EOT
-      vmrun -T ws stop ${each.value.path} hard || true
-    EOT
-  }
 }
 
 /*
-* NOTE: Using local-exec to start VMs as a workaround due to the lack of a stable
-* VMware Workstation provider. This is a known technical debt.
+* This makes sure this resource runs only after the "for_each" loop
+* in "configure_nodes" has completed for all nodes.
 */
-resource "null_resource" "start_all_vms" {
-  depends_on = [null_resource.configure_nodes, local_file.ssh_config, null_resource.ssh_config_include]
+resource "null_resource" "prepare_ssh_access" {
+  depends_on = [null_resource.configure_nodes]
 
   provisioner "local-exec" {
-    command = <<EOT
-      echo ">>> STEP: Starting all VMs after configuration..."
-      ${join("\n", [for node in var.all_nodes : "vmrun -T ws start ${node.path} || echo 'Warning: Failed to start ${node.key}'"])}
-      sleep 20
-      echo "All VMs started."
+    command     = <<-EOT
+      set -e
+      echo ">>> Verifying VM liveness and preparing SSH access..."
+      . ${path.root}/../scripts/utils_ssh.sh
+      bootstrap_ssh_known_hosts ${join(" ", [for node in var.all_nodes : node.ip])}
+      echo ">>> Liveness check passed. SSH access is ready."
     EOT
+    interpreter = ["/bin/bash", "-c"]
   }
 }

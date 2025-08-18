@@ -4,40 +4,10 @@ variable "vm_username" {
   sensitive   = false
 }
 
-variable "vm_password" {
-  description = "Password for SSH access to the VMs"
+variable "ssh_private_key_path" {
+  description = "Path to the SSH private key for connecting to the VMs."
   type        = string
   sensitive   = true
-}
-
-variable "master_ip_list" {
-  description = "IP address list for the Kubernetes master node"
-  type        = list(string)
-}
-
-variable "worker_ip_list" {
-  description = "IP address list for the Kubernetes worker nodes"
-  type        = list(string)
-}
-
-variable "master_vcpu" {
-  description = "Number of vCPUs for the Kubernetes master node"
-  type        = number
-}
-
-variable "master_ram" {
-  description = "Amount of RAM (in MB) for the Kubernetes master node"
-  type        = number
-}
-
-variable "worker_vcpu" {
-  description = "Number of vCPUs for each Kubernetes worker node"
-  type        = number
-}
-
-variable "worker_ram" {
-  description = "Amount of RAM (in MB) for each Kubernetes worker node"
-  type        = number
 }
 
 variable "vms_dir" {
@@ -52,7 +22,7 @@ variable "vmx_image_path" {
 
 variable "all_nodes" {
   description = "List of all nodes (master and workers)"
-  type        = list(object({
+  type = list(object({
     key  = string
     ip   = string
     vcpu = number

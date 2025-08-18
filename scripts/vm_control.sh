@@ -16,7 +16,7 @@ cleanup_vmware_vms() {
 }
 
 # Function: Batch control VMs (start, stop, status)
-control_vms() {
+control_terraform_vms() {
   local ACTION=$1
   echo ">>> STEP: Executing VM batch control: ${ACTION^^}..."
 
@@ -135,7 +135,7 @@ control_vms() {
       echo "--- Status check completed ---"
       ;;
     *)
-      echo "Error: Invalid action '$ACTION' for control_vms function."
+      echo "Error: Invalid action '$ACTION' for control_terraform_vms function."
       return 1
       ;;
   esac

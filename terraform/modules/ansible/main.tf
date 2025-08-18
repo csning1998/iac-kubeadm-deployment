@@ -12,13 +12,10 @@ terraform {
 */
 resource "ansible_host" "nodes" {
   for_each = { for node in var.all_nodes : node.key => node }
-  name     = "vm${split(".", each.value.ip)[3]}"
+  name     = each.value.key
   groups   = startswith(each.value.key, "k8s-master") ? ["master"] : ["workers"]
   variables = {
-    # ansible_host                 = each.value.ip
-    ansible_ssh_user             = var.vm_username
-    ansible_ssh_private_key_file = "~/.ssh/id_ed25519_k8s-cluster"
-    ansible_ssh_extra_args       = "-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=~/.ssh/k8s_cluster_config"
+    advertise_ip = each.value.ip
   }
 }
 
@@ -28,13 +25,24 @@ resource "ansible_vault" "secrets" {
 }
 
 /*
-Generate Ansible inventory file from template
+* Generate the parameters that are necessary for Ansible inventory
+*/
+locals {
+  master_nodes = [
+    for node in var.all_nodes : node if startswith(node.key, "k8s-master")
+  ]
+  worker_nodes = [
+    for node in var.all_nodes : node if startswith(node.key, "k8s-worker")
+  ]
+}
+
+/*
+* Generate the Ansible inventory file from template
 */
 resource "local_file" "inventory" {
-  content = templatefile("${path.module}/../../templates/inventory.yml.tftpl", {
-    master_ips = var.master_config[*].ip,
-    worker_ips = var.worker_config[*].ip,
-    ssh_user   = var.vm_username,
+  content = templatefile("${path.root}/templates/inventory.yml.tftpl", {
+    master_nodes = local.master_nodes,
+    worker_nodes = local.worker_nodes
   })
   filename        = "${var.ansible_path}/inventory.yml"
   file_permission = "0644"
@@ -45,14 +53,22 @@ resource "null_resource" "run_ansible" {
   provisioner "local-exec" {
     command     = <<-EOT
       set -e
-      . ${path.root}/../scripts/utils.sh && prepare_ansible_known_hosts ${join(" ", [for node in var.all_nodes : node.ip])}
-      export ANSIBLE_SSH_ARGS="-o UserKnownHostsFile=~/.ssh/k8s_cluster_known_hosts"
-      ansible-playbook -i ${var.ansible_path}/inventory.yml ${var.ansible_path}/playbooks/10-provision-cluster.yml --vault-password-file ${var.vault_pass_path} -vv
+      ansible-playbook \
+        -i ${var.ansible_path}/inventory.yml \
+        --private-key ${var.ssh_private_key_path} \
+        --vault-password-file ${var.vault_pass_path} \
+        --extra-vars "ansible_ssh_user=${var.vm_username}" \
+        -vv \
+        ${var.ansible_path}/playbooks/10-provision-cluster.yml
     EOT
     interpreter = ["/bin/bash", "-c"]
   }
 }
+#       . ${path.root}/../scripts/utils_ssh.sh && bootstrap_ssh_known_hosts ${join(" ", [for node in var.all_nodes : node.ip])}
 
+/*
+ * Execute Ansible playbook using ansible_playbook resource
+ */
 # resource "ansible_playbook" "provision_k8s" {
 #   for_each            = { for node in var.all_nodes : node.key => node }
 #   depends_on          = [var.vm_status, ansible_vault.secrets]
