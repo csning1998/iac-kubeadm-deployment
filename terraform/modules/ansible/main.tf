@@ -15,11 +15,7 @@ resource "ansible_host" "nodes" {
   name     = each.value.key
   groups   = startswith(each.value.key, "k8s-master") ? ["master"] : ["workers"]
   variables = {
-    # ansible_host                 = each.value.ip
-    ansible_ssh_user             = var.vm_username
-    ansible_ssh_private_key_file = var.ssh_private_key_path
-    ansible_ssh_extra_args       = "-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=~/.ssh/k8s_cluster_config"
-    advertise_ip                 = each.value.ip
+    advertise_ip = each.value.ip
   }
 }
 
@@ -29,14 +25,24 @@ resource "ansible_vault" "secrets" {
 }
 
 /*
-Generate Ansible inventory file from template
+* Generate the parameters that are necessary for Ansible inventory
+*/
+locals {
+  master_nodes = [
+    for node in var.all_nodes : node if startswith(node.key, "k8s-master")
+  ]
+  worker_nodes = [
+    for node in var.all_nodes : node if startswith(node.key, "k8s-worker")
+  ]
+}
+
+/*
+* Generate the Ansible inventory file from template
 */
 resource "local_file" "inventory" {
   content = templatefile("${path.root}/templates/inventory.yml.tftpl", {
-    master_nodes         = var.master_config,
-    worker_nodes         = var.worker_config
-    ssh_user             = var.vm_username,
-    ssh_private_key_path = var.ssh_private_key_path
+    master_nodes = local.master_nodes,
+    worker_nodes = local.worker_nodes
   })
   filename        = "${var.ansible_path}/inventory.yml"
   file_permission = "0644"
@@ -51,6 +57,7 @@ resource "null_resource" "run_ansible" {
         -i ${var.ansible_path}/inventory.yml \
         --private-key ${var.ssh_private_key_path} \
         --vault-password-file ${var.vault_pass_path} \
+        --extra-vars "ansible_ssh_user=${var.vm_username}" \
         -vv \
         ${var.ansible_path}/playbooks/10-provision-cluster.yml
     EOT

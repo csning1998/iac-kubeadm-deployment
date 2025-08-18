@@ -1,5 +1,4 @@
 ---
-# Ansible Inventory for Kubernetes cluster
 all:
   children:
     master:
@@ -7,15 +6,9 @@ all:
 %{ for node in master_nodes ~}
         ${node.key}:
           advertise_ip: ${node.ip}
-      vars:
-        ansible_ssh_user: ${ssh_user}
-        ansible_ssh_private_key_file: ${ssh_private_key_path}
 %{ endfor ~}
     workers:
       hosts:
 %{ for node in worker_nodes ~}
-        ${node.key}:
+        ${node.key}
 %{ endfor ~}
-      vars:
-        ansible_ssh_user: ${ssh_user}
-        ansible_ssh_private_key_file: ${ssh_private_key_path}

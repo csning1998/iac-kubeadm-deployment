@@ -22,13 +22,11 @@ variable "ssh_private_key_path" {
 variable "master_ip_list" {
   description = "IP address list for the Kubernetes master node"
   type        = list(string)
-  default     = ["172.16.134.200"] # Add IP for setting up High Abilities
 }
 
 variable "worker_ip_list" {
   description = "IP address list for the Kubernetes worker nodes"
   type        = list(string)
-  default     = ["172.16.134.210", "172.16.134.211", "172.16.134.212"]
 }
 
 ### Configure Resources for the Infrastructure 

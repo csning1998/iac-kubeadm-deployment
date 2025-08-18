@@ -6,26 +6,16 @@ output "all_nodes" {
 output "master_config" {
   description = "Configuration for master nodes"
   value = [
-    for idx, ip in var.master_ip_list : {
-      key  = "k8s-master-${format("%02d", idx)}"
-      ip   = ip
-      vcpu = var.master_vcpu
-      ram  = var.master_ram
-      path = "${var.vms_dir}/k8s-master-${format("%02d", idx)}/k8s-master-${format("%02d", idx)}.vmx"
-    }
+    for node in var.all_nodes :
+    node if startswith(node.key, "k8s-master")
   ]
 }
 
 output "worker_config" {
   description = "Configuration for worker nodes"
   value = [
-    for idx, ip in var.worker_ip_list : {
-      key  = "k8s-worker-${format("%02d", idx)}"
-      ip   = ip
-      vcpu = var.worker_vcpu
-      ram  = var.worker_ram
-      path = "${var.vms_dir}/k8s-worker-${format("%02d", idx)}/k8s-worker-${format("%02d", idx)}.vmx"
-    }
+    for node in var.all_nodes :
+    node if startswith(node.key, "k8s-worker")
   ]
 }
 
