@@ -3,6 +3,7 @@
   hosts: master
   become: true
   roles:
+    - 11-ha-loadbalancer
     - 10-kubeadm-init
 
 - name: "Play: Join the Kubernetes worker node(s) to the cluster"

@@ -13,7 +13,7 @@
 
     - name: "Step 2a. Download CRI-O GPG key"
       ansible.builtin.get_url:
-        url: https://pkgs.k8s.io/addons:/cri-o:/prerelease:/main/deb/Release.key
+        url: https://pkgs.k8s.io/addons:/cri-o:/stable:/v1.32/deb/Release.key
         dest: /tmp/crio.key
         mode: '0644'
       retries: 5
@@ -31,7 +31,7 @@
       ansible.builtin.apt_repository:
         repo: >
           deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg]
-          https://pkgs.k8s.io/addons:/cri-o:/prerelease:/main/deb/ /
+          https://pkgs.k8s.io/addons:/cri-o:/stable:/v1.32/deb/ /
         state: present
         filename: crio
 
@@ -50,15 +50,15 @@
 
     - name: "Step 5a. Download crictl archive"
       ansible.builtin.get_url:
-        url: "https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.30.0/crictl-v1.30.0-linux-amd64.tar.gz"
-        dest: "/tmp/crictl-v1.30.0-linux-amd64.tar.gz"
+        url: "https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.32.0/crictl-v1.32.0-linux-amd64.tar.gz"
+        dest: "/tmp/crictl-v1.32.0-linux-amd64.tar.gz"
         mode: '0644'
       retries: 5
       delay: 10
 
     - name: "Step 5b. Unarchive crictl"
       ansible.builtin.unarchive:
-        src: "/tmp/crictl-v1.30.0-linux-amd64.tar.gz"
+        src: "/tmp/crictl-v1.32.0-linux-amd64.tar.gz"
         dest: "/usr/local/bin"
         remote_src: true
         mode: '0755'
@@ -66,5 +66,5 @@
 
     - name: "Step 5c. Clean up crictl archive"
       ansible.builtin.file:
-        path: "/tmp/crictl-v1.30.0-linux-amd64.tar.gz"
+        path: "/tmp/crictl-v1.32.0-linux-amd64.tar.gz"
         state: absent

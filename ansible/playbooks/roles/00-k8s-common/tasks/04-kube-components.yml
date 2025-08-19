@@ -3,7 +3,7 @@
   block:
     - name: "Step 1a. Download Kubernetes GPG key"
       ansible.builtin.get_url:
-        url: https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key
+        url: https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key
         dest: /tmp/kubernetes-apt-keyring.asc
         mode: '0644'
 
@@ -17,7 +17,7 @@
 
     - name: "Step 2. Add Kubernetes apt repository"
       ansible.builtin.apt_repository:
-        repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /"
+        repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /"
         state: present
         filename: kubernetes
         update_cache: true
@@ -25,9 +25,9 @@
     - name: "Step 3. Install kubeadm, kubelet, kubectl"
       ansible.builtin.apt:
         name:
-          - kubelet=1.30.0-1.1
-          - kubeadm=1.30.0-1.1
-          - kubectl=1.30.0-1.1
+          - kubelet=1.32.0-1.1
+          - kubeadm=1.32.0-1.1
+          - kubectl=1.32.0-1.1
         state: present
 
     - name: "Step 4. Hold Kubernetes package versions"

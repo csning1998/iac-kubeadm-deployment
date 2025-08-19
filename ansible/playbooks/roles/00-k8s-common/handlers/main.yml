@@ -20,6 +20,13 @@
     state: started
     daemon_reload: true
 
+- name: Restart crio service
+  listen: "Restart crio service"
+  ansible.builtin.systemd:
+    name: crio
+    state: restarted
+    daemon_reload: true
+
 - name: "Reboot the machine"
   listen: "Reboot the machine"
   ansible.builtin.reboot:

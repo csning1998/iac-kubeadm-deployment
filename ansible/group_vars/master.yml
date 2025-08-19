@@ -1,0 +1,12 @@
+---
+# Variables specific to the Kubernetes master nodes
+
+# Define the Virtual IP (VIP) for the HA cluster control plane.
+K8S_HA_VIRTUAL_IP: "172.16.134.250"
+
+# EXPLICITLY define the interface for Keepalived and the master node IPs.
+# This avoids relying on potentially confusing ansible_default_ipv4 facts.
+K8S_MASTER_IPS:
+  - "172.16.134.200"
+  - "172.16.134.201"
+  - "172.16.134.202"

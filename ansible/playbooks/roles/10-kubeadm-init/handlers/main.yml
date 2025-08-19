@@ -1,7 +1,7 @@
----
-- name: Create Calico operator flag file
-  listen: "Create Calico operator flag file"
-  ansible.builtin.file:
-    path: /etc/kubernetes/calico-operator-installed.flag
-    state: touch
-    mode: '0600'
+# ---
+# - name: Create Calico operator flag file
+#   listen: "Create Calico operator flag file"
+#   ansible.builtin.file:
+#     path: /etc/kubernetes/calico-operator-installed.flag
+#     state: touch
+#     mode: '0600'

@@ -12,12 +12,12 @@ source "vmware-iso" "ubuntu-server" {
   cpus      = var.cpus
   memory    = var.memory
   disk_size = var.disk_size
-  headless  = false
+  headless  = true
 
   # Hardware Interfaces
   disk_type_id         = "0" # Growable virtual disk contained in a single file (monolithic sparse).
   disk_adapter_type    = "scsi"
-  network              = "nat" # For external internet connection during installation.
+  network              = "nat"   # For external internet connection during installation.
   network_adapter_type = "e1000" # Recommended values are e1000 and vmxnet3. Defaults to e1000.
   
   # HTTP Content Delivery for cloud-init

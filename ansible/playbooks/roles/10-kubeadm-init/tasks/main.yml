@@ -1,12 +1,32 @@
 ---
-- name: Section A. Initialize Kubernetes master node
-  ansible.builtin.include_tasks: 11-init-master.yml
+# === STAGE 0: Set advertise_ip fact for each master node ===
+- name: Set advertise_ip for the current host
+  ansible.builtin.set_fact:
+    advertise_ip: "{{ K8S_MASTER_IPS[groups['master'].index(inventory_hostname)] }}"
 
-- name: Section B. Set up kubeconfig for users
-  ansible.builtin.include_tasks: 12-setup-kubeconfig.yml
+# === STAGE 1: Initialize ONLY the Primary Master ===
+- name: Section A. Initialize the Primary Master Node
+  ansible.builtin.import_tasks: 11-init-master.yml
+  when: inventory_hostname == groups['master'][0]
 
-- name: Section C. Install Container Network Interface (CNI)
-  ansible.builtin.include_tasks: 13-install-cni.yml
+# === STAGE 2: Generate Join Commands on the Primary Master ===
+- name: Section B. Generate and Register Join Commands
+  ansible.builtin.import_tasks: 14-generate-join-command.yml
+  when: inventory_hostname == groups['master'][0]
 
-- name: Section D. Generate and register the cluster join command
-  ansible.builtin.include_tasks: 14-generate-join-command.yml
+# === STAGE 3: Make the join command available to all other hosts ===
+- name: Run a trivial task to synchronize facts across hosts
+  ansible.builtin.setup:
+    filter: "ansible_architecture"
+
+# === STAGE 4: Join the Secondary Masters ===
+- name: Section C. Join Secondary Master Nodes
+  ansible.builtin.command: >-
+    {{ hostvars[groups['master'][0]]['kubeadm_join_command_control_plane'] }}
+  args:
+    creates: /etc/kubernetes/admin.conf
+  when: inventory_hostname != groups['master'][0]
+
+# === STAGE 5: Setup Kubeconfig on ALL Master Nodes ===
+- name: Section D. Set up kubeconfig for users on all masters
+  ansible.builtin.import_tasks: 12-setup-kubeconfig.yml

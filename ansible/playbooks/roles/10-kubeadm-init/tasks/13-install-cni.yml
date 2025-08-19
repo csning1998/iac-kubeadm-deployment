@@ -1,29 +1,29 @@
----
-- name: Section C. Install Container Network Interface (CNI)
-  block:
-    - name: "Step 1. Install the Tigera Calico operator"
-      ansible.builtin.command: >-
-        kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/tigera-operator.yaml
-      # Operator apply is idempotent
-      args:
-        creates: /etc/kubernetes/calico-operator-installed.flag
-      register: calico_operator_create
-      changed_when: "'created' in calico_operator_create.stdout"
-      notify: Create Calico operator flag file
+# ---
+# - name: Section C. Install Container Network Interface (CNI)
+#   block:
+#     - name: "Step 1. Install the Tigera Calico operator"
+#       ansible.builtin.command: >-
+#         kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/tigera-operator.yaml
+#       # Operator apply is idempotent
+#       args:
+#         creates: /etc/kubernetes/calico-operator-installed.flag
+#       register: calico_operator_create
+#       changed_when: "'created' in calico_operator_create.stdout"
+#       notify: Create Calico operator flag file
 
-    - name: "Step 2. Download Calico custom resources manifest"
-      ansible.builtin.get_url:
-        url: "https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/custom-resources.yaml"
-        dest: "/tmp/calico-custom-resources.yaml"
-        mode: '0644'
+#     - name: "Step 2. Download Calico custom resources manifest"
+#       ansible.builtin.get_url:
+#         url: "https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/custom-resources.yaml"
+#         dest: "/tmp/calico-custom-resources.yaml"
+#         mode: '0644'
 
-    - name: "Step 3. Update Calico manifest with the correct pod CIDR"
-      ansible.builtin.replace:
-        path: "/tmp/calico-custom-resources.yaml"
-        regexp: 'cidr: 192.168.0.0/16'
-        replace: 'cidr: 10.244.0.0/16'
+#     - name: "Step 3. Update Calico manifest with the correct pod CIDR"
+#       ansible.builtin.replace:
+#         path: "/tmp/calico-custom-resources.yaml"
+#         regexp: 'cidr: 192.168.0.0/16'
+#         replace: 'cidr: 10.244.0.0/16'
 
-    - name: "Step 4. Apply the customized Calico resources"
-      ansible.builtin.command: "kubectl apply -f /tmp/calico-custom-resources.yaml"
-      register: calico_apply
-      changed_when: "'created' in calico_apply.stdout or 'configured' in calico_apply.stdout"
+#     - name: "Step 4. Apply the customized Calico resources"
+#       ansible.builtin.command: "kubectl apply -f /tmp/calico-custom-resources.yaml"
+#       register: calico_apply
+#       changed_when: "'created' in calico_apply.stdout or 'configured' in calico_apply.stdout"
