@@ -73,22 +73,42 @@ resource "null_resource" "configure_nodes" {
     inline = [
       "sleep 5",
       "sudo cloud-init clean --logs || true",
-      "sudo systemctl disable cloud-init || true",
-      "sudo systemctl stop cloud-init || true",
       "sudo touch /etc/cloud/cloud-init.disabled || true",
-      "sudo rm -f /etc/machine-id",                      # Reset machine-id to avoid DUID conflicts
-      "sudo systemd-machine-id-setup",                   # Generate new machine-id
-      "sudo systemctl stop systemd-networkd || true",    # Stop networkd to prevent DHCP interference
-      "sudo systemctl disable systemd-networkd || true", # Disable networkd
-      "sudo modprobe e1000 || true",
-      "sudo udevadm trigger || true",
-      "HOSTONLY_IFACE=$(ip -o link show | awk -F': ' '{print $2}' | grep -v -e '^lo$' -e '^ens33$' | head -n 1)",
-      "if [ -z \"$HOSTONLY_IFACE\" ]; then echo 'Error: Host-only network interface not found'; ip -o link show; exit 1; fi",
-      "echo 'network:\n  version: 2\n  ethernets:\n    ens33:\n      dhcp4: false\n      addresses: [172.16.86.${split(".", each.value.ip)[3]}/24]\n      nameservers:\n        addresses: [8.8.8.8, 8.8.4.4]\n      dhcp6: false\n    '$HOSTONLY_IFACE':\n      dhcp4: false\n      addresses: [${each.value.ip}/24]' | sudo tee /etc/netplan/00-hostonly.yaml",
-      "sudo chmod 600 /etc/netplan/00-hostonly.yaml",
-      "sudo netplan apply || { echo 'Error: netplan apply failed'; cat /etc/netplan/00-hostonly.yaml; exit 1; }",
+      "sudo rm -f /etc/netplan/*.yaml",
+      "sudo rm -f /etc/machine-id",
+      "sudo systemd-machine-id-setup",
+
+      "for i in {1..5}; do NAT_IFACE=$(ip -o -4 addr show | grep 'inet 172.16.86.' | awk '{print $2}'); [ -n \"$NAT_IFACE\" ] && break; sleep 2; done",
+      "if [ -z \"$NAT_IFACE\" ]; then echo 'Error: Could not find NAT interface'; ip addr; exit 1; fi",
+      "HOSTONLY_IFACE=$(ip -o link show | awk -F': ' '{print $2}' | grep -v -e '^lo$' -e \"^$NAT_IFACE$\")",
+      "if [ -z \"$HOSTONLY_IFACE\" ]; then echo 'Error: Could not find Host-only interface'; ip addr; exit 1; fi",
+
+      "sudo ip addr flush dev $NAT_IFACE || true",
+      "sudo ip addr flush dev $HOSTONLY_IFACE || true",
+      "sleep 2",
+
+      "echo 'network:",
+      "  version: 2",
+      "  renderer: networkd",
+      "  ethernets:",
+      "    '$NAT_IFACE':",
+      "      dhcp4: false",
+      "      addresses: [172.16.86.${split(".", each.value.ip)[3]}/24]",
+      "      routes:",
+      "        - to: default",
+      "          via: 172.16.86.2",
+      "      nameservers:",
+      "        addresses: [8.8.8.8, 8.8.4.4]",
+      "      dhcp6: false",
+      "    '$HOSTONLY_IFACE':",
+      "      dhcp4: false",
+      "      addresses: [${each.value.ip}/24]",
+      "      dhcp6: false",
+      "' | sudo tee /etc/netplan/00-installer-config.yaml",
+
+      "sudo chmod 600 /etc/netplan/00-installer-config.yaml",
+      "sudo netplan apply || { echo 'Error: netplan apply failed'; cat /etc/netplan/00-installer-config.yaml; exit 1; }",
       "sleep 5",
-      "sudo ip link set $HOSTONLY_IFACE up", # Explicitly bring up host-only interface
       "sudo hostnamectl set-hostname ${each.key}",
       "chmod 755 /home/${var.vm_username}",
       "sudo sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config",

@@ -147,6 +147,7 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild Terraform workflow..."
       check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
+      control_terraform_vms "delete"
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform_stage_I
@@ -160,6 +161,7 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild Terraform workflow..."
       check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
+      control_terraform_vms "delete"
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform_stage_I
