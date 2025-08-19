@@ -40,17 +40,17 @@ variable "master_vcpu" {
 variable "master_ram" {
   description = "Amount of RAM (in MB) for the Kubernetes master node"
   type        = number
-  default     = 6144
+  default     = 4096
 }
 
 variable "worker_vcpu" {
   description = "Number of vCPUs for each Kubernetes worker node"
   type        = number
-  default     = 6
+  default     = 4
 }
 
 variable "worker_ram" {
   description = "Amount of RAM (in MB) for each Kubernetes worker node"
   type        = number
-  default     = 12288
+  default     = 4096
 }
