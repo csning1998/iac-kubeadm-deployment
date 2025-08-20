@@ -1,0 +1,86 @@
+---
+- name: Section C. Install and Configure container runtime
+  block:
+    - name: "Step 1. Install CRI-O dependencies"
+      ansible.builtin.apt:
+        name:
+          - software-properties-common
+          - gpg
+          - curl
+          - apt-transport-https
+          - ca-certificates
+        state: present
+
+    - name: "Step 2a. Download CRI-O GPG key"
+      ansible.builtin.get_url:
+        url: https://pkgs.k8s.io/addons:/cri-o:/stable:/v1.32/deb/Release.key
+        dest: /tmp/crio.key
+        mode: '0644'
+      retries: 5
+      delay: 10
+
+    - name: "Step 2b. Dearmor CRI-O GPG key"
+      ansible.builtin.command:
+        cmd: gpg --dearmor -o /etc/apt/keyrings/cri-o-apt-keyring.gpg /tmp/crio.key
+      args:
+        creates: /etc/apt/keyrings/cri-o-apt-keyring.gpg
+      register: gpg_dearmor_result
+      changed_when: gpg_dearmor_result.rc == 0 and 'overwrite' not in gpg_dearmor_result.stderr
+
+    - name: "Step 3a. Add CRI-O apt repository"
+      ansible.builtin.apt_repository:
+        repo: >
+          deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg]
+          https://pkgs.k8s.io/addons:/cri-o:/stable:/v1.32/deb/ /
+        state: present
+        filename: crio
+
+    - name: "Step 3b. Force apt cache update after adding new repository"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      changed_when: false
+      # This task is only for update only, which does not change the states.
+
+    - name: "Step 4. Install CRI-O"
+      ansible.builtin.apt:
+        name: cri-o
+        state: present
+      notify: Enable and start crio service
+
+    - name: "Step 5a. Download crictl archive"
+      ansible.builtin.get_url:
+        url: "https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.32.0/crictl-v1.32.0-linux-amd64.tar.gz"
+        dest: "/tmp/crictl-v1.32.0-linux-amd64.tar.gz"
+        mode: '0644'
+      retries: 5
+      delay: 10
+
+    - name: "Step 5b. Unarchive crictl"
+      ansible.builtin.unarchive:
+        src: "/tmp/crictl-v1.32.0-linux-amd64.tar.gz"
+        dest: "/usr/local/bin"
+        remote_src: true
+        mode: '0755'
+        creates: "/usr/local/bin/crictl"
+
+    - name: "Step 5c. Clean up crictl archive"
+      ansible.builtin.file:
+        path: "/tmp/crictl-v1.32.0-linux-amd64.tar.gz"
+        state: absent
+
+    - name: "Step 6. Configure CRI-O to use systemd cgroup driver"
+      ansible.builtin.copy:
+        dest: /etc/crio/crio.conf.d/02-cgroup-manager.conf
+        content: |
+          [crio.runtime]
+          conmon_cgroup = "pod"
+          cgroup_manager = "systemd"
+        mode: '0644'
+      notify: Restart crio service   # Important to apply the new config
+
+    - name: "Verify CRI-O cgroup configuration"
+      ansible.builtin.stat:
+        path: /etc/crio/crio.conf.d/02-cgroup-manager.conf
+      register: crio_config_stat
+      failed_when: not crio_config_stat.stat.exists

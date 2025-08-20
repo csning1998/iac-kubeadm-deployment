@@ -1,0 +1,27 @@
+---
+- name: Create Calico operator flag file
+  listen: "Create Calico operator flag file"
+  ansible.builtin.file:
+    path: /etc/kubernetes/calico-operator-installed.flag
+    state: touch
+    mode: '0600'
+
+- name: Create certificate key flag file
+  ansible.builtin.file:
+    path: /etc/kubernetes/cert-key.flag
+    state: touch
+    mode: '0644'
+  listen: Create certificate key flag file
+
+- name: Create token flag file
+  ansible.builtin.file:
+    path: /etc/kubernetes/token.flag
+    state: touch
+    mode: '0644'
+  listen: Create token flag file
+
+- name: Restart crio service
+  ansible.builtin.systemd:
+    name: crio
+    state: restarted
+  listen: Restart crio service

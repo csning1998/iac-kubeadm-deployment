@@ -1,3 +1,0 @@
----
-- name: Include worker node join tasks
-  ansible.builtin.include_tasks: 12-worker-node.yml

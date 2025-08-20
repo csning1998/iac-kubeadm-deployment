@@ -1,0 +1,26 @@
+global
+    log /var/log/haproxy.log local0
+    maxconn 4096
+    user haproxy
+    group haproxy
+    daemon
+
+defaults
+    log global
+    mode tcp
+    option tcplog
+    timeout connect 5000
+    timeout client 50000
+    timeout server 50000
+
+frontend k8s_api
+    bind [::]:6443
+    mode tcp
+    default_backend k8s_api_backend
+
+backend k8s_api_backend
+    mode tcp
+    balance roundrobin
+{% for host in groups['master'] %}
+    server {{ host }} {{ hostvars[host]['advertise_ip'] }}:6443 check
+{% endfor %}

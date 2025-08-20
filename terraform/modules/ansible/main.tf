@@ -20,7 +20,7 @@ resource "ansible_host" "nodes" {
 }
 
 resource "ansible_vault" "secrets" {
-  vault_file          = "${var.ansible_path}/group_vars/vault.yml"
+  vault_file          = "${var.ansible_path}/group_vars/vault.yaml"
   vault_password_file = var.vault_pass_path
 }
 
@@ -40,11 +40,11 @@ locals {
 * Generate the Ansible inventory file from template
 */
 resource "local_file" "inventory" {
-  content = templatefile("${path.root}/templates/inventory.yml.tftpl", {
+  content = templatefile("${path.root}/templates/inventory.yaml.tftpl", {
     master_nodes = local.master_nodes,
     worker_nodes = local.worker_nodes
   })
-  filename        = "${var.ansible_path}/inventory.yml"
+  filename        = "${var.ansible_path}/inventory.yaml"
   file_permission = "0644"
 }
 
@@ -53,13 +53,14 @@ resource "null_resource" "run_ansible" {
   provisioner "local-exec" {
     command     = <<-EOT
       set -e
+      cd ..
       ansible-playbook \
-        -i ${var.ansible_path}/inventory.yml \
+        -i ${var.ansible_path}/inventory.yaml \
         --private-key ${var.ssh_private_key_path} \
         --vault-password-file ${var.vault_pass_path} \
         --extra-vars "ansible_ssh_user=${var.vm_username}" \
         -vv \
-        ${var.ansible_path}/playbooks/10-provision-cluster.yml
+        ${var.ansible_path}/playbooks/10-provision-cluster.yaml
     EOT
     interpreter = ["/bin/bash", "-c"]
   }
@@ -72,10 +73,10 @@ resource "null_resource" "run_ansible" {
 # resource "ansible_playbook" "provision_k8s" {
 #   for_each            = { for node in var.all_nodes : node.key => node }
 #   depends_on          = [var.vm_status, ansible_vault.secrets]
-#   playbook            = "${var.ansible_path}/playbooks/10-provision-cluster.yml"
+#   playbook            = "${var.ansible_path}/playbooks/10-provision-cluster.yaml"
 #   name                = "vm${split(".", each.value.ip)[3]}"
 #   groups              = ["master", "workers"]
-#   vault_files         = ["${var.ansible_path}/group_vars/vault.yml"]
+#   vault_files         = ["${var.ansible_path}/group_vars/vault.yaml"]
 #   vault_password_file = var.vault_pass_path
 #   verbosity           = 2  # Use verbose output for Ansible tasks
 #   extra_vars          = {

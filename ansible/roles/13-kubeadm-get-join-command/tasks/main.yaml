@@ -1,0 +1,43 @@
+---
+- name: "Section A: Generate and register cluster join commands"
+  block:
+    - name: "Step 1. Check if admin.conf exists on the primary master"
+      ansible.builtin.stat:
+        path: /etc/kubernetes/admin.conf
+      register: admin_conf
+
+    - name: "Step 2. Assert that kubeadm init was successful before proceeding"
+      ansible.builtin.assert:
+        that: admin_conf.stat.exists
+        fail_msg: "Cannot generate join command because kubeadm init seems to have failed (admin.conf not found)."
+
+    - name: "Step 3. Generate a new token and base join command"
+      # 透過 command 模組產生 token，並註冊 stdout
+      ansible.builtin.command: >-
+        kubeadm token create --print-join-command
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: join_command
+      changed_when: "'kubeadm join' in join_command.stdout"
+
+    - name: "Step 4. Extract the certificate key for control-plane join"
+      # 產生讓其他 master 加入所需的 certificate key
+      ansible.builtin.command: >-
+        kubeadm init phase upload-certs --upload-certs
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: cert_key
+      changed_when: "'certificate key' in cert_key.stdout"
+
+    - name: "Step 5. Register control-plane join command as a fact"
+      # 將 token 和 cert key 組合起來，變成一個完整的 control-plane join 指令
+      # cacheable: true 讓這個 fact 可以在不同的 Play 之間傳遞
+      ansible.builtin.set_fact:
+        kubeadm_join_command_control_plane: "{{ join_command.stdout }} --control-plane --certificate-key {{ cert_key.stdout_lines | last }}"  # noqa yaml[line-length]
+        cacheable: true
+
+    - name: "Step 6. Register worker join command as a fact"
+      # worker join 指令比較簡單，直接使用即可
+      ansible.builtin.set_fact:
+        kubeadm_join_command_worker: "{{ join_command.stdout }}"
+        cacheable: true

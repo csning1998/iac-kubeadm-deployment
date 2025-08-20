@@ -19,7 +19,7 @@ source "vmware-iso" "ubuntu-server" {
   disk_adapter_type    = "scsi"
   network              = "nat"   # For external internet connection during installation.
   network_adapter_type = "e1000" # Recommended values are e1000 and vmxnet3. Defaults to e1000.
-  
+
   # HTTP Content Delivery for cloud-init
   http_content = {
     "/user-data" = templatefile("${path.root}/http/user-data", {
@@ -30,7 +30,7 @@ source "vmware-iso" "ubuntu-server" {
   }
 
   # Boot Command with wait time
-  boot_wait    = "5s"
+  boot_wait = "5s"
   boot_command = [
     "<wait2s>",
     "e<wait>",
@@ -55,11 +55,11 @@ build {
   sources = ["source.vmware-iso.ubuntu-server"]
 
   provisioner "ansible" {
-    playbook_file = "../ansible/playbooks/00-provision-base-image.yml"
+    playbook_file       = "../ansible/playbooks/00-provision-base-image.yaml"
     inventory_directory = "../ansible/"
 
-    user          = var.ssh_username
-    
+    user = var.ssh_username
+
     extra_arguments = [
       "--extra-vars", "expected_hostname=${var.vm_name}",
       "--extra-vars", "ssh_user=${var.ssh_username}",

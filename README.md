@@ -49,7 +49,7 @@ Please select an action:
 
 1. **VMware Workstation**
 
-   VMware Workstation Pro 17 is the virtual machine application used in this IaC project. You need to register an account on broadcom.com, then click [here](https://support.broadcom.com/group/ecx/productdownloads?subfamily=VMware%20Workstation%20Pro&freeDownloads=true) to download Workstation Pro 17.
+   VMware Workstation Pro 17 is the virtual machine application used in this IaC project. You need to register an account on broadcom.com, then click [here to download Workstation Pro 17](https://support.broadcom.com/group/ecx/productdownloads?subfamily=VMware%20Workstation%20Pro&freeDownloads=true).
 
    After installation, configure VMware Network Editor:
 
@@ -179,7 +179,7 @@ To ensure the project runs smoothly, please follow the procedures below to compl
      In which `ssh_username` and `ssh_password` are the account and password used to log into the virtual machine; while `ssh_password_hash` is the hashed password required for virtual machine automatic installation (Cloud-init). This password needs to be generated using the password string from `ssh_password`. For instance, if the password is `HelloWorld@k8s`, then the corresponding password hash should be generated using the following command:
 
      ```bash
-     mkpassword -m sha-512 HelloWorld@k8s
+     mkpasswd -m sha-512 HelloWorld@k8s
      ```
 
      And `ssh_public_key_path`: needs to be changed to the **public key** name generated earlier, the public key will be in `*.pub` format
@@ -207,14 +207,14 @@ To ensure the project runs smoothly, please follow the procedures below to compl
    Although Ansible Vault setup is currently mandatory, the related configurations are still being integrated. You need to run ./entry.sh, enter 3 to access the "Set up Ansible Vault" option. At this point, the terminal will ask you to enter a password to encrypt the Vault, and by default it uses the host user's username as the vault_vm_username variable. The system will prompt whether this is the correct login name. Since some people prefer different virtual machine usernames, if you choose to use a different username, the system will open the vim editor for you to enter it manually. After completing the operation, the following two files will be generated:
 
    1. `vault_pass.txt`: Stores the password used to decrypt the Vault, this file is already included in `.gitignore` by default.
-   2. `ansible/group_vars/vault.yml`: This is an encrypted variable file
+   2. `ansible/group_vars/vault.yaml`: This is an encrypted variable file
 
 4. After completing all the above setup steps, you can use `entry.sh`, enter `5` to access _"Rebuild All"_ to perform automated deployment of the Kubernetes cluster. Based on testing, the current complete deployment of a Kubernetes Cluster takes approximately 21 minutes, with an average time of about 3 minutes to configure each node.
 
 > The setup process is based on the commands provided by Bibin Wilson (2025), which I implemented using an Ansible Playbook. Thanks to the author, Bibin Wilson, for the contribution on his article
-> 
-> Work Cited: Bibin Wilson, B. (2025). _How To Setup Kubernetes Cluster Using Kubeadm._ devopscube. https://devopscube.com/setup-kubernetes-cluster-kubeadm/#vagrantfile-kubeadm-scripts-manifests
-> 
+>
+> Work Cited: Bibin Wilson, B. (2025). _How To Setup Kubernetes Cluster Using Kubeadm._ devopscube. <https://devopscube.com/setup-kubernetes-cluster-kubeadm/#vagrantfile-kubeadm-scripts-manifests>
+>
 
 ## Section 3. System Architecture
 
@@ -236,7 +236,7 @@ sequenceDiagram
    User->>+Entrypoint: Execute 'Rebuild All'
    Entrypoint->>+Packer: 1. Execute build_packer
    Packer->>+VMware: 1a. Build base image from ISO (Template VM)
-   Packer->>+Ansible: 1b. Execute Playbook (00-provision-base-image.yml)
+   Packer->>+Ansible: 1b. Execute Playbook (00-provision-base-image.yaml)
    Ansible-->>-Packer: (Install k8s components, CRI-O, etc.)
    VMware-->>-Packer: 1c. Output VMX format Template
    Packer-->>-Entrypoint: Complete image creation
@@ -247,7 +247,7 @@ sequenceDiagram
    Terraform-->>-Entrypoint: Complete node initialization
 
    Entrypoint->>+Terraform: 3. Execute apply_terraform_stage_II
-   Terraform->>+Ansible: 3a. Execute Playbook (10-provision-cluster.yml)
+   Terraform->>+Ansible: 3a. Execute Playbook (10-provision-cluster.yaml)
    Ansible->>Ansible: 3b. Initialize Master node (kubeadm init)
    Ansible->>Ansible: 3c. Join Worker nodes to cluster (kubeadm join)
    Ansible-->>-Terraform: Playbook execution completed
@@ -259,7 +259,7 @@ sequenceDiagram
 
 1. **Packer + Ansible: Provisioning base Kubernetes Golden Image**
 
-   Packer plays the role of an "image factory" in this project, with its core task being to automate the creation of a standardized virtual machine template (Golden Image) pre-configured with all Kubernetes dependencies. The project uses `packer/ubuntu-server-24.pkr.hcl` as its definition file, with a workflow that includes: automatically downloading the `Ubuntu Server 24.04 ISO` file and completing unattended installation using cloud-init; starting SSH connection and invoking the Ansible Provisioner after installation; executing `ansible/playbooks/00-provision-base-image.yml` to install necessary components such as `kubelet`, `kubeadm`, `kubectl`, and `CRI-O`; finally shutting down the virtual machine and producing a `*.vmx` format template for Terraform to use. The goal of this phase is to "bake" all infrequently changing software and configurations into the image to reduce the time required for subsequent deployments.
+   Packer plays the role of an "image factory" in this project, with its core task being to automate the creation of a standardized virtual machine template (Golden Image) pre-configured with all Kubernetes dependencies. The project uses `packer/ubuntu-server-24.pkr.hcl` as its definition file, with a workflow that includes: automatically downloading the `Ubuntu Server 24.04 ISO` file and completing unattended installation using cloud-init; starting SSH connection and invoking the Ansible Provisioner after installation; executing `ansible/playbooks/00-provision-base-image.yaml` to install necessary components such as `kubelet`, `kubeadm`, `kubectl`, and `CRI-O`; finally shutting down the virtual machine and producing a `*.vmx` format template for Terraform to use. The goal of this phase is to "bake" all infrequently changing software and configurations into the image to reduce the time required for subsequent deployments.
 
 2. **Terraform: The Infrastructure Orchestrator**
 
@@ -272,12 +272,12 @@ sequenceDiagram
      - Using `remote-exec`, it executes Shell commands on each node to configure static IP addresses, hostnames, and other network settings.
 
    - **Cluster Configuration (Stage II)**:
-     - Once all nodes are ready, Terraform dynamically generates `ansible/inventory.yml` list file.
-     - Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-cluster.yml` Playbook to complete the initialization of the Kubernetes cluster.
+     - Once all nodes are ready, Terraform dynamically generates `ansible/inventory.yaml` list file.
+     - Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-cluster.yaml` Playbook to complete the initialization of the Kubernetes cluster.
 
 3. **Ansible: The Configuration Manager**
 
-   This is the twice call for Ansible, serving as the configuration manager at different stages. The project's Playbooks are stored in the `ansible/playbooks/ directory`. In terms of role assignment, Ansible is primarily responsible for cluster initialization (invoked by Terraform), executing the following tasks through the `10-provision-cluster.yml` Playbook:
+   This is the twice call for Ansible, serving as the configuration manager at different stages. The project's Playbooks are stored in the `ansible/playbooks/ directory`. In terms of role assignment, Ansible is primarily responsible for cluster initialization (invoked by Terraform), executing the following tasks through the `10-provision-cluster.yaml` Playbook:
 
    1. Initializing the control plane on the Master node with kubeadm init.
    2. Installing Calico as the CNI network plugin. (This will be integrated to Kubernetes or Helm Provider from HashiCorp official)
@@ -292,7 +292,7 @@ The project initially used VirtualBox, but the build process frequently encounte
 
 ### Phase 2. Implementing Cluster Scalability
 
-After achieving stable deployment of a single node, the project focus shifted to clustering. The implementation involved introducing two array variables, `master_ip_list` and `worker_ip_list`, in `terraform.tfvars`. Terraform determines the number of VMs to clone based on the length of these arrays, and dynamically generates the `inventory.yml` list needed by Ansible from a `*.tftpl` template. Additionally, to facilitate manual login verification, Terraform generates a `~/.ssh/k8s_cluster_config` file on the local machine, allowing users to log in without a password using aliases like `ssh k8s-master-00`.
+After achieving stable deployment of a single node, the project focus shifted to clustering. The implementation involved introducing two array variables, `master_ip_list` and `worker_ip_list`, in `terraform.tfvars`. Terraform determines the number of VMs to clone based on the length of these arrays, and dynamically generates the `inventory.yaml` list needed by Ansible from a `*.tftpl` template. Additionally, to facilitate manual login verification, Terraform generates a `~/.ssh/k8s_cluster_config` file on the local machine, allowing users to log in without a password using aliases like `ssh k8s-master-00`.
 
 ### Phase 3. Shifting Common Settings "Left" to Packer
 

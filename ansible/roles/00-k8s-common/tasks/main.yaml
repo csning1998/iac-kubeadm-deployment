@@ -1,0 +1,15 @@
+---
+- name: Section A. Run OS prerequisites setup
+  ansible.builtin.include_tasks: 01-prerequisites-os.yaml
+
+- name: Section B. Run Kubernetes prerequisites setup
+  ansible.builtin.include_tasks: 02-prerequisites-k8s.yaml
+
+- name: Section C. Install and Configure container runtime
+  ansible.builtin.include_tasks: 03-container-runtime.yaml
+
+- name: Section D. Install Kubernetes components
+  ansible.builtin.include_tasks: 04-kube-components.yaml
+
+- name: Section E. Finalize image and clean up
+  ansible.builtin.include_tasks: 05-finalization.yaml

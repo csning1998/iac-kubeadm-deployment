@@ -1,0 +1,67 @@
+---
+- name: "Section A: Prepare secondary master node for joining"
+  block:
+    - name: "Step 1. Reset any previous kubeadm configuration"
+      # 確保節點是乾淨的，這一步讓 join 操作可以重複執行
+      ansible.builtin.command: kubeadm reset -f
+      changed_when: true
+
+    - name: "Step 2. Ensure kubelet service is enabled and started"
+      # 加入之前，kubelet 服務必須是 active 狀態
+      ansible.builtin.systemd:
+        name: kubelet
+        state: started
+        enabled: true
+
+- name: "Section B: Join this node to the control plane"
+  block:
+    - name: "Step 1. Execute the control-plane join command"
+      # 關鍵步驟：使用 hostvars 從 master-00 取得 join 指令
+      # hostvars[groups['master'][0]]['kubeadm_join_command_control_plane']
+      ansible.builtin.command: "{{ hostvars[groups['master'][0]]['kubeadm_join_command_control_plane'] }}"
+      args:
+        # 使用 kubelet.conf 作為冪等性判斷，因為 join 成功後會產生此檔案
+        creates: /etc/kubernetes/kubelet.conf
+      register: kubeadm_join_result
+
+    - name: "Step 2. Fail if kubeadm join command failed"
+      ansible.builtin.fail:
+        msg: |
+          kubeadm join failed on {{ inventory_hostname }}.
+          STDOUT: {{ kubeadm_join_result.stdout | default('N/A') }}
+          STDERR: {{ kubeadm_join_result.stderr | default('N/A') }}
+      when: kubeadm_join_result.rc is defined and kubeadm_join_result.rc != 0
+
+- name: "Section C: Set up kubeconfig on this secondary master"
+  # 加入成功後，secondary master 也需要 admin.conf 才能執行 kubectl
+  # 這段內容與 10-kubeadm-init-primary Role 中的 Section C 完全相同
+  block:
+    - name: "Step 1. Create .kube directory for the root user"
+      ansible.builtin.file:
+        path: "/root/.kube"
+        state: directory
+        mode: '0755'
+
+    - name: "Step 2. Copy admin.conf to root's kube config"
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: "/root/.kube/config"
+        remote_src: true
+        mode: '0600'
+
+    - name: "Step 3. Create .kube directory for the SSH user"
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/.kube"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+
+    - name: "Step 4. Copy admin.conf to user's kube config"
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: "/home/{{ ansible_user }}/.kube/config"
+        remote_src: true
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'

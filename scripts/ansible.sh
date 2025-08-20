@@ -6,7 +6,7 @@ setup_ansible_vault() {
 
   # Step 1: Check if ansible-vault is installed
   vault_pass_file="${SCRIPT_DIR}/vault_pass.txt"
-  vault_file="${ANSIBLE_DIR}/group_vars/vault.yml"
+  vault_file="${ANSIBLE_DIR}/group_vars/vault.yaml"
 
   # Step 2: Get vm_username from terraform.tfvars or TF_VAR_vm_username
   if ! command -v ansible-vault >/dev/null 2>&1; then
@@ -31,7 +31,7 @@ setup_ansible_vault() {
   chmod 600 "$vault_pass_file"
   echo "#### Created $vault_pass_file"
 
-  # Step 4: Create `ansible/group_vars/vault.yml`
+  # Step 4: Create `ansible/group_vars/vault.yaml`
   mkdir -p "${ANSIBLE_DIR}/group_vars"
   echo "vault_vm_username: $vm_username" | ansible-vault encrypt --vault-password-file "$vault_pass_file" > "$vault_file"
   if [ $? -eq 0 ]; then

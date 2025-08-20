@@ -1,7 +1,0 @@
----
-kinds:
-  # All files ending with "0.yml" are defined as Playbooks
-  - playbook: "**/playbooks/*0-*.yml"
-
-  # All files ending with "1.yml" through "9.yml" are defined as Tasks files
-  - tasks: "**/playbooks/*[1-9]-*.yml"
