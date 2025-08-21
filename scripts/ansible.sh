@@ -1,5 +1,24 @@
 #!/bin/bash
 
+# (Dev) This function is for faster reset and re-execute the Ansible Playbook
+apply_ansible_stage_II(){
+  echo ">>> STEP: Rebuild the VM Environment of Stage II..."
+
+  cd ${SCRIPT_DIR}
+
+  # Step 1. Destroy
+  ansible-playbook \
+    --private-key ~/.ssh/id_ed25519_iac_automation \
+    -vv \
+    ansible/playbooks/90-reset-cluster.yaml
+
+  # Step 2. Build
+  ansible-playbook \
+    --private-key ~/.ssh/id_ed25519_iac_automation \
+    -vv \
+    ansible/playbooks/10-provision-cluster.yaml
+}
+
 # This script contains functions related to Ansible operations.
 setup_ansible_vault() {
   echo ">>> STEP: Set up Ansible Vault ..."

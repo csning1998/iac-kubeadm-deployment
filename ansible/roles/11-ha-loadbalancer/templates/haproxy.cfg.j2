@@ -14,7 +14,7 @@ defaults
     timeout server 50000
 
 frontend k8s_api
-    bind [::]:6443
+    bind {{ K8S_HA_VIRTUAL_IP }}:6443
     mode tcp
     default_backend k8s_api_backend
 

@@ -8,12 +8,13 @@
         state: present
         reload: true
 
-    - name: "Step 2. Install Keepalived, HAProxy, and rsyslog"
+    - name: "Step 2. Install Necessary Packages"
       ansible.builtin.apt:
         name:
           - keepalived
           - haproxy
           - rsyslog
+          - etcd-client
         state: present
         update_cache: true
 

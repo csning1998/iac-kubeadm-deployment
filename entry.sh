@@ -71,6 +71,7 @@ options=(
     "Rebuild Terraform: All Stage" 
     "Rebuild Terraform Stage I: Configure Nodes" 
     "Rebuild Terraform Stage II: Ansible" 
+    "[DEV] Rebuild Stage II via Ansible"
     "Verify SSH"
     "Check VM Status"
     "Start All VMs"
@@ -175,9 +176,19 @@ select opt in "${options[@]}"; do
       check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
       verify_ssh
-      apply_terraform_stage_II
+      apply_ansible_stage_II
       report_execution_time
       echo "# Rebuild Terraform workflow completed successfully."
+      break
+      ;;
+    "[DEV] Rebuild Stage II via Ansible")
+      echo "# Executing Rebuild Terraform workflow..."
+      check_vmware_workstation
+      if ! check_ssh_key_exists; then break; fi
+      verify_ssh
+      apply_ansible_stage_II
+      report_execution_time
+      echo "# Rebuild Stage II via Ansible completed successfully."
       break
       ;;
     "Verify SSH")

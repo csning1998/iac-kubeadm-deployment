@@ -17,6 +17,11 @@ kind: ClusterConfiguration
 kubernetesVersion: "v1.32.0"
 controlPlaneEndpoint: "{{ K8S_HA_VIRTUAL_IP }}:6443"
 apiServer:
+  extraArgs:
+    - name: bind-address
+      value: "{{ advertise_ip }}"
+    - name: etcd-servers
+      value: "https://127.0.0.1:2379"
   certSANs:
     - "{{ K8S_HA_VIRTUAL_IP }}"
     - "kubernetes"
@@ -26,15 +31,13 @@ apiServer:
 {% for ip in K8S_MASTER_IPS %}
     - "{{ ip }}"
 {% endfor %}
-
 networking:
   podSubnet: "{{ K8S_POD_SUBNET }}"
-
 etcd:
   local:
     extraArgs:
       - name: initial-cluster
-        value: "{% for host in groups['master'] %}{{ host }}=https://{{ hostvars[host]['advertise_ip'] }}:2380{% if not loop.last %},{% endif %}{% endfor %}"
+        value: "{{ inventory_hostname }}=https://{{ advertise_ip }}:2380"
       - name: initial-cluster-state
         value: "new"
       - name: listen-client-urls
@@ -46,12 +49,16 @@ etcd:
       - name: initial-advertise-peer-urls
         value: "https://{{ advertise_ip }}:2380"
     serverCertSANs:
-      - "{{ inventory_hostname }}"
+{% for host in groups['master'] %}
+      - "{{ host }}"
+{% endfor %}
 {% for ip in K8S_MASTER_IPS %}
       - "{{ ip }}"
 {% endfor %}
     peerCertSANs:
-      - "{{ inventory_hostname }}"
+{% for host in groups['master'] %}
+      - "{{ host }}"
+{% endfor %}
 {% for ip in K8S_MASTER_IPS %}
       - "{{ ip }}"
 {% endfor %}

@@ -6,19 +6,30 @@
       ansible.builtin.set_fact:
         advertise_ip: "{{ K8S_MASTER_IPS[0] }}"
 
-    - name: "Step 2. Ensure kubelet service is enabled and running"
+    - name: "Step 2. Ensure journald persistent storage directory exists"
+      ansible.builtin.file:
+        path: /var/log/journal
+        state: directory
+        mode: '0755'
+
+    - name: "Step 3. Restart systemd-journald to apply persistent storage"
+      ansible.builtin.systemd:
+        name: systemd-journald
+        state: restarted
+
+    - name: "Step 4. Ensure kubelet service is enabled and running"
       ansible.builtin.systemd:
         name: kubelet
         state: started
         enabled: true
 
-    - name: "Step 3. Ensure /etc/kubernetes directory exists"
+    - name: "Step 5. Ensure /etc/kubernetes directory exists"
       ansible.builtin.file:
         path: /etc/kubernetes
         state: directory
         mode: '0755'
 
-    - name: "Step 4. Create kubeadm config file from template"
+    - name: "Step 6. Create kubeadm config file from template"
       ansible.builtin.template:
         src: kubeadm-config.yaml.j2
         dest: /etc/kubernetes/kubeadm-config.yaml
@@ -31,21 +42,32 @@
         path: /etc/kubernetes/admin.conf
       register: admin_conf_stat
 
-    - name: "Step 2. Run kubeadm init command"
+    # - name: "Step 2. Temporarily stop HAProxy to free up port 6443"
+    #   ansible.builtin.systemd:
+    #     name: haproxy
+    #     state: stopped
+    #   when: not admin_conf_stat.stat.exists
+
+    - name: "Step 3. Run kubeadm init command"
       ansible.builtin.shell: >-
-        kubeadm init --config=/etc/kubernetes/kubeadm-config.yaml --upload-certs --v=5 > /tmp/kubeadm-init.log 2>&1
+        kubeadm init
+        --config=/etc/kubernetes/kubeadm-config.yaml
+        --upload-certs
+        --ignore-preflight-errors=Port-6443
+        --v=5 > /tmp/kubeadm-init.log 2>&1
       args:
         creates: /etc/kubernetes/admin.conf
       when: not admin_conf_stat.stat.exists
       register: kubeadm_init
       changed_when: kubeadm_init.rc == 0
+      notify: Restart haproxy on primary master
 
-    - name: "Step 3. Verify that admin.conf was created"
+    - name: "Step 4. Verify that admin.conf was created"
       ansible.builtin.stat:
         path: /etc/kubernetes/admin.conf
       register: admin_conf_stat_post_init
 
-    - name: "Step 4. Fail if kubeadm init did not create admin.conf"
+    - name: "Step 5. Fail if kubeadm init did not create admin.conf"
       ansible.builtin.fail:
         msg: "kubeadm init failed to create /etc/kubernetes/admin.conf. Check /tmp/kubeadm-init.log for details."
       when: not admin_conf_stat_post_init.stat.exists and kubeadm_init is changed
@@ -67,19 +89,19 @@
 
     - name: "Step 3. Create .kube directory for the SSH user"
       ansible.builtin.file:
-        path: "/home/{{ ansible_user }}/.kube"
+        path: "/home/{{ ansible_ssh_user }}/.kube"
         state: directory
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
+        owner: "{{ ansible_ssh_user }}"
+        group: "{{ ansible_ssh_user }}"
         mode: '0755'
 
     - name: "Step 4. Copy admin.conf to user's kube config"
       ansible.builtin.copy:
         src: /etc/kubernetes/admin.conf
-        dest: "/home/{{ ansible_user }}/.kube/config"
+        dest: "/home/{{ ansible_ssh_user }}/.kube/config"
         remote_src: true
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
+        owner: "{{ ansible_ssh_user }}"
+        group: "{{ ansible_ssh_user }}"
         mode: '0644'
 
 - name: "Section D: Install Container Network Interface (CNI)"

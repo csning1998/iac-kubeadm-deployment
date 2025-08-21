@@ -88,7 +88,7 @@
     - /var/lib/kubelet
     - /var/lib/etcd
     - /etc/cni/net.d
-    - "/home/{{ ansible_user | default('ubuntu') }}/.kube"
+    - "/home/{{ ansible_ssh_user | default('ubuntu') }}/.kube"
     - "/root/.kube"
     - /etc/haproxy/haproxy.cfg
     - /etc/keepalived/keepalived.conf

@@ -1,4 +1,9 @@
 ---
+- name: Restart haproxy on primary master
+  ansible.builtin.systemd:
+    name: haproxy
+    state: restarted
+
 - name: Create Calico operator flag file
   listen: "Create Calico operator flag file"
   ansible.builtin.file:
