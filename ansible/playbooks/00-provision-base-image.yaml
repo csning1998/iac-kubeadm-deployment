@@ -3,4 +3,4 @@
   hosts: all
   become: true
   roles:
-    - 00-k8s-common
+    - 01-base-kubernetes
