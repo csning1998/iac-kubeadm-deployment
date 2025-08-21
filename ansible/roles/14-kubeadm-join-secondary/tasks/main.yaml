@@ -13,8 +13,16 @@
 
 - name: "Section B: Join this node to the control plane"
   block:
+    - name: "Step 0. Create kubeadm join config file from template"
+      ansible.builtin.template:
+        src: kubeadm-join-config.yaml.j2
+        dest: /tmp/kubeadm-join-config.yaml
+        mode: '0644'
+
     - name: "Step 1. Execute the control-plane join command"
-      ansible.builtin.command: "{{ hostvars[groups['master'][0]]['kubeadm_join_command_control_plane'] }}"
+      ansible.builtin.command: >-
+        kubeadm join --config /tmp/kubeadm-join-config.yaml
+        --ignore-preflight-errors=Port-6443
       args:
         creates: /etc/kubernetes/kubelet.conf
       register: kubeadm_join_result

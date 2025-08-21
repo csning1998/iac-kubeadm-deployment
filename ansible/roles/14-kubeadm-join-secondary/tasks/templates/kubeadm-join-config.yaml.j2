@@ -1,0 +1,19 @@
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: JoinConfiguration
+nodeRegistration:
+  name: "{{ inventory_hostname }}"
+  kubeletExtraArgs:
+    - name: "cgroup-driver"
+      value: "systemd"
+discovery:
+  bootstrapToken:
+    apiServerEndpoint: "{{ K8S_HA_VIRTUAL_IP }}:6443"
+    token: "{{ hostvars[groups['master'][0]]['kubeadm_token'] }}"
+    caCertHashes:
+      - "sha256:{{ hostvars[groups['master'][0]]['kubeadm_ca_hash'] }}"
+    unsafeSkipCAVerification: false
+controlPlane:
+  localAPIEndpoint:
+    advertiseAddress: "{{ advertise_ip }}"
+  certificateKey: "{{ hostvars[groups['master'][0]]['kubeadm_cert_key'] }}"

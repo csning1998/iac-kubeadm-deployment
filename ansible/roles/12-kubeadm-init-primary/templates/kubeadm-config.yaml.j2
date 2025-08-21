@@ -34,20 +34,16 @@ apiServer:
 networking:
   podSubnet: "{{ K8S_POD_SUBNET }}"
 etcd:
+  extraArgs:
+    - name: listen-client-urls
+      value: "https://127.0.0.1:2379,https://{{ advertise_ip }}:2379"
+    - name: advertise-client-urls
+      value: "https://{{ advertise_ip }}:2379"
+    - name: listen-peer-urls
+      value: "https://{{ advertise_ip }}:2380"
+    - name: initial-advertise-peer-urls
+      value: "https://{{ advertise_ip }}:2380"
   local:
-    extraArgs:
-      - name: initial-cluster
-        value: "{{ inventory_hostname }}=https://{{ advertise_ip }}:2380"
-      - name: initial-cluster-state
-        value: "new"
-      - name: listen-client-urls
-        value: "https://127.0.0.1:2379,https://{{ advertise_ip }}:2379"
-      - name: advertise-client-urls
-        value: "https://{{ advertise_ip }}:2379"
-      - name: listen-peer-urls
-        value: "https://{{ advertise_ip }}:2380"
-      - name: initial-advertise-peer-urls
-        value: "https://{{ advertise_ip }}:2380"
     serverCertSANs:
 {% for host in groups['master'] %}
       - "{{ host }}"

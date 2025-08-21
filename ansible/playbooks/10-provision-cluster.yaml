@@ -18,7 +18,7 @@
     - 13-kubeadm-get-join-command
 
 - name: "Play 4: Join secondary master nodes to the cluster"
-  hosts: "{{ groups['master'] | difference(groups['master'][0]) | default([]) }}"
+  hosts: "{{ groups['master'] | default([]) | difference([ (groups['master'] | default(['placeholder']))[0] ]) }}"
   become: true
   roles:
     - 14-kubeadm-join-secondary
