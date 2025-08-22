@@ -42,13 +42,7 @@
         path: /etc/kubernetes/admin.conf
       register: admin_conf_stat
 
-    # - name: "Step 2. Temporarily stop HAProxy to free up port 6443"
-    #   ansible.builtin.systemd:
-    #     name: haproxy
-    #     state: stopped
-    #   when: not admin_conf_stat.stat.exists
-
-    - name: "Step 3. Run kubeadm init command"
+    - name: "Step 2. Run kubeadm init command"
       ansible.builtin.shell: >-
         kubeadm init
         --config=/etc/kubernetes/kubeadm-config.yaml
@@ -62,12 +56,12 @@
       changed_when: kubeadm_init.rc == 0
       notify: Restart haproxy on primary master
 
-    - name: "Step 4. Verify that admin.conf was created"
+    - name: "Step 3. Verify that admin.conf was created"
       ansible.builtin.stat:
         path: /etc/kubernetes/admin.conf
       register: admin_conf_stat_post_init
 
-    - name: "Step 5. Fail if kubeadm init did not create admin.conf"
+    - name: "Step 4. Fail if kubeadm init did not create admin.conf"
       ansible.builtin.fail:
         msg: "kubeadm init failed to create /etc/kubernetes/admin.conf. Check /tmp/kubeadm-init.log for details."
       when: not admin_conf_stat_post_init.stat.exists and kubeadm_init is changed
@@ -103,6 +97,8 @@
         owner: "{{ ansible_ssh_user }}"
         group: "{{ ansible_ssh_user }}"
         mode: '0644'
+
+### For the purpose of testing cluster only.
 
 # - name: "Section D: Install Container Network Interface (CNI)"
 #   block:

@@ -79,7 +79,7 @@
         mode: '0644'
       notify: Restart crio service   # Important to apply the new config
 
-    - name: "Verify CRI-O cgroup configuration"
+    - name: "Step 7. Verify CRI-O cgroup configuration"
       ansible.builtin.stat:
         path: /etc/crio/crio.conf.d/02-cgroup-manager.conf
       register: crio_config_stat

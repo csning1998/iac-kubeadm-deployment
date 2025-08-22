@@ -34,7 +34,7 @@
         owner: root
         group: root
         mode: '0644'
-      notify: Restart keepalived   # Notify handler to restart the service on change
+      notify: Restart keepalived  # Notify handler to restart the service on change
 
     - name: "Step 3. Verify Keepalived configuration syntax"
       ansible.builtin.command: keepalived --config-test
