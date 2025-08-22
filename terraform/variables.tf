@@ -22,6 +22,11 @@ variable "ssh_private_key_path" {
 variable "master_ip_list" {
   description = "IP address list for the Kubernetes master node"
   type        = list(string)
+
+  validation {
+    condition     = length(var.master_ip_list) % 2 != 0
+    error_message = "The number of master nodes must be an odd number (1, 3, 5, etc.) to ensure a stable etcd quorum."
+  }
 }
 
 variable "worker_ip_list" {

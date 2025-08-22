@@ -3,7 +3,8 @@
   hosts: master
   become: true
   roles:
-    - 11-ha-loadbalancer
+    - role: 11-ha-loadbalancer
+      when: (groups['master'] | length) > 1
 
 - name: "Play 2: Initialize the primary master node"
   hosts: "{{ groups['master'][0] | default([]) }}"

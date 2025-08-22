@@ -15,7 +15,11 @@ localAPIEndpoint:
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
 kubernetesVersion: "v1.32.0"
+{% if (groups['master'] | length) > 1 %}
 controlPlaneEndpoint: "{{ K8S_HA_VIRTUAL_IP }}:6443"
+{% else %}
+controlPlaneEndpoint: "{{ advertise_ip }}:6443"
+{% endif %}
 apiServer:
   extraArgs:
     - name: bind-address

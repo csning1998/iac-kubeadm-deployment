@@ -3,6 +3,7 @@
   ansible.builtin.systemd:
     name: haproxy
     state: restarted
+  when: (groups['master'] | length) > 1
 
 - name: Create Calico operator flag file
   listen: "Create Calico operator flag file"
