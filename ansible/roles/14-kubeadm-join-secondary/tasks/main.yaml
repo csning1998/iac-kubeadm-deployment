@@ -35,7 +35,22 @@
           STDERR: {{ kubeadm_join_result.stderr | default('N/A') }}
       when: kubeadm_join_result.rc is defined and kubeadm_join_result.rc != 0
 
-- name: "Section C: Set up kubeconfig on this secondary master"
+- name: "Section C: Ensure correct bind-address in kube-apiserver manifest"
+  block:
+    - name: "Step 1. Remove any existing bind-address line"
+      ansible.builtin.lineinfile:
+        path: /etc/kubernetes/manifests/kube-apiserver.yaml
+        state: absent
+        regexp: '^(\s+)- --bind-address='
+
+    - name: "Step 2. Add the correct bind-address line"
+      ansible.builtin.lineinfile:
+        path: /etc/kubernetes/manifests/kube-apiserver.yaml
+        state: present
+        insertafter: '(\s+)- --authorization-mode=Node,RBAC'
+        line: '    - --bind-address={{ advertise_ip }}'
+
+- name: "Section D: Set up kubeconfig on this secondary master"
   block:
     - name: "Step 1. Create .kube directory for the root user"
       ansible.builtin.file:

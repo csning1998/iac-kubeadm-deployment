@@ -67,6 +67,7 @@ build {
     extra_arguments = [
       "--extra-vars", "expected_hostname=${var.vm_name}",
       "--extra-vars", "public_key_file=${var.ssh_public_key_path}",
+      "--extra-vars", "ssh_user=${var.ssh_username}",
       "-v",
       # "-vv",
       # "-vvv",
