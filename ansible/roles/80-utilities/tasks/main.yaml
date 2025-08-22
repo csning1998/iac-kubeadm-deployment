@@ -1,0 +1,12 @@
+---
+- name: "Include Zsh setup tasks"
+  ansible.builtin.include_tasks: 81-setup-zsh.yaml
+  when: configure_zsh | bool
+
+- name: "Include tmux setup tasks"
+  ansible.builtin.include_tasks: setup-tmux.yaml
+  when: configure_tmux | bool
+
+- name: "Include Vim setup tasks"
+  ansible.builtin.include_tasks: setup-vim.yaml
+  when: configure_vim | bool

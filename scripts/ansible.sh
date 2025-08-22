@@ -1,12 +1,31 @@
 #!/bin/bash
 
+# (Dev) This function is for faster reset and re-execute the Ansible Playbook
+apply_ansible_stage_II(){
+  echo ">>> STEP: Rebuild the VM Environment of Stage II..."
+
+  cd ${SCRIPT_DIR}
+
+  # Step 1. Destroy
+  ansible-playbook \
+    --private-key ~/.ssh/id_ed25519_iac_automation \
+    -vv \
+    ansible/playbooks/90-reset-cluster.yaml
+
+  # Step 2. Build
+  ansible-playbook \
+    --private-key ~/.ssh/id_ed25519_iac_automation \
+    -vv \
+    ansible/playbooks/10-provision-cluster.yaml
+}
+
 # This script contains functions related to Ansible operations.
 setup_ansible_vault() {
   echo ">>> STEP: Set up Ansible Vault ..."
 
   # Step 1: Check if ansible-vault is installed
   vault_pass_file="${SCRIPT_DIR}/vault_pass.txt"
-  vault_file="${ANSIBLE_DIR}/group_vars/vault.yml"
+  vault_file="${ANSIBLE_DIR}/group_vars/vault.yaml"
 
   # Step 2: Get vm_username from terraform.tfvars or TF_VAR_vm_username
   if ! command -v ansible-vault >/dev/null 2>&1; then
@@ -31,7 +50,7 @@ setup_ansible_vault() {
   chmod 600 "$vault_pass_file"
   echo "#### Created $vault_pass_file"
 
-  # Step 4: Create `ansible/group_vars/vault.yml`
+  # Step 4: Create `ansible/group_vars/vault.yaml`
   mkdir -p "${ANSIBLE_DIR}/group_vars"
   echo "vault_vm_username: $vm_username" | ansible-vault encrypt --vault-password-file "$vault_pass_file" > "$vault_file"
   if [ $? -eq 0 ]; then

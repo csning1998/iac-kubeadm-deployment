@@ -1,8 +1,0 @@
----
-- name: "Section: Join Worker Node to Cluster"
-  block:
-    - name: "Step 1. Execute kubeadm join"
-      ansible.builtin.command: "{{ hostvars[groups['master'][0]]['kubeadm_join_command'] }}"
-      args:
-        # Ensure the join command only be executed once by checking if `kubelet.conf`` exists
-        creates: /etc/kubernetes/kubelet.conf

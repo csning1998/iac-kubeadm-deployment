@@ -1,0 +1,35 @@
+---
+- name: "Section A: Prepare worker node for joining"
+  block:
+    - name: "Step 1. Reset any previous kubeadm configuration"
+      ansible.builtin.command: kubeadm reset -f
+      changed_when: true
+
+    - name: "Step 2. Ensure kubelet service is enabled and started"
+      ansible.builtin.systemd:
+        name: kubelet
+        state: started
+        enabled: true
+
+- name: "Section B: Join this worker node to the cluster"
+  block:
+    - name: "Step 0. Create kubeadm join config file from template"
+      ansible.builtin.template:
+        src: kubeadm-join-config.yaml.j2
+        dest: /tmp/kubeadm-join-config.yaml
+        mode: '0644'
+
+    - name: "Step 1. Execute the worker join command"
+      ansible.builtin.command: >-
+        kubeadm join --config /tmp/kubeadm-join-config.yaml
+      args:
+        creates: /etc/kubernetes/kubelet.conf
+      register: kubeadm_join_result
+
+    - name: "Step 2. Fail if kubeadm join command failed"
+      ansible.builtin.fail:
+        msg: |
+          kubeadm join failed on {{ inventory_hostname }}.
+          STDOUT: {{ kubeadm_join_result.stdout | default('N/A') }}
+          STDERR: {{ kubeadm_join_result.stderr | default('N/A') }}
+      when: kubeadm_join_result.rc is defined and kubeadm_join_result.rc != 0

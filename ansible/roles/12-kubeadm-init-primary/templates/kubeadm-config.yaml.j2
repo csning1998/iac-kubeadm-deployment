@@ -1,0 +1,64 @@
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: InitConfiguration
+nodeRegistration:
+  name: "{{ inventory_hostname }}"
+  kubeletExtraArgs:
+    - name: container-runtime-endpoint
+      value: "unix:///var/run/crio/crio.sock"
+    - name: cgroup-driver
+      value: "systemd"
+localAPIEndpoint:
+  advertiseAddress: "{{ advertise_ip }}"
+  bindPort: 6443
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: ClusterConfiguration
+kubernetesVersion: "v1.32.0"
+{% if (groups['master'] | length) > 1 %}
+controlPlaneEndpoint: "{{ K8S_HA_VIRTUAL_IP }}:6443"
+{% else %}
+controlPlaneEndpoint: "{{ advertise_ip }}:6443"
+{% endif %}
+apiServer:
+  extraArgs:
+    - name: bind-address
+      value: "{{ advertise_ip }}"
+    - name: etcd-servers
+      value: "https://127.0.0.1:2379"
+  certSANs:
+    - "{{ K8S_HA_VIRTUAL_IP }}"
+    - "kubernetes"
+    - "kubernetes.default"
+    - "kubernetes.default.svc"
+    - "kubernetes.default.svc.cluster.local"
+{% for ip in K8S_MASTER_IPS %}
+    - "{{ ip }}"
+{% endfor %}
+networking:
+  podSubnet: "{{ K8S_POD_SUBNET }}"
+etcd:
+  extraArgs:
+    - name: listen-client-urls
+      value: "https://127.0.0.1:2379,https://{{ advertise_ip }}:2379"
+    - name: advertise-client-urls
+      value: "https://{{ advertise_ip }}:2379"
+    - name: listen-peer-urls
+      value: "https://{{ advertise_ip }}:2380"
+    - name: initial-advertise-peer-urls
+      value: "https://{{ advertise_ip }}:2380"
+  local:
+    serverCertSANs:
+{% for host in groups['master'] %}
+      - "{{ host }}"
+{% endfor %}
+{% for ip in K8S_MASTER_IPS %}
+      - "{{ ip }}"
+{% endfor %}
+    peerCertSANs:
+{% for host in groups['master'] %}
+      - "{{ host }}"
+{% endfor %}
+{% for ip in K8S_MASTER_IPS %}
+      - "{{ ip }}"
+{% endfor %}

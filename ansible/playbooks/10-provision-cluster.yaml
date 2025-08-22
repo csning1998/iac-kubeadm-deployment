@@ -1,0 +1,31 @@
+---
+- name: "Play 1: Setup HA Load Balancer on all master nodes"
+  hosts: master
+  become: true
+  roles:
+    - role: 11-ha-loadbalancer
+      when: (groups['master'] | length) > 1
+
+- name: "Play 2: Initialize the primary master node"
+  hosts: "{{ groups['master'][0] | default([]) }}"
+  become: true
+  roles:
+    - 12-kubeadm-init-primary
+
+- name: "Play 3: Generate and fetch join commands from primary master"
+  hosts: "{{ groups['master'][0] | default([]) }}"
+  become: true
+  roles:
+    - 13-kubeadm-get-join-command
+
+- name: "Play 4: Join secondary master nodes to the cluster"
+  hosts: "{{ groups['master'] | default([]) | difference([ (groups['master'] | default(['placeholder']))[0] ]) }}"
+  become: true
+  roles:
+    - 14-kubeadm-join-secondary
+
+- name: "Play 5: Join worker nodes to the cluster"
+  hosts: workers
+  become: true
+  roles:
+    - 15-kubeadm-join-workers

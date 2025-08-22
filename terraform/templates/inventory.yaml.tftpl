@@ -1,0 +1,15 @@
+---
+all:
+  children:
+    master:
+      hosts:
+%{ for node in master_nodes ~}
+        ${node.key}:
+          advertise_ip: ${node.ip}
+%{ endfor ~}
+    workers:
+      hosts:
+%{ for node in worker_nodes ~}
+        ${node.key}:
+          advertise_ip: ${node.ip}
+%{ endfor ~}

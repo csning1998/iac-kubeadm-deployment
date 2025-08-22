@@ -1,0 +1,7 @@
+---
+- name: "Play: Reset all Kubernetes nodes to a clean state"
+  hosts: all
+  become: true
+  gather_facts: false
+  roles:
+    - 99-reset-cluster

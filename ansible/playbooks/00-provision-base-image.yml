@@ -1,6 +1,0 @@
----
-- name: "Play 1: Apply common prerequisites to all Kubernetes nodes"
-  hosts: all
-  become: true
-  roles:
-    - 00-k8s-common

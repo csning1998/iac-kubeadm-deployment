@@ -22,6 +22,11 @@ variable "ssh_private_key_path" {
 variable "master_ip_list" {
   description = "IP address list for the Kubernetes master node"
   type        = list(string)
+
+  validation {
+    condition     = length(var.master_ip_list) % 2 != 0
+    error_message = "The number of master nodes must be an odd number (1, 3, 5, etc.) to ensure a stable etcd quorum."
+  }
 }
 
 variable "worker_ip_list" {
@@ -40,17 +45,17 @@ variable "master_vcpu" {
 variable "master_ram" {
   description = "Amount of RAM (in MB) for the Kubernetes master node"
   type        = number
-  default     = 6144
+  default     = 4096
 }
 
 variable "worker_vcpu" {
   description = "Number of vCPUs for each Kubernetes worker node"
   type        = number
-  default     = 6
+  default     = 4
 }
 
 variable "worker_ram" {
   description = "Amount of RAM (in MB) for each Kubernetes worker node"
   type        = number
-  default     = 12288
+  default     = 4096
 }

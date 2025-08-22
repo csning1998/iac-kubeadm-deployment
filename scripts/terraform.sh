@@ -22,7 +22,7 @@ destroy_terraform_resources() {
   cd "${TERRAFORM_DIR}"
   terraform init -upgrade
   terraform destroy -parallelism=1 -auto-approve -lock=false
-  rm -rf "${TERRAFORM_DIR}/vms"
+  rm -rf "${TERRAFORM_DIR}/vms/*"
   echo "#### Terraform destroy complete."
   echo "--------------------------------------------------"
 }

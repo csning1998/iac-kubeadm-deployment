@@ -4,10 +4,11 @@ packer/secret.auto.pkrvars.hcl
 
 
 ### Ansible inventory
-ansible/group_vars/vault.yml
+ansible/group_vars/vault.yaml
 ansible/logs
-ansible/inventory.yml
+ansible/inventory.yaml
 ansible/packer-provisioner-ansible*
+backup
 vault_pass.txt
 
 ### Ignore folder for output *.vdi
@@ -17,6 +18,7 @@ packer-playground/output
 
 ### Ignore Terraform state files
 .terraform/
+terraform/.terraform.tfstate.lock.info
 terraform.tfstate
 terraform.tfstate.backup
 # Ignore all VMWare files
@@ -43,3 +45,4 @@ terraform/setup_ansible.tf.bak
 
 # Only for recording by commit messages personally.
 commit-message.md
+ansible/group_vars/all.yaml

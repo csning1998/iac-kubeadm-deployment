@@ -1,0 +1,140 @@
+# ansible/roles/10-kubeadm-init-primary/tasks/main.yml
+---
+- name: "Section A: Prepare primary master node for initialization"
+  block:
+    - name: "Step 1. Set advertise_ip fact for this node"
+      ansible.builtin.set_fact:
+        advertise_ip: "{{ K8S_MASTER_IPS[0] }}"
+
+    - name: "Step 2. Ensure journald persistent storage directory exists"
+      ansible.builtin.file:
+        path: /var/log/journal
+        state: directory
+        mode: '0755'
+
+    - name: "Step 3. Restart systemd-journald to apply persistent storage"
+      ansible.builtin.systemd:
+        name: systemd-journald
+        state: restarted
+
+    - name: "Step 4. Ensure kubelet service is enabled and running"
+      ansible.builtin.systemd:
+        name: kubelet
+        state: started
+        enabled: true
+
+    - name: "Step 5. Ensure /etc/kubernetes directory exists"
+      ansible.builtin.file:
+        path: /etc/kubernetes
+        state: directory
+        mode: '0755'
+
+    - name: "Step 6. Create kubeadm config file from template"
+      ansible.builtin.template:
+        src: kubeadm-config.yaml.j2
+        dest: /etc/kubernetes/kubeadm-config.yaml
+        mode: '0644'
+
+- name: "Section B: Run kubeadm init to bootstrap the cluster"
+  block:
+    - name: "Step 1. Check if admin.conf already exists"
+      ansible.builtin.stat:
+        path: /etc/kubernetes/admin.conf
+      register: admin_conf_stat
+
+    - name: "Step 2. Run kubeadm init command"
+      ansible.builtin.shell: >-
+        kubeadm init
+        --config=/etc/kubernetes/kubeadm-config.yaml
+        --upload-certs
+        --ignore-preflight-errors=Port-6443
+        --v=5 > /tmp/kubeadm-init.log 2>&1
+      args:
+        creates: /etc/kubernetes/admin.conf
+      when: not admin_conf_stat.stat.exists
+      register: kubeadm_init
+      changed_when: kubeadm_init.rc == 0
+      notify: Restart haproxy on primary master
+
+    - name: "Step 3. Verify that admin.conf was created"
+      ansible.builtin.stat:
+        path: /etc/kubernetes/admin.conf
+      register: admin_conf_stat_post_init
+
+    - name: "Step 4. Fail if kubeadm init did not create admin.conf"
+      ansible.builtin.fail:
+        msg: "kubeadm init failed to create /etc/kubernetes/admin.conf. Check /tmp/kubeadm-init.log for details."
+      when: not admin_conf_stat_post_init.stat.exists and kubeadm_init is changed
+
+- name: "Section C: Set up kubeconfig to enable kubectl"
+  block:
+    - name: "Step 1. Create .kube directory for the root user"
+      ansible.builtin.file:
+        path: "/root/.kube"
+        state: directory
+        mode: '0755'
+
+    - name: "Step 2. Copy admin.conf to root's kube config"
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: "/root/.kube/config"
+        remote_src: true
+        mode: '0600'
+
+    - name: "Step 3. Create .kube directory for the SSH user"
+      ansible.builtin.file:
+        path: "/home/{{ ansible_ssh_user }}/.kube"
+        state: directory
+        owner: "{{ ansible_ssh_user }}"
+        group: "{{ ansible_ssh_user }}"
+        mode: '0755'
+
+    - name: "Step 4. Copy admin.conf to user's kube config"
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: "/home/{{ ansible_ssh_user }}/.kube/config"
+        remote_src: true
+        owner: "{{ ansible_ssh_user }}"
+        group: "{{ ansible_ssh_user }}"
+        mode: '0644'
+
+### For the purpose of testing cluster only.
+
+# - name: "Section D: Install Container Network Interface (CNI)"
+#   block:
+#     - name: "Step 1. Install the Tigera Calico operator"
+#       ansible.builtin.command: >-
+#         kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/tigera-operator.yaml
+#       environment:
+#         KUBECONFIG: /etc/kubernetes/admin.conf
+#       args:
+#         creates: /etc/kubernetes/calico-operator-installed.flag
+#       register: calico_operator_create
+#       changed_when: "'created' in calico_operator_create.stdout"
+
+#     - name: "Step 2. Download Calico custom resources manifest"
+#       ansible.builtin.get_url:
+#         url: "https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/custom-resources.yaml"
+#         dest: "/tmp/calico-custom-resources.yaml"
+#         mode: '0644'
+
+#     - name: "Step 3. Update Calico manifest with the correct pod CIDR"
+#       ansible.builtin.replace:
+#         path: "/tmp/calico-custom-resources.yaml"
+#         regexp: 'cidr: 192.168.0.0/16'
+#         replace: 'cidr: {{ K8S_POD_SUBNET }}'
+
+#     - name: "Step 4. Apply the customized Calico resources"
+#       ansible.builtin.command: kubectl apply -f /tmp/calico-custom-resources.yaml
+#       environment:
+#         KUBECONFIG: /etc/kubernetes/admin.conf
+#       register: calico_apply
+#       changed_when: "'created' in calico_apply.stdout or 'configured' in calico_apply.stdout"
+
+# - name: "Section E: Wait for API server to become responsive after CNI"
+#   ansible.builtin.wait_for:
+#     host: "{{ advertise_ip }}"
+#     port: 6443
+#     delay: 15
+#     timeout: 180
+#     msg: "API server did not become responsive within 3 minutes after CNI installation."
