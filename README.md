@@ -30,18 +30,24 @@ You can clone the project using the following command:
 git clone https://github.com/csning1998/iac-kubeadm-deployment.git
 ```
 
-The content in Section 1 and Section 2 serves as prerequisite setup before formal execution. Project lifecycle management and configuration are handled through the [entry.sh](http://entry.sh/) script in the root directory. After executing `./entry.sh`, you will see the following content:
+The content in Section 1 and Section 2 serves as prerequisite setup before formal execution. Project lifecycle management and configuration are handled through the `entry.sh` script in the root directory. After executing `./entry.sh`, you will see the following content:
 
 ```text
 ➜  iac-kubeadm-deployment git:(main) ✗ ./entry.sh
+(base) ➜  iac-kubeadm-deployment git:(ha-cluster) ✗ ./entry.sh                           
 VMware Workstation VM Management Script
-1) Setup IaC Environment    6) Rebuild Packer                               11) Check VM Status
-2) Generate SSH Key         7) Rebuild Terraform: All Stage                 12) Start All VMs
-3) Set up Ansible Vault     8) Rebuild Terraform Stage I: Configure Nodes   13) Stop All VMs
-4) Reset All                9) Rebuild Terraform Stage II: Ansible          14) Delete All VMs
-5) Rebuild All              10) Verify SSH                                  15) Quit
+1) Setup IaC Environment                        9) Rebuild Terraform Stage II: Ansible
+2) Generate SSH Key                            10) [DEV] Rebuild Stage II via Ansible
+3) Set up Ansible Vault                        11) Verify SSH
+4) Reset All                                   12) Check VM Status
+5) Rebuild All                                 13) Start All VMs
+6) Rebuild Packer                              14) Stop All VMs
+7) Rebuild Terraform: All Stage                15) Delete All VMs
+8) Rebuild Terraform Stage I: Configure Nodes  16) Quit
 Please select an action:
 ```
+
+A description of how to use this script follows below.
 
 ## Section 1. Environmental Setup
 
@@ -112,14 +118,14 @@ Please select an action:
    on linux_amd64
    (base) ➜  ~ ansible --version
    ansible [core 2.18.7]
-     config file = /etc/ansible/ansible.cfg
-     configured module search path = ['/home/someUserName/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
-     ansible python module location = /usr/lib/python3/dist-packages/ansible
-     ansible collection location = /home/someUserName/.ansible/collections:/usr/share/ansible/collections
-     executable location = /usr/bin/ansible
-     python version = 3.12.3 (main, Jun 18 2025, 17:59:45) [GCC 13.3.0]
-     jinja version = 3.1.2
-     libyaml = True
+      config file = /etc/ansible/ansible.cfg
+      configured module search path = ['/home/someUserName/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
+      ansible python module location = /usr/lib/python3/dist-packages/ansible
+      ansible collection location = /home/someUserName/.ansible/collections:/usr/share/ansible/collections
+      executable location = /usr/bin/ansible
+      python version = 3.12.3 (main, Jun 18 2025, 17:59:45) [GCC 13.3.0]
+      jinja version = 3.1.2
+      libyaml = True
    ```
 
 5. **Suggested Plugins for VSCode**
@@ -166,39 +172,44 @@ To ensure the project runs smoothly, please follow the procedures below to compl
 
    - **For Packer:** You can create the `packer/secret.auto.pkrvars.hcl` file using the following command:
 
-     ```bash
-     cat << EOF > packer/secret.auto.pkrvars.hcl
-     ssh_username = "YOUR_VM_USERNAME"
-     ssh_password = "YOUR_VM_PASSWORD"
-     ssh_password_hash = "\\$(mkpasswd -m sha-512 YOUR_VM_PASSWORD)"
-     ssh_public_key_path = "~/.ssh/id_ed25519_iac_automation.pub"
-     EOF
+      ```bash
+      cat << EOF > packer/secret.auto.pkrvars.hcl
+      ssh_username = "YOUR_VM_USERNAME"
+      ssh_password = "YOUR_VM_PASSWORD"
+      ssh_password_hash = "\\$(mkpasswd -m sha-512 YOUR_VM_PASSWORD)"
+      ssh_public_key_path = "~/.ssh/id_ed25519_iac_automation.pub"
+      EOF
+      ```
 
-     ```
+      In which `ssh_username` and `ssh_password` are the account and password used to log into the virtual machine; while `ssh_password_hash` is the hashed password required for virtual machine automatic installation (Cloud-init). This password needs to be generated using the password string from `ssh_password`. For instance, if the password is `HelloWorld@k8s`, then the corresponding password hash should be generated using the following command:
 
-     In which `ssh_username` and `ssh_password` are the account and password used to log into the virtual machine; while `ssh_password_hash` is the hashed password required for virtual machine automatic installation (Cloud-init). This password needs to be generated using the password string from `ssh_password`. For instance, if the password is `HelloWorld@k8s`, then the corresponding password hash should be generated using the following command:
+      ```bash
+      mkpasswd -m sha-512 HelloWorld@k8s
+      ```
 
-     ```bash
-     mkpasswd -m sha-512 HelloWorld@k8s
-     ```
-
-     And `ssh_public_key_path`: needs to be changed to the **public key** name generated earlier, the public key will be in `*.pub` format
+      And `ssh_public_key_path`: needs to be changed to the **public key** name generated earlier, the public key will be in `*.pub` format
 
    - **For Terraform:** You can create the `terraform/terraform.tfvars` file using the following command:
 
-     ```bash
-     cat << EOF > terraform/terraform.tfvars
-     vm_username = "YOUR_VM_USERNAME"
-     vm_password = "YOUR_VM_PASSWORD"
-     ssh_private_key_path = "~/.ssh/id_ed25519_iac_automation"
+      ```bash
+      cat << EOF > terraform/terraform.tfvars
 
-     # Define IP addresses for your cluster nodes
-     master_ip_list = ["172.16.134.100"]
-     worker_ip_list = ["172.16.134.101", "172.16.134.102"]
-     EOF
-     ```
+      vm_username = "YOUR_VM_USERNAME"
+      vm_password = "YOUR_VM_PASSWORD"
+      ssh_private_key_path = "~/.ssh/id_ed25519_iac_automation"
 
-     The number of elements in `master_ip_list` and `worker_ip_list` will determine the number of nodes generated. `master_ip_list` currently only supports setting up a single node (High Availability Cluster will be supported in the future), while `worker_ip_list` can be configured according to the number of IPs. The IPs set by the user must correspond to the host-only network segment
+      # For cluster with single master
+      master_ip_list = ["172.16.134.200"]
+
+      # For cluster with high availability
+      # master_ip_list = ["172.16.134.200", "172.16.134.201", "172.16.134.202"]
+
+      # Worker nodes
+      worker_ip_list = ["172.16.134.210", "172.16.134.211", "172.16.134.212"]
+      EOF
+      ```
+
+      For users setting up an HA Cluster, the number of elements in `master_ip_list` and `worker_ip_list` determines the number of nodes generated. Ensure the length of `master_ip_list` is an odd number to prevent the etcd Split-Brain risk in Kubernetes. Meanwhile, `worker_ip_list` can be configured based on the number of IPs. The IPs provided by the user must correspond to the host-only network segment.
 
    **Note:** Please make sure to replace `YOUR_VM_USERNAME` and `YOUR_VM_PASSWORD` with the actual credentials you wish to use. If you specified a non-default key name in the previous step, you must also update the `ssh_public_key_path` and `ssh_private_key_path` fields accordingly
 
@@ -259,7 +270,7 @@ sequenceDiagram
 
 1. **Packer + Ansible: Provisioning base Kubernetes Golden Image**
 
-   Packer plays the role of an "image factory" in this project, with its core task being to automate the creation of a standardized virtual machine template (Golden Image) pre-configured with all Kubernetes dependencies. The project uses `packer/ubuntu-server-24.pkr.hcl` as its definition file, with a workflow that includes: automatically downloading the `Ubuntu Server 24.04 ISO` file and completing unattended installation using cloud-init; starting SSH connection and invoking the Ansible Provisioner after installation; executing `ansible/playbooks/00-provision-base-image.yaml` to install necessary components such as `kubelet`, `kubeadm`, `kubectl`, and `CRI-O`; finally shutting down the virtual machine and producing a `*.vmx` format template for Terraform to use. The goal of this phase is to "bake" all infrequently changing software and configurations into the image to reduce the time required for subsequent deployments.
+   Packer plays the role of an "image factory" in this project, with its core task being to automate the creation of a standardized virtual machine template (Golden Image) pre-configured with all Kubernetes dependencies. The project uses `packer/ubuntu-server-24.pkr.hcl` as its definition file, with a workflow that includes: automatically downloading the `Ubuntu Server 24.04 ISO` file and completing unattended installation using cloud-init; starting SSH connection and invoking the Ansible Provisioner after installation; executing `ansible/playbooks/00-provision-base-image.yaml` to install necessary components such as `kubelet`, `kubeadm`, `kubectl`, and `CRI-O` (also configure it to use `cgroup` driver); finally shutting down the virtual machine and producing a `*.vmx` format template for Terraform to use. The goal of this phase is to "bake" all infrequently changing software and configurations into the image to reduce the time required for subsequent deployments.
 
 2. **Terraform: The Infrastructure Orchestrator**
 
@@ -267,13 +278,13 @@ sequenceDiagram
 
    - **Node Deployment (Stage I)**:
 
-     - Based on `master_ip_list` and `worker_ip_list` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
-     - Using the `vmrun` clone command, it quickly replicates multiple virtual machine instances from the `*.vmx` template created by Packer.
-     - Using `remote-exec`, it executes Shell commands on each node to configure static IP addresses, hostnames, and other network settings.
+      - Based on `master_ip_list` and `worker_ip_list` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
+      - Using the `vmrun` clone command, it quickly replicates multiple virtual machine instances from the `*.vmx` template created by Packer.
+      - Using `remote-exec`, it executes Shell commands on each node to configure static IP addresses, hostnames, and other network settings.
 
    - **Cluster Configuration (Stage II)**:
-     - Once all nodes are ready, Terraform dynamically generates `ansible/inventory.yaml` list file.
-     - Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-cluster.yaml` Playbook to complete the initialization of the Kubernetes cluster.
+      - Once all nodes are ready, Terraform dynamically generates `ansible/inventory.yaml` list file.
+      - Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-cluster.yaml` Playbook to complete the initialization of the Kubernetes cluster.
 
 3. **Ansible: The Configuration Manager**
 
