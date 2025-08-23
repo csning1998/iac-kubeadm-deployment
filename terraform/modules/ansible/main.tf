@@ -49,7 +49,7 @@ resource "local_file" "inventory" {
 }
 
 resource "null_resource" "run_ansible" {
-  depends_on = [var.vm_status, ansible_vault.secrets, local_file.inventory]
+  depends_on = [var.vm_status, local_file.inventory]
   provisioner "local-exec" {
     command     = <<-EOT
       set -e
