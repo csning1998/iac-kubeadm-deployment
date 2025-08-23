@@ -34,16 +34,17 @@ The content in Section 1 and Section 2 serves as prerequisite setup before forma
 
 ```text
 ➜  iac-kubeadm-deployment git:(main) ✗ ./entry.sh
-(base) ➜  iac-kubeadm-deployment git:(ha-cluster) ✗ ./entry.sh                           
+(base) ➜  iac-kubeadm-deployment git:(ha-cluster) ✗ ./entry.sh
 VMware Workstation VM Management Script
-1) Setup IaC Environment                        9) Rebuild Terraform Stage II: Ansible
-2) Generate SSH Key                            10) [DEV] Rebuild Stage II via Ansible
-3) Set up Ansible Vault                        11) Verify SSH
-4) Reset All                                   12) Check VM Status
-5) Rebuild All                                 13) Start All VMs
-6) Rebuild Packer                              14) Stop All VMs
-7) Rebuild Terraform: All Stage                15) Delete All VMs
-8) Rebuild Terraform Stage I: Configure Nodes  16) Quit
+VMware Workstation VM Management Script
+1) Setup IaC Environment                         9) [DEV] Rebuild Stage II via Ansible
+2) Generate SSH Key                             10) Verify SSH
+3) Reset All                                    11) Check VM Status
+4) Rebuild All                                  12) Start All VMs
+5) Rebuild Packer                               13) Stop All VMs
+6) Rebuild Terraform: All Stage                 14) Delete All VMs
+7) Rebuild Terraform Stage I: Configure Nodes   15) Quit
+8) Rebuild Terraform Stage II: Ansible
 Please select an action:
 ```
 
@@ -173,10 +174,15 @@ To ensure the project runs smoothly, please follow the procedures below to compl
    - **For Packer:** You can create the `packer/secret.auto.pkrvars.hcl` file using the following command:
 
       ```bash
+
+      VM_USERNAME="YOUR_VM_USERNAME"
+      VM_PASSWORD="YOUR_VM_PASSWORD"
+      HASHED_PASSWORD=$(echo -n "$VM_PASS" | mkpasswd -m sha-512 -P 0)
+
       cat << EOF > packer/secret.auto.pkrvars.hcl
-      ssh_username = "YOUR_VM_USERNAME"
-      ssh_password = "YOUR_VM_PASSWORD"
-      ssh_password_hash = "\\$(mkpasswd -m sha-512 YOUR_VM_PASSWORD)"
+      ssh_username = "$VM_USERNAME"
+      ssh_password = "$VM_PASSWORD"
+      ssh_password_hash = "$HASHED_PASSWORD"
       ssh_public_key_path = "~/.ssh/id_ed25519_iac_automation.pub"
       EOF
       ```
@@ -189,13 +195,13 @@ To ensure the project runs smoothly, please follow the procedures below to compl
 
       And `ssh_public_key_path`: needs to be changed to the **public key** name generated earlier, the public key will be in `*.pub` format
 
-   - **For Terraform:** You can create the `terraform/terraform.tfvars` file using the following command:
+      - **For Terraform:** You can create the `terraform/terraform.tfvars` file using the following command with `VM_USERNAME` and `VM_PASSWORD` above:
 
       ```bash
       cat << EOF > terraform/terraform.tfvars
 
-      vm_username = "YOUR_VM_USERNAME"
-      vm_password = "YOUR_VM_PASSWORD"
+      vm_username = "$VM_USERNAME"
+      vm_password = "$VM_PASSWORD"
       ssh_private_key_path = "~/.ssh/id_ed25519_iac_automation"
 
       # For cluster with single master
@@ -225,7 +231,6 @@ To ensure the project runs smoothly, please follow the procedures below to compl
 > The setup process is based on the commands provided by Bibin Wilson (2025), which I implemented using an Ansible Playbook. Thanks to the author, Bibin Wilson, for the contribution on his article
 >
 > Work Cited: Bibin Wilson, B. (2025). _How To Setup Kubernetes Cluster Using Kubeadm._ devopscube. <https://devopscube.com/setup-kubernetes-cluster-kubeadm/#vagrantfile-kubeadm-scripts-manifests>
->
 
 ## Section 3. System Architecture
 
@@ -278,13 +283,13 @@ sequenceDiagram
 
    - **Node Deployment (Stage I)**:
 
-      - Based on `master_ip_list` and `worker_ip_list` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
-      - Using the `vmrun` clone command, it quickly replicates multiple virtual machine instances from the `*.vmx` template created by Packer.
-      - Using `remote-exec`, it executes Shell commands on each node to configure static IP addresses, hostnames, and other network settings.
+     - Based on `master_ip_list` and `worker_ip_list` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
+     - Using the `vmrun` clone command, it quickly replicates multiple virtual machine instances from the `*.vmx` template created by Packer.
+     - Using `remote-exec`, it executes Shell commands on each node to configure static IP addresses, hostnames, and other network settings.
 
    - **Cluster Configuration (Stage II)**:
-      - Once all nodes are ready, Terraform dynamically generates `ansible/inventory.yaml` list file.
-      - Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-cluster.yaml` Playbook to complete the initialization of the Kubernetes cluster.
+     - Once all nodes are ready, Terraform dynamically generates `ansible/inventory.yaml` list file.
+     - Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-cluster.yaml` Playbook to complete the initialization of the Kubernetes cluster.
 
 3. **Ansible: The Configuration Manager**
 

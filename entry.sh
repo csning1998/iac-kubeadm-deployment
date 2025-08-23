@@ -64,7 +64,7 @@ PS3="Please select an action: "
 options=(
     "Setup IaC Environment"
     "Generate SSH Key"
-    "Set up Ansible Vault" 
+    # "Set up Ansible Vault" 
     "Reset All" 
     "Rebuild All" 
     "Rebuild Packer" 
@@ -105,12 +105,12 @@ select opt in "${options[@]}"; do
       echo "# SSH Key successfully generated in the path '~/.ssh'."
       break
       ;;
-    "Set up Ansible Vault")
-      echo "# Executing Set up Ansible Vault workflow..."
-      setup_ansible_vault
-      echo "# Set up Ansible Vault workflow completed successfully."
-      break
-      ;;
+    # "Set up Ansible Vault")
+    #   echo "# Executing Set up Ansible Vault workflow..."
+    #   setup_ansible_vault
+    #   echo "# Set up Ansible Vault workflow completed successfully."
+    #   break
+    #   ;;
     "Reset All")
       echo "# Executing Reset All workflow..."
       `check_vmware_workstation`
