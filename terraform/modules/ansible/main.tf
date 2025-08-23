@@ -19,10 +19,10 @@ resource "ansible_host" "nodes" {
   }
 }
 
-resource "ansible_vault" "secrets" {
-  vault_file          = "${var.ansible_path}/group_vars/vault.yaml"
-  vault_password_file = var.vault_pass_path
-}
+# resource "ansible_vault" "secrets" {
+#   vault_file          = "${var.ansible_path}/group_vars/vault.yaml"
+#   vault_password_file = var.vault_pass_path
+# }
 
 /*
 * Generate the parameters that are necessary for Ansible inventory
@@ -57,7 +57,6 @@ resource "null_resource" "run_ansible" {
       ansible-playbook \
         -i ${var.ansible_path}/inventory.yaml \
         --private-key ${var.ssh_private_key_path} \
-        --vault-password-file ${var.vault_pass_path} \
         --extra-vars "ansible_ssh_user=${var.vm_username}" \
         -vv \
         ${var.ansible_path}/playbooks/10-provision-cluster.yaml

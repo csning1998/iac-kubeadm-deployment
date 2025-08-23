@@ -20,87 +20,87 @@ apply_ansible_stage_II(){
 }
 
 # This script contains functions related to Ansible operations.
-setup_ansible_vault() {
-  echo ">>> STEP: Set up Ansible Vault ..."
+# setup_ansible_vault() {
+#   echo ">>> STEP: Set up Ansible Vault ..."
 
-  # Step 1: Check if ansible-vault is installed
-  vault_pass_file="${SCRIPT_DIR}/vault_pass.txt"
-  vault_file="${ANSIBLE_DIR}/group_vars/vault.yaml"
+#   # Step 1: Check if ansible-vault is installed
+#   vault_pass_file="${SCRIPT_DIR}/vault_pass.txt"
+#   vault_file="${ANSIBLE_DIR}/group_vars/vault.yaml"
 
-  # Step 2: Get vm_username from terraform.tfvars or TF_VAR_vm_username
-  if ! command -v ansible-vault >/dev/null 2>&1; then
-    echo "#### Error: ansible-vault is not installed. Please install ansible (e.g., pip install ansible)"
-    return 1
-  fi
+#   # Step 2: Get vm_username from terraform.tfvars or TF_VAR_vm_username
+#   if ! command -v ansible-vault >/dev/null 2>&1; then
+#     echo "#### Error: ansible-vault is not installed. Please install ansible (e.g., pip install ansible)"
+#     return 1
+#   fi
 
-  if [ -f "${TERRAFORM_DIR}/terraform.tfvars" ]; then
-    vm_username=$(grep '^vm_username' "${TERRAFORM_DIR}/terraform.tfvars" | grep -oP '"\K[^"]+' || true)
-  fi
+#   if [ -f "${TERRAFORM_DIR}/terraform.tfvars" ]; then
+#     vm_username=$(grep '^vm_username' "${TERRAFORM_DIR}/terraform.tfvars" | grep -oP '"\K[^"]+' || true)
+#   fi
 
-  vm_username="${vm_username:-${TF_VAR_vm_username:-$(whoami)}}"
-  if [ -z "$vm_username" ]; then
-    echo "#### Error: vm_username not found in terraform.tfvars or TF_VAR_vm_username"
-    return 1
-  fi
+#   vm_username="${vm_username:-${TF_VAR_vm_username:-$(whoami)}}"
+#   if [ -z "$vm_username" ]; then
+#     echo "#### Error: vm_username not found in terraform.tfvars or TF_VAR_vm_username"
+#     return 1
+#   fi
 
-  # Step 3: Create vault_pass.txt
-  echo "#### Enter Ansible Vault password:"
-  read -s vault_password
-  echo "$vault_password" > "$vault_pass_file"
-  chmod 600 "$vault_pass_file"
-  echo "#### Created $vault_pass_file"
+#   # Step 3: Create vault_pass.txt
+#   echo "#### Enter Ansible Vault password:"
+#   read -s vault_password
+#   echo "$vault_password" > "$vault_pass_file"
+#   chmod 600 "$vault_pass_file"
+#   echo "#### Created $vault_pass_file"
 
-  # Step 4: Create `ansible/group_vars/vault.yaml`
-  mkdir -p "${ANSIBLE_DIR}/group_vars"
-  echo "vault_vm_username: $vm_username" | ansible-vault encrypt --vault-password-file "$vault_pass_file" > "$vault_file"
-  if [ $? -eq 0 ]; then
-    echo "#### Created and encrypted $vault_file"
-  else
-    echo "#### Error: Failed to create $vault_file"
-    return 1
-  fi
-  chmod 600 "$vault_file"
-  echo "#### Set permissions for $vault_file"
+#   # Step 4: Create `ansible/group_vars/vault.yaml`
+#   mkdir -p "${ANSIBLE_DIR}/group_vars"
+#   echo "vault_vm_username: $vm_username" | ansible-vault encrypt --vault-password-file "$vault_pass_file" > "$vault_file"
+#   if [ $? -eq 0 ]; then
+#     echo "#### Created and encrypted $vault_file"
+#   else
+#     echo "#### Error: Failed to create $vault_file"
+#     return 1
+#   fi
+#   chmod 600 "$vault_file"
+#   echo "#### Set permissions for $vault_file"
 
-  # Step 5: Update .gitignore
-  gitignore_file="${SCRIPT_DIR}/.gitignore"
-  for file in "$vault_pass_file" "$vault_file"; do
-    relative_file="${file#${SCRIPT_DIR}/}"
-    if ! grep -Fx "$relative_file" "$gitignore_file" >/dev/null 2>&1; then
-      echo -e "\n$relative_file" >> "$gitignore_file"
-      echo "#### Added $relative_file to $gitignore_file"
-    fi
-  done
+#   # Step 5: Update .gitignore
+#   gitignore_file="${SCRIPT_DIR}/.gitignore"
+#   for file in "$vault_pass_file" "$vault_file"; do
+#     relative_file="${file#${SCRIPT_DIR}/}"
+#     if ! grep -Fx "$relative_file" "$gitignore_file" >/dev/null 2>&1; then
+#       echo -e "\n$relative_file" >> "$gitignore_file"
+#       echo "#### Added $relative_file to $gitignore_file"
+#     fi
+#   done
 
-  # Step 6: Verify vault file and prompt for confirmation
-  echo -e "#### Verifying $vault_file contents:\n"
-  ansible-vault view --vault-password-file "$vault_pass_file" "$vault_file"
-  if [ $? -eq 0 ]; then
-    echo -e "\n #### AWARE!!! Confirm if this is the expected username for Ansible working on the VMs."
-    read -p "#### If not, enter 'n' to edit, or 'y' to continue (y/n): " answer
-    case "$answer" in
-      [Yy])
-      ;;
-    *)
-      echo "#### Editing $vault_file..."
-      ansible-vault edit --vault-password-file "$vault_pass_file" "$vault_file"
-      if [ $? -eq 0 ]; then
-        echo "#### Updated $vault_file. Verifying new contents:"
-        ansible-vault view --vault-password-file "$vault_pass_file" "$vault_file"
-      else
-        echo "#### Error: Failed to edit $vault_file"
-        return 1
-      fi
-      ;;
-    esac
-  else
-    echo "#### Error: Failed to verify $vault_file"
-    return 1
-  fi
+#   # Step 6: Verify vault file and prompt for confirmation
+#   echo -e "#### Verifying $vault_file contents:\n"
+#   ansible-vault view --vault-password-file "$vault_pass_file" "$vault_file"
+#   if [ $? -eq 0 ]; then
+#     echo -e "\n #### AWARE!!! Confirm if this is the expected username for Ansible working on the VMs."
+#     read -p "#### If not, enter 'n' to edit, or 'y' to continue (y/n): " answer
+#     case "$answer" in
+#       [Yy])
+#       ;;
+#     *)
+#       echo "#### Editing $vault_file..."
+#       ansible-vault edit --vault-password-file "$vault_pass_file" "$vault_file"
+#       if [ $? -eq 0 ]; then
+#         echo "#### Updated $vault_file. Verifying new contents:"
+#         ansible-vault view --vault-password-file "$vault_pass_file" "$vault_file"
+#       else
+#         echo "#### Error: Failed to edit $vault_file"
+#         return 1
+#       fi
+#       ;;
+#     esac
+#   else
+#     echo "#### Error: Failed to verify $vault_file"
+#     return 1
+#   fi
 
-  echo "Ansible Vault setup completed successfully."
-  echo "--------------------------------------------------"
-}
+#   echo "Ansible Vault setup completed successfully."
+#   echo "--------------------------------------------------"
+# }
 
 # Function: Format Ansible JSON output into a readable summary (with ONLY verbosity set to 2 )
 # Generated by Google Gemini 2.5 Pro

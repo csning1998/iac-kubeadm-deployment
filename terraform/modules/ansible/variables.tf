@@ -14,10 +14,10 @@ variable "ssh_private_key_path" {
   description = "Path to the SSH private key for Ansible."
 }
 
-variable "vault_pass_path" {
-  description = "Path to Ansible vault password file"
-  type        = string
-}
+# variable "vault_pass_path" {
+#   description = "Path to Ansible vault password file"
+#   type        = string
+# }
 
 variable "vm_status" {
   description = "Status of VM startup"
