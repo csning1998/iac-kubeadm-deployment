@@ -82,6 +82,11 @@ options=(
 select opt in "${options[@]}"; do
   # Record start time
   readonly START_TIME=$(date +%s)
+
+  # Export network variables for Terraform
+  export TF_VAR_nat_gateway="${VMNET8_GATEWAY}"
+  export TF_VAR_nat_subnet_prefix=$(echo "${VMNET8_SUBNET}" | cut -d'.' -f1-3)
+
   case $opt in
     "Setup IaC Environment")
       echo "# Executing Setup IaC Environment workflow..."
@@ -108,7 +113,7 @@ select opt in "${options[@]}"; do
       ;;
     "Reset All")
       echo "# Executing Reset All workflow..."
-      check_vmware_workstation
+      `check_vmware_workstation`
       cleanup_vmware_vms
       control_terraform_vms "delete"
       destroy_terraform_resources

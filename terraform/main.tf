@@ -5,6 +5,8 @@ module "vm" {
   vms_dir              = local.vms_dir
   vmx_image_path       = local.vmx_image_path
   all_nodes            = local.all_nodes
+  nat_gateway            = var.nat_gateway
+  nat_subnet_prefix      = var.nat_subnet_prefix
 }
 
 module "ansible" {

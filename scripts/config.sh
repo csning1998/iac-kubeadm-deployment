@@ -27,15 +27,57 @@ PACKER_OUTPUT_SUBDIR="ubuntu-server-vmware"
 SSH_PRIVATE_KEY="$HOME/.ssh/id_ed25519_iac_automation"
 
 ###
-# Network Configuration
+# Network Configuration (Linux Distribution-Aware)
 ###
 
-# VMware Workstation Network Configuration for automatic setup.
-# These values will be written to /etc/vmware/networking.
-VMNET8_SUBNET="172.16.86.0"
-VMNET8_NETMASK="255.255.255.0"
-VMNET1_SUBNET="172.16.134.0"
-VMNET1_NETMASK="255.255.255.0"
+# Detect the Linux distribution and set network defaults accordingly.
+# This approach is more robust for supporting multiple native Linux environments.
+if [ -f /etc/os-release ]; then
+  # Source the os-release file to get variables like $ID
+  . /etc/os-release
+    
+  case $ID in
+    fedora)
+      ### [Example] Fedora / Red Hat Family Defaults ###
+      echo "INFO: Fedora environment detected. Using Red Hat family VMware defaults."
+      VMNET8_SUBNET="192.168.182.0"
+      VMNET8_NETMASK="255.255.255.0"
+      VMNET8_GATEWAY="192.168.182.2"
+
+      VMNET1_SUBNET="192.168.205.0"
+      VMNET1_NETMASK="255.255.255.0"
+      ;;    
+    ubuntu|debian)
+      ### Debian / Ubuntu Family Defaults ###
+      echo "INFO: Debian/Ubuntu environment detected. Using Debian family VMware defaults."
+      VMNET8_SUBNET="172.16.86.0"
+      VMNET8_NETMASK="255.255.255.0"
+      VMNET8_GATEWAY="172.16.86.2"
+
+      VMNET1_SUBNET="172.16.134.0"
+      VMNET1_NETMASK="255.255.255.0"
+      ;;
+    *)
+      ### Fallback for other Linux Distributions ###
+      echo "WARN: Unknown Linux distribution '$ID'. Falling back to Debian/Ubuntu family defaults."
+      echo "WARN: Please verify these network settings match your VMware Workstation configuration."
+      VMNET8_SUBNET="172.16.86.0"
+      VMNET8_NETMASK="255.255.255.0"
+      VMNET8_GATEWAY="172.16.86.2"
+
+      VMNET1_SUBNET="172.16.134.0"
+      VMNET1_NETMASK="255.255.255.0"
+      ;;
+  esac
+else
+  echo "WARN: Cannot find /etc/os-release. Using generic Debian/Ubuntu family defaults."
+  VMNET8_SUBNET="172.16.86.0"
+  VMNET8_NETMASK="255.255.255.0"
+  VMNET8_GATEWAY="172.16.86.2"
+
+  VMNET1_SUBNET="172.16.134.0"
+  VMNET1_NETMASK="255.255.255.0"
+fi
 
 
 # ====== DO NOT MODIFY THE HEREDOC BELOW ======
