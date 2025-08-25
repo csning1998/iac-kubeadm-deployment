@@ -66,13 +66,15 @@ A description of how to use this script follows below.
 
 1. **VMware Workstation**
 
-   VMware Workstation Pro 17 is the virtual machine application used in this IaC project. You need to register an account on broadcom.com, then click [here to download Workstation Pro 17](https://support.broadcom.com/group/ecx/productdownloads?subfamily=VMware%20Workstation%20Pro&freeDownloads=true).
+   VMware Workstation Pro 17 is the virtual machine application used in this IaC project. You need to register an account on broadcom.com, then click [here to download Workstation Pro 17](https://support.broadcom.com/group/ecx/productdownloads?subfamily=VMware%20Workstation%20Pro&freeDownloads=true). This project requires VMware Workstation 17.6.2 or later installed.
+
+   **Note:** If this is your first time using VMware Workstation, you'll need to open the program and complete the User Agreements. Otherwise, the process will fail immediately in Packer's headless mode. Alternatively, you can open `packer/ubuntu-server-24.pkr.hcl` and change the `headless` parameter to `false`.
 
    After installation, configure VMware Network Editor:
 
-   - Open VMware Network Editor (`vmware-netcfg`).
-   - Ensure `vmnet8` is set to NAT with subnet `172.16.86.0/24` and DHCP enabled.
-   - Ensure `vmnet1` is set to Host-only with subnet `172.16.134.0/24` (no DHCP).
+   -  Open VMware Network Editor (`vmware-netcfg`).
+   -  Ensure `vmnet8` is set to NAT with subnet `172.16.86.0/24` and DHCP enabled.
+   -  Ensure `vmnet1` is set to Host-only with subnet `172.16.134.0/24` (no DHCP).
 
 2. **Install HashiCorp Toolkit - Terraform and Packer**
 
@@ -167,8 +169,8 @@ A description of how to use this script follows below.
 
 The virtual machines deployed in this project use a dual network mode with the following specifications:
 
-- NAT Network (`vmnet8`): This network interface provides virtual machines with access to external internet during system installation and subsequent operations. The Subnet is `172.16.86.0/24`
-- Host-only Network (`vmnet1`): This network interface is dedicated for communication between Kubernetes cluster nodes and allows the host system to access internal cluster services. The Subnet is `172.16.134.0/24`
+-  NAT Network (`vmnet8`): This network interface provides virtual machines with access to external internet during system installation and subsequent operations. The Subnet is `172.16.86.0/24`
+-  Host-only Network (`vmnet1`): This network interface is dedicated for communication between Kubernetes cluster nodes and allows the host system to access internal cluster services. The Subnet is `172.16.134.0/24`
 
 These parameters currently need to be set manually. In the future, these two parameters can be adjusted in the `scripts/config.sh` file.
 
@@ -181,23 +183,15 @@ To ensure the project runs smoothly, please follow the procedures below to compl
 
    During the Packer and Terraform execution process, user-defined variables need to be set up, which requires manually creating the following variable files. For security considerations, these files have already been preconfigured in `.gitignore` and will not be included in version control.
 
-   - **For Packer:** You can create the `packer/secret.auto.pkrvars.hcl` file using the following command:
+   -  **For Packer:** You can create the `packer/secret.auto.pkrvars.hcl` file using the following command:
 
       ```bash
 
       VM_USERNAME="YOUR_VM_USERNAME"
       VM_PASSWORD="YOUR_VM_PASSWORD"
-      HASHED_PASSWORD=$(echo -n "$VM_PASS" | mkpasswd -m sha-512 -P 0)
-
-
-      VM_USERNAME="YOUR_VM_USERNAME"
-      VM_PASSWORD="YOUR_VM_PASSWORD"
-      HASHED_PASSWORD=$(echo -n "$VM_PASS" | mkpasswd -m sha-512 -P 0)
+      HASHED_PASSWORD=$(echo -n "$VM_PASSWORD" | mkpasswd -m sha-512 -P 0)
 
       cat << EOF > packer/secret.auto.pkrvars.hcl
-      ssh_username = "$VM_USERNAME"
-      ssh_password = "$VM_PASSWORD"
-      ssh_password_hash = "$HASHED_PASSWORD"
       ssh_username = "$VM_USERNAME"
       ssh_password = "$VM_PASSWORD"
       ssh_password_hash = "$HASHED_PASSWORD"
@@ -213,13 +207,11 @@ To ensure the project runs smoothly, please follow the procedures below to compl
 
       And `ssh_public_key_path`: needs to be changed to the **public key** name generated earlier, the public key will be in `*.pub` format
 
-   - **For Terraform:** You can create the `terraform/terraform.tfvars` file using the following command with `VM_USERNAME` and `VM_PASSWORD` above:
+   -  **For Terraform:** You can create the `terraform/terraform.tfvars` file using the following command with `VM_USERNAME` and `VM_PASSWORD` above:
 
       ```bash
       cat << EOF > terraform/terraform.tfvars
 
-      vm_username = "$VM_USERNAME"
-      vm_password = "$VM_PASSWORD"
       vm_username = "$VM_USERNAME"
       vm_password = "$VM_PASSWORD"
       ssh_private_key_path = "~/.ssh/id_ed25519_iac_automation"
@@ -235,21 +227,28 @@ To ensure the project runs smoothly, please follow the procedures below to compl
       EOF
       ```
 
-      For users setting up an HA Cluster, the number of elements in `master_ip_list` and `worker_ip_list` determines the number of nodes generated. Ensure the length of `master_ip_list` is an odd number to prevent the etcd Split-Brain risk in Kubernetes. Meanwhile, `worker_ip_list` can be configured based on the number of IPs. The IPs provided by the user must correspond to the host-only network segment.
+   For users setting up an HA Cluster, the number of elements in `master_ip_list` and `worker_ip_list` determines the number of nodes generated. Ensure the length of `master_ip_list` is an odd number to prevent the etcd Split-Brain risk in Kubernetes. Meanwhile, `worker_ip_list` can be configured based on the number of IPs. The IPs provided by the user must correspond to the host-only network segment.
 
    **Note:** Please make sure to replace `YOUR_VM_USERNAME` and `YOUR_VM_PASSWORD` with the actual credentials you wish to use. If you specified a non-default key name in the previous step, you must also update the `ssh_public_key_path` and `ssh_private_key_path` fields accordingly
 
 3. **[Deprecated] Set up Ansible Vault**
 
    > This section would be replaced by **HashiCorp Vault** for more environmental consistency.
-   >
 
    Although Ansible Vault setup is currently mandatory, the related configurations are still being integrated. You need to run ./entry.sh, enter 3 to access the "Set up Ansible Vault" option. At this point, the terminal will ask you to enter a password to encrypt the Vault, and by default it uses the host user's username as the vault_vm_username variable. The system will prompt whether this is the correct login name. Since some people prefer different virtual machine usernames, if you choose to use a different username, the system will open the vim editor for you to enter it manually. After completing the operation, the following two files will be generated:
 
    1. `vault_pass.txt`: Stores the password used to decrypt the Vault, this file is already included in `.gitignore` by default.
    2. `ansible/group_vars/vault.yaml`: This is an encrypted variable file
 
-4. After completing all the above setup steps, you can use `entry.sh`, enter `5` to access _"Rebuild All"_ to perform automated deployment of the Kubernetes cluster. Based on testing, the current complete deployment of a Kubernetes Cluster takes approximately 21 minutes, with an average time of about 3 minutes to configure each node.
+4. The project currently uses Ubuntu 24.04.2, which is categorized by Canonical as an "old-release." If you wish to use a newer virtual machine, it is recommended that you first verify the Ubuntu Server version and checksum.
+
+   -  The latest version is available at <https://cdimage.ubuntu.com/ubuntu/releases/24.04/release/> ,
+   -  The test version of this project is also available at <https://old-releases.ubuntu.com/releases/noble/> .
+   -  After selecting your version, please verify the checksum.
+      -  For latest Noble version: <https://releases.ubuntu.com/noble/SHA256SUMS>
+      -  For "Noble-old-release" version: <https://old-releases.ubuntu.com/releases/noble/SHA256SUMS>
+
+5. After completing all the above setup steps, you can use `entry.sh`, enter `5` to access _"Rebuild All"_ to perform automated deployment of the Kubernetes cluster. Based on testing, the current complete deployment of a Kubernetes Cluster takes approximately 21 minutes, with an average time of about 3 minutes to configure each node.
 
 > The setup process is based on the commands provided by Bibin Wilson (2025), which I implemented using an Ansible Playbook. Thanks to the author, Bibin Wilson, for the contribution on his article
 >
@@ -304,20 +303,20 @@ sequenceDiagram
 
    Terraform is responsible for managing the infrastructure lifecycle and serves as the core orchestration component of the entire architecture. Terraform reads the image template produced by Packer and deploys the actual virtual machine cluster in VMware Workstation. The definition files are the .tf files in the terraform/ directory, with the **workflow as follows:**
 
-   - **Node Deployment (Stage I)**:
+   -  **Node Deployment (Stage I)**:
 
-     - Based on `master_ip_list` and `worker_ip_list` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
-     - Using the `vmrun` clone command, it quickly replicates multiple virtual machine instances from the `*.vmx` template created by Packer.
-     - Using `remote-exec`, it executes Shell commands on each node to configure static IP addresses, hostnames, and other network settings.
-     - Based on `master_ip_list` and `worker_ip_list` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
-     - Using the `vmrun` clone command, it quickly replicates multiple virtual machine instances from the `*.vmx` template created by Packer.
-     - Using `remote-exec`, it executes Shell commands on each node to configure static IP addresses, hostnames, and other network settings.
+      -  Based on `master_ip_list` and `worker_ip_list` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
+      -  Using the `vmrun` clone command, it quickly replicates multiple virtual machine instances from the `*.vmx` template created by Packer.
+      -  Using `remote-exec`, it executes Shell commands on each node to configure static IP addresses, hostnames, and other network settings.
+      -  Based on `master_ip_list` and `worker_ip_list` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
+      -  Using the `vmrun` clone command, it quickly replicates multiple virtual machine instances from the `*.vmx` template created by Packer.
+      -  Using `remote-exec`, it executes Shell commands on each node to configure static IP addresses, hostnames, and other network settings.
 
-   - **Cluster Configuration (Stage II)**:
-     - Once all nodes are ready, Terraform dynamically generates `ansible/inventory.yaml` list file.
-     - Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-cluster.yaml` Playbook to complete the initialization of the Kubernetes cluster.
-     - Once all nodes are ready, Terraform dynamically generates `ansible/inventory.yaml` list file.
-     - Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-cluster.yaml` Playbook to complete the initialization of the Kubernetes cluster.
+   -  **Cluster Configuration (Stage II)**:
+      -  Once all nodes are ready, Terraform dynamically generates `ansible/inventory.yaml` list file.
+      -  Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-cluster.yaml` Playbook to complete the initialization of the Kubernetes cluster.
+      -  Once all nodes are ready, Terraform dynamically generates `ansible/inventory.yaml` list file.
+      -  Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-cluster.yaml` Playbook to complete the initialization of the Kubernetes cluster.
 
 3. **Ansible: The Configuration Manager**
 

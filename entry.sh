@@ -113,7 +113,7 @@ select opt in "${options[@]}"; do
     #   ;;
     "Reset All")
       echo "# Executing Reset All workflow..."
-      `check_vmware_workstation`
+      check_vmware_workstation
       cleanup_vmware_vms
       control_terraform_vms "delete"
       destroy_terraform_resources

@@ -67,23 +67,23 @@ setup_iac_environment() {
   echo
 
   read -n 1 -s -r -p "Press any key to continue..."
-
-  sudo apt update
+  echo
+  
+  sudo apt-get update
   echo "#### Install necessary packages/libraries..."
-  sudo apt install -y jq openssh-client python3 software-properties-common wget gnupg lsb-release
+  sudo apt install -y jq openssh-client python3 software-properties-common wget gnupg lsb-release whois
 
   # Install HashiCorp Toolkits (Terraform and Packer)
   echo "#### Installing HashiCorp Toolkits (Terraform and Packer)..."
   wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-  sudo apt install terraform packer -y
+  sudo apt-get install terraform packer -y
   echo "#### Terraform and Packer installation completed."
 
   # Install Ansible
   echo "#### Installing Ansible..."
-  sudo apt install software-properties-common -y
   sudo add-apt-repository --yes --update ppa:ansible/ansible
-  sudo apt install ansible -y
+  sudo apt-get install ansible ansible-lint -y
   echo "#### Ansible installation completed."
 
   # Verify installations
