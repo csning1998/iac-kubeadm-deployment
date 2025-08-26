@@ -9,7 +9,7 @@ nodeRegistration:
 discovery:
   bootstrapToken:
 {% if (groups['master'] | length) > 1 %}
-    apiServerEndpoint: "{{ K8S_HA_VIRTUAL_IP }}:6443"
+    apiServerEndpoint: "{{ k8s_ha_virtual_ip }}:6443"
 {% else %}
     apiServerEndpoint: "{{ hostvars[groups['master'][0]]['advertise_ip'] }}:6443"
 {% endif %}

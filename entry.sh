@@ -83,10 +83,6 @@ select opt in "${options[@]}"; do
   # Record start time
   readonly START_TIME=$(date +%s)
 
-  # Export network variables for Terraform
-  export TF_VAR_nat_gateway="${VMNET8_GATEWAY}"
-  export TF_VAR_nat_subnet_prefix=$(echo "${VMNET8_SUBNET}" | cut -d'.' -f1-3)
-
   case $opt in
     "Setup IaC Environment")
       echo "# Executing Setup IaC Environment workflow..."

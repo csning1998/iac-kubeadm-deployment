@@ -34,3 +34,25 @@ variable "all_nodes" {
     path = string
   }))
 }
+
+# Variables for Kubernetes network configuration
+
+variable "k8s_master_ips" {
+  description = "List of IP addresses for the master nodes."
+  type        = list(string)
+}
+
+variable "k8s_ha_virtual_ip" {
+  description = "The virtual IP for the HA cluster."
+  type        = string
+}
+
+variable "k8s_pod_subnet" {
+  description = "The CIDR for the Pod network."
+  type        = string
+}
+
+variable "nat_subnet_prefix" {
+  description = "The subnet prefix for the NAT network, used for interface discovery."
+  type        = string
+}

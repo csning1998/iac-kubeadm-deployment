@@ -8,7 +8,7 @@ nodeRegistration:
       value: "systemd"
 discovery:
   bootstrapToken:
-    apiServerEndpoint: "{{ K8S_HA_VIRTUAL_IP }}:6443"
+    apiServerEndpoint: "{{ k8s_ha_virtual_ip }}:6443"
     token: "{{ hostvars[groups['master'][0]]['kubeadm_token'] }}"
     caCertHashes:
       - "sha256:{{ hostvars[groups['master'][0]]['kubeadm_ca_hash'] }}"

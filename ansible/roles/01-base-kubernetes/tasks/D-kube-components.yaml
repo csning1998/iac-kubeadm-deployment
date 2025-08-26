@@ -43,3 +43,7 @@
       ansible.builtin.systemd:
         name: kubelet
         enabled: true
+
+    - name: "Step 6. Pre-pull container images for control plane"
+      ansible.builtin.command: kubeadm config images pull
+      changed_when: true
