@@ -1,5 +1,5 @@
 /*
-* Generate a ~/.ssh/k8s_cluster_config file in the user's home directory with an alias and a specified public key
+* Generate a ~/.ssh/iac-kubeadm-deployment_config file in the user's home directory with an alias and a specified public key
 * for passwordless SSH using the alias (e.g., ssh vm200).
 */
 resource "local_file" "ssh_config" {
@@ -8,7 +8,7 @@ resource "local_file" "ssh_config" {
     ssh_user             = var.vm_username,
     ssh_private_key_path = var.ssh_private_key_path
   })
-  filename        = pathexpand("~/.ssh/k8s_cluster_config")
+  filename        = pathexpand("~/.ssh/iac-kubeadm-deployment_config")
   file_permission = "0600"
 }
 
