@@ -11,7 +11,7 @@ FROM hashicorp/vault:1.20.2 AS vault
 FROM ubuntu:24.04
 
 # # Avoid interactive prompts
-# ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Install runtime dependencies, Python, pip, and VMware dependencies
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \

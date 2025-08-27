@@ -21,7 +21,7 @@ destroy_terraform_resources() {
   echo ">>> STEP: Destroying existing Terraform-managed VMs..."
   cd "${TERRAFORM_DIR}"
 
-  docker compose run --rm iac-controller bash \
+  docker compose exec iac-controller bash \
     -c "cd /app/terraform && terraform init -upgrade && terraform destroy -parallelism=1 -auto-approve -lock=false"
 
   rm -rf "${TERRAFORM_DIR}/vms/*"
@@ -36,7 +36,7 @@ apply_terraform_stage_I() {
 
   echo ">>> Stage I: Applying VM creation and SSH configuration with 'parallelism = 1' ..."
 
-  docker compose run --rm iac-controller bash \
+  docker compose exec iac-controller bash \
   -c "cd /app/terraform && terraform init && terraform validate && terraform apply -parallelism=1 -auto-approve -var-file=terraform.tfvars -target=module.vm"
 
   echo "#### VM creation and SSH configuration complete."
@@ -49,7 +49,7 @@ apply_terraform_stage_II() {
   echo ">>> Stage II: Applying Ansible configuration with default parallelism..."
   cd "${TERRAFORM_DIR}" || exit 1 # Exit if cd fails
 
-  docker compose run --rm iac-controller bash \
+  docker compose exec iac-controller bash \
   -c "cd /app/terraform && terraform init && terraform validate && terraform apply -auto-approve -var-file=terraform.tfvars -target=module.ansible"
 
 

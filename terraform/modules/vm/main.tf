@@ -55,7 +55,7 @@ resource "null_resource" "configure_nodes" {
       echo 'ethernet1.virtualDev = "e1000"' >> ${each.value.path}
       vmrun -T ws start ${each.value.path} nogui
       sleep 10
-      vmrun -T ws getGuestIPAddress ${each.value.path} -wait > ${var.vms_dir}/${each.key}/nat_ip.txt || true
+      vmrun -T ws getGuestIPAddress ${each.value.path} -wait > ${var.vms_dir}/${each.key}/nat_ip.txt
     EOT
   }
 

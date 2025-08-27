@@ -101,17 +101,27 @@ verify_ssh() {
   # Loop through each host and test the connection silently.
   while IFS= read -r host; do
     if [ -z "$host" ]; then continue; fi
-
+    
+    local connected=false
+    echo "#### Verifying connection to ${host}..."
     # Use ssh with the 'true' command for a quick, non-interactive connection test.
     # The '-n' option is CRITICAL here to prevent ssh from consuming the stdin of the while loop.
-    ssh -n \
-        -F "$ssh_config_file" \
-        -o ConnectTimeout=10 \
-        -o BatchMode=yes \
-        -o PasswordAuthentication=no \
-        -o StrictHostKeyChecking=yes \
-        -o UserKnownHostsFile="$known_hosts_file" \
-      "$host" true
+    for i in {1..15}; do
+      if ssh -n \
+          -F "$ssh_config_file" \
+          -o ConnectTimeout=5 \
+          -o BatchMode=yes \
+          -o PasswordAuthentication=no \
+          -o StrictHostKeyChecking=yes \
+          -o UserKnownHostsFile="$known_hosts_file" \
+        "$host" true 2>/dev/null; then
+        echo "######## SUCCESS: Connected to ${host} via public key."
+        connected=true
+        break
+      fi
+      echo "    - Attempt $i failed for ${host}. Retrying in 2 seconds..."
+      sleep 2
+    done
 
     if [ $? -eq 0 ]; then
       echo "######## SUCCESS: Connected to ${host} via public key."

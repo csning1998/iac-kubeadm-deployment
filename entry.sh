@@ -75,7 +75,7 @@ readonly USER_HOME_DIR="${HOME}"
 # Main menu
 echo " ======= VMware Workstation VM Management Script ======="
 
-# check_docker_environment
+check_docker_environment
 
 PS3=">>> Please select an action: "
 options=(
@@ -136,6 +136,7 @@ select opt in "${options[@]}"; do
       build_packer
       reset_terraform_state
       apply_terraform_stage_I
+      control_terraform_vms "start"
       verify_ssh
       apply_terraform_stage_II
       report_execution_time
@@ -160,6 +161,7 @@ select opt in "${options[@]}"; do
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform_stage_I
+      control_terraform_vms "start"
       verify_ssh
       apply_terraform_stage_II
       report_execution_time
@@ -174,6 +176,7 @@ select opt in "${options[@]}"; do
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform_stage_I
+      control_terraform_vms "start"
       verify_ssh
       report_execution_time
       echo "# Rebuild Terraform workflow completed successfully."
@@ -183,6 +186,7 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild Terraform workflow..."
       check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
+      control_terraform_vms "start"
       verify_ssh
       apply_terraform_stage_II
       report_execution_time
@@ -193,6 +197,7 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild Terraform workflow..."
       check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
+      control_terraform_vms "start"
       verify_ssh
       apply_ansible_stage_II
       report_execution_time
