@@ -34,49 +34,43 @@ The content in Section 1 and Section 2 serves as prerequisite setup before forma
 
 ```text
 ➜  iac-kubeadm-deployment git:(main) ✗ ./entry.sh
-(base) ➜  iac-kubeadm-deployment git:(ha-cluster) ✗ ./entry.sh
-(base) ➜  iac-kubeadm-deployment git:(ha-cluster) ✗ ./entry.sh
-VMware Workstation VM Management Script
-VMware Workstation VM Management Script
-1) Setup IaC Environment                         9) [DEV] Rebuild Stage II via Ansible
-2) Generate SSH Key                             10) Verify SSH
-3) Reset All                                    11) Check VM Status
-4) Rebuild All                                  12) Start All VMs
-5) Rebuild Packer                               13) Stop All VMs
-6) Rebuild Terraform: All Stage                 14) Delete All VMs
-7) Rebuild Terraform Stage I: Configure Nodes   15) Quit
-8) Rebuild Terraform Stage II: Ansible
-VMware Workstation VM Management Script
-1) Setup IaC Environment                         9) [DEV] Rebuild Stage II via Ansible
-2) Generate SSH Key                             10) Verify SSH
-3) Reset All                                    11) Check VM Status
-4) Rebuild All                                  12) Start All VMs
-5) Rebuild Packer                               13) Stop All VMs
-6) Rebuild Terraform: All Stage                 14) Delete All VMs
-7) Rebuild Terraform Stage I: Configure Nodes   15) Quit
-8) Rebuild Terraform Stage II: Ansible
-Please select an action:
+INFO: Debian/Ubuntu environment detected. Using Debian family VMware defaults.
+
+======= VMware Workstation VM Management Script =======
+
+1) Switch Execution Mode (Current: NATIVE)       9) Rebuild Terraform Stage II: Ansible
+2) Setup Workstation Network                    10) [DEV] Rebuild Stage II via Ansible
+3) Generate SSH Key                             11) Verify SSH
+4) Reset All                                    12) Check VM Status
+5) Rebuild All                                  13) Start All VMs
+6) Rebuild Packer                               14) Stop All VMs
+7) Rebuild Terraform: All Stage                 15) Delete All VMs
+8) Rebuild Terraform Stage I: Configure Nodes   16) Quit
+>>> Please select an action: 
 ```
 
-A description of how to use this script follows below.
+**A description of how to use this script follows below.**
 
 ## Section 1. Environmental Setup
 
-### Installation
+### Required. VMware Workstation
 
-1. **VMware Workstation**
+VMware Workstation Pro 17 is the virtual machine application used in this IaC project. You need to register an account on broadcom.com, then click [here to download Workstation Pro 17](https://support.broadcom.com/group/ecx/productdownloads?subfamily=VMware%20Workstation%20Pro&freeDownloads=true). **This project requires VMware Workstation 17.6.2 or later installed.**
 
-   VMware Workstation Pro 17 is the virtual machine application used in this IaC project. You need to register an account on broadcom.com, then click [here to download Workstation Pro 17](https://support.broadcom.com/group/ecx/productdownloads?subfamily=VMware%20Workstation%20Pro&freeDownloads=true). This project requires VMware Workstation 17.6.2 or later installed.
+**Note:**
 
-   **Note:** If this is your first time using VMware Workstation, you'll need to open the program and complete the User Agreements. Otherwise, the process will fail immediately in Packer's headless mode. Alternatively, you can open `packer/ubuntu-server-24.pkr.hcl` and change the `headless` parameter to `false`.
+-  If this is your first time using VMware Workstation, you'll need to open the program and complete the User Agreements. Otherwise, the process will fail immediately in Packer's headless mode. Alternatively, you can open `packer/ubuntu-server-24.pkr.hcl` and change the `headless` parameter to `false`. Alternatively, you can use VNC to view the screen
+-  If using Docker for deployment, currently `headless` can only be set to true, mainly due to `libxml2` related issues that are still under investigation; you can also use VNC to view the screen
 
-   After installation, configure VMware Network Editor:
+After installation, configure VMware Network Editor:
 
-   -  Open VMware Network Editor (`vmware-netcfg`).
-   -  Ensure `vmnet8` is set to NAT with subnet `172.16.86.0/24` and DHCP enabled.
-   -  Ensure `vmnet1` is set to Host-only with subnet `172.16.134.0/24` (no DHCP).
+-  Open VMware Network Editor (`vmware-netcfg`).
+-  Ensure `vmnet8` is set to NAT with subnet `172.16.86.0/24` and DHCP enabled.
+-  Ensure `vmnet1` is set to Host-only with subnet `172.16.134.0/24` (no DHCP).
 
-2. **Install HashiCorp Toolkit - Terraform and Packer**
+### Option 1. Install on Host: For Debian and Ubuntu
+
+1. **Install HashiCorp Toolkit - Terraform and Packer**
 
    Next, you can install Terraform, Packer, and Ansible by running entry.sh in the project root directory and selecting the first option _"Setup IaC Environment"_
 
@@ -91,7 +85,7 @@ A description of how to use this script follows below.
    sudo apt update && sudo apt install terraform packer -y
    ```
 
-3. **Install Ansible**
+2. **Install Ansible**
 
    > _Reference: [Ansible Installation on Ubuntu](https://docs.ansible.com/ansible/latest/installation_guide/installation_distros.html#installing-ansible-on-ubuntu)_
 
@@ -101,7 +95,7 @@ A description of how to use this script follows below.
    sudo apt install ansible -y
    ```
 
-4. **Verification**
+3. **Verification**
 
    Verify each tool to confirm successful setup:
 
@@ -123,14 +117,14 @@ A description of how to use this script follows below.
 
    ```text
    (base) ➜  ~ vmware --version
-   VMware Workstation 17.5.0 build-22583795
+   VMware Workstation 17.6.2 build-24409262
    (base) ➜  ~ packer --version
-   Packer v1.9.4
+   Packer v1.14.1
    (base) ➜  ~ terraform --version
-   Terraform v1.9.4
+   Terraform v1.13.0
    on linux_amd64
    (base) ➜  ~ ansible --version
-   ansible [core 2.18.7]
+   ansible [core 2.18.8]
       config file = /etc/ansible/ansible.cfg
       configured module search path = ['/home/someUserName/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
       ansible python module location = /usr/lib/python3/dist-packages/ansible
@@ -141,9 +135,35 @@ A description of how to use this script follows below.
       libyaml = True
    ```
 
-5. **Suggested Plugins for VSCode**
+### Option 2. Install on Docker: For Ubuntu, Debian, Fedora, RHEL, Arch
 
-   Enhance productivity with syntax support:
+1. Please ensure Docker is installed correctly. You can refer to the following URL and choose the installation method corresponding to your platform
+   > _Reference: [Install Docker Engine for Linux Distro / WSL2](https://docs.docker.com/engine/install/)_
+
+2. After completing the Docker installation, please switch to the project root directory:
+   1. If using for the first time, execute the following command
+
+      ```shell
+      docker compose build
+      ```
+
+   2. After creating the Container, you only need to run the container to perform operations:
+
+      ```shell
+      docker compose up -d
+      ```
+
+   3. Currently, the default setting is `DEBIAN_FRONTEND=noninteractive`. If you need to make any modifications and check inside the container, you can execute
+
+      ```shell
+      docker exec -it iac-controller bash
+      ```
+
+      Where `iac-controller` is the Container name for the project.
+
+### Miscellaneous
+
+- **Suggested Plugins for VSCode:** Enhance productivity with syntax support:
 
    1. Ansible language support extension. [Marketplace Link of Ansible](https://marketplace.visualstudio.com/items?itemName=redhat.ansible)
 
@@ -178,8 +198,13 @@ These parameters currently need to be set manually. In the future, these two par
 
 To ensure the project runs smoothly, please follow the procedures below to complete the initialization setup.
 
-1. **Generate SSH Key**During the execution of Terraform and Ansible, SSH keys will be used for node access authentication and configuration management. You can generate these by running `./entry.sh` and entering `2` to access the _"Generate SSH Key"_ option. You can enter your desired key name or simply use the default value `id_ed25519_iac_automation`. The generated public and private key pair will be stored in the `~/.ssh` directory
-2. **Create Secret Variable Files**
+0. **Environment variable file:** The script `entry.sh` will automatically create a `.env` environment variable for docker files to use, which can be ignored. This will later be integrated into the HashiCorp Vault workflow (with the following setup).
+
+1. **Switch Environment:** You can switch between "Docker" or "Native" environment by using `./entry.sh` and entering `1`. Please refer to the descriptions in Section 1's Option A or B, and switch to the appropriate mode based on your operating system.
+
+2. **Generate SSH Key:** During the execution of Terraform and Ansible, SSH keys will be used for node access authentication and configuration management. You can generate these by running `./entry.sh` and entering `3` to access the _"Generate SSH Key"_ option. You can enter your desired key name or simply use the default value `id_ed25519_iac_automation`. The generated public and private key pair will be stored in the `~/.ssh` directory
+
+3. **Create Secret Variable Files (Would be further integrated into HashiCorp Vault)**
 
    During the Packer and Terraform execution process, user-defined variables need to be set up, which requires manually creating the following variable files. For security considerations, these files have already been preconfigured in `.gitignore` and will not be included in version control.
 
@@ -224,6 +249,12 @@ To ensure the project runs smoothly, please follow the procedures below to compl
 
       # Worker nodes
       worker_ip_list = ["172.16.134.210", "172.16.134.211", "172.16.134.212"]
+
+      # Kubernetes network configuration
+      k8s_ha_virtual_ip = "172.16.134.250"
+      k8s_pod_subnet    = "10.244.0.0/16"
+      nat_gateway       = "172.16.86.2"
+      nat_subnet_prefix = "172.16.86"
       EOF
       ```
 
@@ -231,7 +262,7 @@ To ensure the project runs smoothly, please follow the procedures below to compl
 
    **Note:** Please make sure to replace `YOUR_VM_USERNAME` and `YOUR_VM_PASSWORD` with the actual credentials you wish to use. If you specified a non-default key name in the previous step, you must also update the `ssh_public_key_path` and `ssh_private_key_path` fields accordingly
 
-3. **[Deprecated] Set up Ansible Vault**
+4. **[Deprecated] Set up Ansible Vault**
 
    > This section would be replaced by **HashiCorp Vault** for more environmental consistency.
 
@@ -240,7 +271,7 @@ To ensure the project runs smoothly, please follow the procedures below to compl
    1. `vault_pass.txt`: Stores the password used to decrypt the Vault, this file is already included in `.gitignore` by default.
    2. `ansible/group_vars/vault.yaml`: This is an encrypted variable file
 
-4. The project currently uses Ubuntu 24.04.2, which is categorized by Canonical as an "old-release." If you wish to use a newer virtual machine, it is recommended that you first verify the Ubuntu Server version and checksum.
+5. The project currently uses Ubuntu 24.04.2, which is categorized by Canonical as an "old-release." If you wish to use a newer virtual machine, it is recommended that you first verify the Ubuntu Server version and checksum.
 
    -  The latest version is available at <https://cdimage.ubuntu.com/ubuntu/releases/24.04/release/> ,
    -  The test version of this project is also available at <https://old-releases.ubuntu.com/releases/noble/> .
@@ -248,7 +279,7 @@ To ensure the project runs smoothly, please follow the procedures below to compl
       -  For latest Noble version: <https://releases.ubuntu.com/noble/SHA256SUMS>
       -  For "Noble-old-release" version: <https://old-releases.ubuntu.com/releases/noble/SHA256SUMS>
 
-5. After completing all the above setup steps, you can use `entry.sh`, enter `5` to access _"Rebuild All"_ to perform automated deployment of the Kubernetes cluster. Based on testing, the current complete deployment of a Kubernetes Cluster takes approximately 21 minutes, with an average time of about 3 minutes to configure each node.
+6. After completing all the above setup steps, you can use `entry.sh`, enter `5` to access _"Rebuild All"_ to perform automated deployment of the Kubernetes cluster. Based on testing, the current complete deployment of a Kubernetes Cluster takes approximately 21 minutes, with an average time of about 3 minutes to configure each node.
 
 > The setup process is based on the commands provided by Bibin Wilson (2025), which I implemented using an Ansible Playbook. Thanks to the author, Bibin Wilson, for the contribution on his article
 >
@@ -349,3 +380,27 @@ The goal of this phase was to resolve code duplication issues. Two major refacto
 
 1. **SSH Process Automation:** To achieve completely hands-free Key-Based authentication, the specified SSH public key is directly "baked" into the `authorized_keys` file of the image during the Packer build phase. The `./entry.sh` script was also enhanced with `generate_ssh_key` helper functionality and `check_ssh_key_exists` preliminary checks. To avoid polluting the user's global `~/.ssh/config`, Terraform now generates a project-specific SSH configuration file (`~/.ssh/iac-kubeadm-deployment_config`), and dynamically loads it through `local-exec` by adding a line `Include ~/.ssh/iac-kubeadm-deployment_config` to the global configuration file. This project-specific configuration file is removed during `terraform destroy`, ensuring environment isolation and cleanliness.
 2. **Centralization of Terraform Variable Structure:** Previously, both the `vm` and `ansible` submodules within Terraform had their own for loops to process node data, creating logical duplication that stemmed from technical debt incurred during personal refactoring with extensive copy-pasting. This phase centralized all complex variable combination logic for node paths, names, etc., into a unified computation in the root directory's `locals.tf`. Submodules were refactored to receive only the final, pre-assembled `all_nodes` object as input, eliminating duplicate for loops and computation logic within modules. This change created a Single Source of Truth, cutting down complexity for future updates and expansions.
+
+### Phase 5. Configuring the HA Cluster and Parameterization
+
+The primary goal is to achieve HA Cluster deployment by directly adjusting the `master_ip_list`. However, configuring an HA Cluster is significantly more complex than a single master node setup.
+
+1. **Execution Order Trade-offs:**
+
+   Extensive experimentation was conducted to determine the correct order for the following two tasks: **`kubeadm init` and `kubeadm join` commands** and **`haproxy` and `keepalive` configuration**. The initial thought process focused on how to convert a single master node cluster into an HA cluster. However, a more fundamental question arose: "How should an HA Cluster be configured from the very beginning?" Given the architecture of this project, provisioning an HA Cluster only requires changes to the Terraform infrastructure.
+
+   This led to the creation of the `ansible/playbooks/10-provision-cluster.yaml` workflow, which handles `haproxy` and `keepalive` for the HA Cluster and `kubeadm join` for other master nodes. This approach avoids breaking the single master node workflow. The reason for executing `haproxy` and `keepalive` first is that `kubeadm init` requires a stable VIP endpoint (`controlPlaneEndpoint`) to generate cluster certificates, so the Load Balancer must exist before the `init` process.
+
+   The benefit of this is that future users only need to modify `master_ip_list` or related parameters. With correct settings, re-running the `./entry.sh` command will deploy an HA Cluster. The internal Kubernetes facilities can be configured via the `HashiCorp/Kubernetes` provider without the risk of destroying declared resources.
+
+2.  **Parameterization:**
+
+   This was done because many users have variables they wish to change, such as `username` and network settings. Each user has their own preferences, and the goal is to minimally intervene in the user's host settings.
+
+   A further consideration was how to prevent the project from requiring excessive variables to be set in multiple locations. Since the project is already automated, it is fundamental that a user should be able to configure the entire project by declaring variables in a single SSoT (Single Source of Truth) block.
+
+   Therefore, after organizing the parameters, they can be integrated into HashiCorp Vault. Another reason for choosing HashiCorp Vault over Ansible Vault is that this project is intended to be integrated into a CI/CD pipeline. The underlying reason is that handling static encrypted files like those in Ansible Vault is cumbersome in CI/CD, as it requires managing a separate decryption key. By integrating with HashiCorp Vault and using the variable passing mechanism, only one setup process is needed.
+
+### Phase 6. Handling Network and Concurrent Process-Triggered Race Conditions
+
+(To be continued)
