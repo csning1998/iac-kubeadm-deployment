@@ -1,0 +1,40 @@
+
+### The patterns in this file are used by the COPY or ADD instructions in the Dockerfile.
+### This file is prepared to ignore specified paths when a COPY command is added in the future.
+
+# Git history and configuration
+.git
+.gitignore
+
+# Packer build artifacts and cache
+packer/output/
+packer/packer_cache/
+
+# Terraform state, cache, and plans
+.terraform/
+terraform.tfstate
+terraform.tfstate.*
+terraform/.terraform.lock.hcl
+terraform/.terraform/
+
+# Directory for cloned VMs
+terraform/vms/
+
+# Ansible runtime logs
+ansible/logs/
+
+# Docker and Compose specific files
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Environment variables file
+.env
+
+# Documentation and licensing - not needed in the image
+*.md
+LICENSE
+
+# IDE/Editor specific files
+.vscode/
+.idea/

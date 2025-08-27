@@ -46,3 +46,5 @@ terraform/setup_ansible.tf.bak
 # Only for recording by commit messages personally.
 commit-message.md
 ansible/group_vars/all.yaml
+.env
+*.bak

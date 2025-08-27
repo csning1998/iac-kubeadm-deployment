@@ -2,6 +2,15 @@
 
 set -e -u
 
+if [ ! -f .env ]; then
+  echo ">>> Creating .env file with current user's UID, GID, and USERNAME..."
+  echo "UID=$(id -u)" > .env
+  echo "GID=$(id -g)" >> .env
+  echo "UNAME=$(whoami)" >> .env
+  echo "UHOME=${HOME}" >> .env
+  echo "#### .env file created."
+fi
+
 ###
 # SCRIPT INITIALIZATION AND MODULE LOADING
 ###
@@ -59,12 +68,14 @@ readonly USER_HOME_DIR="${HOME}"
 ###
 
 # Main menu
-echo "VMware Workstation VM Management Script"
-PS3="Please select an action: "
+echo " ======= VMware Workstation VM Management Script ======="
+
+check_docker_environment
+
+PS3=">>> Please select an action: "
 options=(
-    "Setup IaC Environment"
+    "Setup Workstation Network"
     "Generate SSH Key"
-    # "Set up Ansible Vault" 
     "Reset All" 
     "Rebuild All" 
     "Rebuild Packer" 
@@ -84,11 +95,8 @@ select opt in "${options[@]}"; do
   readonly START_TIME=$(date +%s)
 
   case $opt in
-    "Setup IaC Environment")
-      echo "# Executing Setup IaC Environment workflow..."
-      if check_iac_environment; then
-        setup_iac_environment
-      fi
+    "Setup Workstation Network")
+      echo "# Executing Setup Workstation Network workflow..."
       check_vmware_workstation
       set_workstation_network
       report_execution_time
@@ -101,12 +109,6 @@ select opt in "${options[@]}"; do
       echo "# SSH Key successfully generated in the path '~/.ssh'."
       break
       ;;
-    # "Set up Ansible Vault")
-    #   echo "# Executing Set up Ansible Vault workflow..."
-    #   setup_ansible_vault
-    #   echo "# Set up Ansible Vault workflow completed successfully."
-    #   break
-    #   ;;
     "Reset All")
       echo "# Executing Reset All workflow..."
       check_vmware_workstation
@@ -124,7 +126,7 @@ select opt in "${options[@]}"; do
       check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
       cleanup_vmware_vms
-      destroy_terraform_resources
+      deintegrate_ssh_config
       cleanup_packer_output
       build_packer
       reset_terraform_state

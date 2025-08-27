@@ -19,8 +19,10 @@ cleanup_packer_output() {
 build_packer() {
   echo ">>> STEP: Starting new Packer build..."
   cd "${PACKER_DIR}"
-  packer init .
-  packer build -var-file=common.pkrvars.hcl .
+
+  docker compose run --rm iac-controller bash \
+    -c "cd /app/packer && packer init . && packer build -var-file=common.pkrvars.hcl ."
+
   echo "#### Packer build complete. New base image (VMX) is ready."
   echo "--------------------------------------------------"
 }
