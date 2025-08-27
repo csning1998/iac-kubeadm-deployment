@@ -38,14 +38,15 @@ INFO: Debian/Ubuntu environment detected. Using Debian family VMware defaults.
 
 ======= VMware Workstation VM Management Script =======
 
-1) Switch Execution Mode (Current: NATIVE)       9) Rebuild Terraform Stage II: Ansible
-2) Setup Workstation Network                    10) [DEV] Rebuild Stage II via Ansible
-3) Generate SSH Key                             11) Verify SSH
-4) Reset All                                    12) Check VM Status
-5) Rebuild All                                  13) Start All VMs
-6) Rebuild Packer                               14) Stop All VMs
-7) Rebuild Terraform: All Stage                 15) Delete All VMs
-8) Rebuild Terraform Stage I: Configure Nodes   16) Quit
+1) Switch Execution Mode (Current: NATIVE)      10) Rebuild Terraform Stage II: Ansible
+2) Setup IaC Environment for Native             11) [DEV] Rebuild Stage II via Ansible
+3) Setup Workstation Network                    12) Verify SSH
+4) Generate SSH Key                             13) Check VM Status
+5) Reset All                                    14) Start All VMs
+6) Rebuild All                                  15) Stop All VMs
+7) Rebuild Packer                               16) Delete All VMs
+8) Rebuild Terraform: All Stage                 17) Quit
+9) Rebuild Terraform Stage I: Configure Nodes
 >>> Please select an action: 
 ```
 
@@ -68,11 +69,11 @@ After installation, configure VMware Network Editor:
 -  Ensure `vmnet8` is set to NAT with subnet `172.16.86.0/24` and DHCP enabled.
 -  Ensure `vmnet1` is set to Host-only with subnet `172.16.134.0/24` (no DHCP).
 
-### Option 1. Install on Host: For Debian and Ubuntu
+### Option 1. Install on Native: For Debian and Ubuntu
 
 1. **Install HashiCorp Toolkit - Terraform and Packer**
 
-   Next, you can install Terraform, Packer, and Ansible by running entry.sh in the project root directory and selecting the first option _"Setup IaC Environment"_
+   Next, you can install Terraform, Packer, and Ansible by running entry.sh in the project root directory and selecting the first option _"Setup IaC Environment for Native"_
 
    > _Reference: [Terraform Installation](https://developer.hashicorp.com/terraform/install)_  
    > _Reference: [Packer Installation](https://developer.hashicorp.com/packer/install)_
@@ -113,7 +114,7 @@ After installation, configure VMware Network Editor:
    ansible --version
    ```
 
-   Expected output should reflect the latest versions (e.g., Terraform > v1.5, Packer > v1.9, Ansible > v2.15). For instance (in zsh):
+   Expected output should reflect the latest versions. For instance (in zsh):
 
    ```text
    (base) ➜  ~ vmware --version
@@ -202,7 +203,7 @@ To ensure the project runs smoothly, please follow the procedures below to compl
 
 1. **Switch Environment:** You can switch between "Docker" or "Native" environment by using `./entry.sh` and entering `1`. Please refer to the descriptions in Section 1's Option A or B, and switch to the appropriate mode based on your operating system.
 
-2. **Generate SSH Key:** During the execution of Terraform and Ansible, SSH keys will be used for node access authentication and configuration management. You can generate these by running `./entry.sh` and entering `3` to access the _"Generate SSH Key"_ option. You can enter your desired key name or simply use the default value `id_ed25519_iac_automation`. The generated public and private key pair will be stored in the `~/.ssh` directory
+2. **Generate SSH Key:** During the execution of Terraform and Ansible, SSH keys will be used for node access authentication and configuration management. You can generate these by running `./entry.sh` and entering `4` to access the _"Generate SSH Key"_ option. You can enter your desired key name or simply use the default value `id_ed25519_iac_automation`. The generated public and private key pair will be stored in the `~/.ssh` directory
 
 3. **Create Secret Variable Files (Would be further integrated into HashiCorp Vault)**
 
@@ -266,10 +267,10 @@ To ensure the project runs smoothly, please follow the procedures below to compl
 
    > This section would be replaced by **HashiCorp Vault** for more environmental consistency.
 
-   Although Ansible Vault setup is currently mandatory, the related configurations are still being integrated. You need to run ./entry.sh, enter 3 to access the "Set up Ansible Vault" option. At this point, the terminal will ask you to enter a password to encrypt the Vault, and by default it uses the host user's username as the vault_vm_username variable. The system will prompt whether this is the correct login name. Since some people prefer different virtual machine usernames, if you choose to use a different username, the system will open the vim editor for you to enter it manually. After completing the operation, the following two files will be generated:
+   ~~Although Ansible Vault setup is currently mandatory, the related configurations are still being integrated. You need to run `./entry.sh`, enter 3 to access the "Set up Ansible Vault" option. At this point, the terminal will ask you to enter a password to encrypt the Vault, and by default it uses the host user's username as the vault_vm_username variable. The system will prompt whether this is the correct login name. Since some people prefer different virtual machine usernames, if you choose to use a different username, the system will open the vim editor for you to enter it manually. After completing the operation, the following two files will be generated:~~
 
-   1. `vault_pass.txt`: Stores the password used to decrypt the Vault, this file is already included in `.gitignore` by default.
-   2. `ansible/group_vars/vault.yaml`: This is an encrypted variable file
+   1. ~~`vault_pass.txt`: Stores the password used to decrypt the Vault, this file is already included in `.gitignore` by default.~~
+   2. ~~`ansible/group_vars/vault.yaml`: This is an encrypted variable file~~
 
 5. The project currently uses Ubuntu 24.04.2, which is categorized by Canonical as an "old-release." If you wish to use a newer virtual machine, it is recommended that you first verify the Ubuntu Server version and checksum.
 
@@ -279,7 +280,7 @@ To ensure the project runs smoothly, please follow the procedures below to compl
       -  For latest Noble version: <https://releases.ubuntu.com/noble/SHA256SUMS>
       -  For "Noble-old-release" version: <https://old-releases.ubuntu.com/releases/noble/SHA256SUMS>
 
-6. After completing all the above setup steps, you can use `entry.sh`, enter `5` to access _"Rebuild All"_ to perform automated deployment of the Kubernetes cluster. Based on testing, the current complete deployment of a Kubernetes Cluster takes approximately 21 minutes, with an average time of about 3 minutes to configure each node.
+6. After completing all the above setup steps, you can use `entry.sh`, enter `6` to access _"Rebuild All"_ to perform automated deployment of the Kubernetes cluster. Based on testing, the current complete deployment of a Kubernetes Cluster takes approximately 21 minutes, with an average time of about 3 minutes to configure each node.
 
 > The setup process is based on the commands provided by Bibin Wilson (2025), which I implemented using an Ansible Playbook. Thanks to the author, Bibin Wilson, for the contribution on his article
 >
@@ -291,7 +292,7 @@ This project employs three tools - Packer, Terraform, and Ansible - using an Inf
 
 ### Deployment Workflow
 
-The entire automated deployment process is triggered by the fifth option _"Rebuild All"_ in the `./entry.sh` script, with detailed steps shown in the diagram below:
+The entire automated deployment process is triggered by the sixth option _"Rebuild All"_ in the `./entry.sh` script, with detailed steps shown in the diagram below:
 
 ```mermaid
 sequenceDiagram
@@ -339,13 +340,8 @@ sequenceDiagram
       -  Based on `master_ip_list` and `worker_ip_list` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
       -  Using the `vmrun` clone command, it quickly replicates multiple virtual machine instances from the `*.vmx` template created by Packer.
       -  Using `remote-exec`, it executes Shell commands on each node to configure static IP addresses, hostnames, and other network settings.
-      -  Based on `master_ip_list` and `worker_ip_list` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
-      -  Using the `vmrun` clone command, it quickly replicates multiple virtual machine instances from the `*.vmx` template created by Packer.
-      -  Using `remote-exec`, it executes Shell commands on each node to configure static IP addresses, hostnames, and other network settings.
 
    -  **Cluster Configuration (Stage II)**:
-      -  Once all nodes are ready, Terraform dynamically generates `ansible/inventory.yaml` list file.
-      -  Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-cluster.yaml` Playbook to complete the initialization of the Kubernetes cluster.
       -  Once all nodes are ready, Terraform dynamically generates `ansible/inventory.yaml` list file.
       -  Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-cluster.yaml` Playbook to complete the initialization of the Kubernetes cluster.
 

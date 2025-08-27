@@ -23,6 +23,9 @@ run_command() {
 
   else
     # Native Mode: Execute the command directly on the host.
+    
+    check_iac_environment
+
     (cd "${host_work_dir}" && eval "${cmd_string}")
   fi
 }

@@ -13,7 +13,7 @@ FROM ubuntu:24.04
 # # Avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install runtime dependencies, Python, pip, and VMware dependencies
+# Install runtime dependencies, Python, pip, VMware dependencies, and Ansible
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     openssh-client \
     git \
@@ -34,19 +34,15 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     libfuse2 \
     libaio1t64 \
     libssl3 \
+    software-properties-common \
+    && add-apt-repository --yes --update ppa:ansible/ansible \
+    && apt-get install -y ansible \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy binaries from HashiCorp stages
 COPY --from=terraform /bin/terraform /usr/local/bin/terraform
 COPY --from=packer /bin/packer /usr/local/bin/packer
 COPY --from=vault /bin/vault /usr/local/bin/vault
-
-# Install Ansible since the last update of official image is and not for end users.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
-    && add-apt-repository --yes --update ppa:ansible/ansible \
-    && apt-get install -y ansible \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create user to match host HOST_UID:HOST_GID and username
 ARG HOST_UID

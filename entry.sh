@@ -97,6 +97,7 @@ echo
 PS3=">>> Please select an action: "
 options=(
     "Switch Execution Mode (Current: ${EXECUTION_STRATEGY^^})" 
+    "Setup IaC Environment for Native"
     "Setup Workstation Network"
     "Generate SSH Key"
     "Reset All" 
@@ -120,6 +121,15 @@ select opt in "${options[@]}"; do
   case $opt in
     "Switch Execution Mode (Current: ${EXECUTION_STRATEGY^^})")
       switch_execution_mode "${EXECUTION_STRATEGY}" "${CONFIG_FILE}"
+      ;;
+    "Setup IaC Environment for Native")
+      echo "# Executing Setup IaC Environment workflow..."
+      if check_iac_environment; then
+        setup_iac_environment
+      fi
+      check_vmware_workstation
+      echo "# Setup IaC Environment workflow completed successfully."
+      break
       ;;
     "Setup Workstation Network")
       echo "# Executing Setup Workstation Network workflow..."
