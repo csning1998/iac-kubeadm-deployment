@@ -67,18 +67,36 @@ readonly PACKER_OUTPUT_DIR="${PACKER_DIR}/output/${PACKER_OUTPUT_SUBDIR}"
 readonly VMS_BASE_PATH="${TERRAFORM_DIR}/vms"
 readonly USER_HOME_DIR="${HOME}"
 
+# Function to switch the execution mode in the config file
+switch_execution_mode() {
+  local current_mode="$1"
+  local config_file_path="$2"
+  local new_mode
+
+  if [[ "$current_mode" == "docker" ]]; then
+    new_mode="native"
+    sed -i "s/EXECUTION_STRATEGY=\"docker\"/EXECUTION_STRATEGY=\"${new_mode}\"/" "${config_file_path}"
+  else
+    new_mode="docker"
+    sed -i "s/EXECUTION_STRATEGY=\"native\"/EXECUTION_STRATEGY=\"${new_mode}\"/" "${config_file_path}"
+  fi
+
+  echo
+  ./entry.sh
+}
 
 ###
 # MAIN EXECUTION MENU
 ###
 
 # Main menu
-echo " ======= VMware Workstation VM Management Script ======="
-
-check_docker_environment
+echo
+echo "======= VMware Workstation VM Management Script ======="
+echo
 
 PS3=">>> Please select an action: "
 options=(
+    "Switch Execution Mode (Current: ${EXECUTION_STRATEGY^^})" 
     "Setup Workstation Network"
     "Generate SSH Key"
     "Reset All" 
@@ -100,6 +118,9 @@ select opt in "${options[@]}"; do
   readonly START_TIME=$(date +%s)
 
   case $opt in
+    "Switch Execution Mode (Current: ${EXECUTION_STRATEGY^^})")
+      switch_execution_mode "${EXECUTION_STRATEGY}" "${CONFIG_FILE}"
+      ;;
     "Setup Workstation Network")
       echo "# Executing Setup Workstation Network workflow..."
       check_vmware_workstation

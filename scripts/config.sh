@@ -10,6 +10,13 @@
 # -----------------------------------------------------------------------------
 
 ###
+# Execution Strategy
+# -----------------------------------------------------------------------------
+# "docker": Use the iac-controller container. (Default)
+# "native": Use tools installed directly on the host.
+EXECUTION_STRATEGY="native"
+
+###
 # Virtual Machine and User Configuration
 ###
 

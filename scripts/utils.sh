@@ -1,6 +1,31 @@
 #!/bin/bash
 
-# This script contains general utility and helper functions.
+### This script contains general utility and helper functions.
+
+# Function: Execute a command string based on the selected strategy.
+run_command() {
+  local cmd_string="$1"
+  local host_work_dir="$2" # Optional working directory for native mode
+
+  if [[ "${EXECUTION_STRATEGY}" == "docker" ]]; then
+
+    check_docker_environment
+
+    # Ensure the controller service is running.
+    if ! docker ps -q --filter "name=iac-controller" | grep -q .; then
+      echo ">>> Starting iac-controller service..."
+      docker compose up -d
+    fi
+
+    # Execute the command within the container which working dir is /app.
+    local container_work_dir="${host_work_dir/#$SCRIPT_DIR//app}"
+    docker compose exec iac-controller bash -c "cd \"${container_work_dir}\" && ${cmd_string}"
+
+  else
+    # Native Mode: Execute the command directly on the host.
+    (cd "${host_work_dir}" && eval "${cmd_string}")
+  fi
+}
 
 # Function: Check if VMWare Workstation is installed
 check_vmware_workstation() {

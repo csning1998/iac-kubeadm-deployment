@@ -4,26 +4,29 @@
 apply_ansible_stage_II(){
   echo ">>> STEP: Rebuild the VM Environment of Stage II..."
 
-  local ansible_dir_in_container="/app/ansible"
-  local ssh_key_in_container="/home/${UNAME}/.ssh/id_ed25519_iac_automation"
+  local private_key_path="${SSH_PRIVATE_KEY}"
+  local relative_inventory_path="ansible/inventory.yaml"
+  local relative_playbook_reset="ansible/playbooks/90-reset-cluster.yaml"
+  local relative_playbook_provision="ansible/playbooks/10-provision-cluster.yaml"
+
+  # Define the playbook commands
+  local cmd_reset="ansible-playbook \
+    -i ${relative_inventory_path} \
+    --private-key ${private_key_path} \
+    -vv \
+    ${relative_playbook_reset}"
+
+  local cmd_provision="ansible-playbook \
+    -i ${relative_inventory_path} \
+    --private-key ${private_key_path} \
+    -vv \
+    ${relative_playbook_provision}"
 
   echo "#### [DEV] Running Playbook: 90-reset-cluster.yaml"
-  docker compose exec iac-controller bash -c " \
-    ansible-playbook \
-      -i ${ansible_dir_in_container}/inventory.yaml \
-      --private-key ${ssh_key_in_container} \
-      -vv \
-      ${ansible_dir_in_container}/playbooks/90-reset-cluster.yaml \
-  "
+  run_command "${cmd_reset}" "${SCRIPT_DIR}"
 
   echo "#### [DEV] Running Playbook: 10-provision-cluster.yaml"
-  docker compose exec iac-controller bash -c " \
-    ansible-playbook \
-      -i ${ansible_dir_in_container}/inventory.yaml \
-      --private-key ${ssh_key_in_container} \
-      -vv \
-      ${ansible_dir_in_container}/playbooks/10-provision-cluster.yaml \
-  "
+  run_command "${cmd_provision}" "${SCRIPT_DIR}"
 }
 
 # Function: Format Ansible JSON output into a readable summary (with ONLY verbosity set to 2 )
