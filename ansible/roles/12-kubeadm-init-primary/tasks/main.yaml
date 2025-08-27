@@ -1,16 +1,15 @@
-# ansible/roles/10-kubeadm-init-primary/tasks/main.yml
 ---
 - name: "Section A: Prepare primary master node for initialization"
   block:
     - name: "Step 1. Set advertise_ip fact for this node"
       ansible.builtin.set_fact:
-        advertise_ip: "{{ K8S_MASTER_IPS[0] }}"
+        advertise_ip: "{{ k8s_master_ips[0] }}"
 
     - name: "Step 2. Ensure journald persistent storage directory exists"
       ansible.builtin.file:
         path: /var/log/journal
         state: directory
-        mode: '0755'
+        mode: "0755"
 
     - name: "Step 3. Restart systemd-journald to apply persistent storage"
       ansible.builtin.systemd:
@@ -27,13 +26,13 @@
       ansible.builtin.file:
         path: /etc/kubernetes
         state: directory
-        mode: '0755'
+        mode: "0755"
 
     - name: "Step 6. Create kubeadm config file from template"
       ansible.builtin.template:
         src: kubeadm-config.yaml.j2
         dest: /etc/kubernetes/kubeadm-config.yaml
-        mode: '0644'
+        mode: "0644"
 
 - name: "Section B: Run kubeadm init to bootstrap the cluster"
   block:
@@ -72,14 +71,14 @@
       ansible.builtin.file:
         path: "/root/.kube"
         state: directory
-        mode: '0755'
+        mode: "0755"
 
     - name: "Step 2. Copy admin.conf to root's kube config"
       ansible.builtin.copy:
         src: /etc/kubernetes/admin.conf
         dest: "/root/.kube/config"
         remote_src: true
-        mode: '0600'
+        mode: "0600"
 
     - name: "Step 3. Create .kube directory for the SSH user"
       ansible.builtin.file:
@@ -87,7 +86,7 @@
         state: directory
         owner: "{{ ansible_ssh_user }}"
         group: "{{ ansible_ssh_user }}"
-        mode: '0755'
+        mode: "0755"
 
     - name: "Step 4. Copy admin.conf to user's kube config"
       ansible.builtin.copy:
@@ -96,8 +95,7 @@
         remote_src: true
         owner: "{{ ansible_ssh_user }}"
         group: "{{ ansible_ssh_user }}"
-        mode: '0644'
-
+        mode: "0644"
 ### For the purpose of testing cluster only.
 
 # - name: "Section D: Install Container Network Interface (CNI)"
@@ -122,7 +120,7 @@
 #       ansible.builtin.replace:
 #         path: "/tmp/calico-custom-resources.yaml"
 #         regexp: 'cidr: 192.168.0.0/16'
-#         replace: 'cidr: {{ K8S_POD_SUBNET }}'
+#         replace: 'cidr: {{ k8s_pod_subnet }}'
 
 #     - name: "Step 4. Apply the customized Calico resources"
 #       ansible.builtin.command: kubectl apply -f /tmp/calico-custom-resources.yaml

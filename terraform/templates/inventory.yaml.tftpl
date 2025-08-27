@@ -1,5 +1,12 @@
 ---
 all:
+  vars:
+    k8s_master_ips: ${jsonencode(k8s_master_ips)}
+    k8s_ha_virtual_ip: "${k8s_ha_virtual_ip}"
+    k8s_pod_subnet: "${k8s_pod_subnet}"
+    ansible_ssh_user: "${ansible_ssh_user}"
+    nat_subnet_prefix: "${nat_subnet_prefix}"
+
   children:
     master:
       hosts:

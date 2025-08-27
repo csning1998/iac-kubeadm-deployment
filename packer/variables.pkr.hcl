@@ -15,7 +15,7 @@ variable "guest_os_type" {
 
 variable "iso_url" {
   type        = string
-  default     = "https://releases.ubuntu.com/noble/ubuntu-24.04.2-live-server-amd64.iso"
+  default     = "https://old-releases.ubuntu.com/releases/noble/ubuntu-24.04.2-live-server-amd64.iso"
   description = "URL of the Ubuntu Server ISO."
 }
 

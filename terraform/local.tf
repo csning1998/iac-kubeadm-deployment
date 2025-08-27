@@ -17,7 +17,7 @@ locals {
   worker_ip_list  = var.worker_ip_list
   vmx_image_path  = abspath("${path.root}/../packer/output/ubuntu-server-vmware/ubuntu-server-k8s-based.vmx")
   ansible_path    = abspath("${path.root}/../ansible/")
-  vault_pass_path = abspath("${path.root}/../vault_pass.txt")
+  # vault_pass_path = abspath("${path.root}/../vault_pass.txt")
 
   master_config = [
     for idx, ip in local.master_ip_list : {

@@ -2,6 +2,20 @@
 
 set -e -u
 
+if [ ! -f .env ]; then
+  echo ">>> Creating .env file with current user's UID and GID..."
+  echo "HOST_UID=$(id -u)" > .env
+  echo "HOST_GID=$(id -g)" >> .env
+  echo "UNAME=$(whoami)" >> .env
+  echo "UHOME=${HOME}" >> .env
+  echo "#### .env file created."
+fi
+
+# Source the .env file to export its variables to any sub-processes
+set -o allexport
+source .env
+set +o allexport
+
 ###
 # SCRIPT INITIALIZATION AND MODULE LOADING
 ###
@@ -53,18 +67,39 @@ readonly PACKER_OUTPUT_DIR="${PACKER_DIR}/output/${PACKER_OUTPUT_SUBDIR}"
 readonly VMS_BASE_PATH="${TERRAFORM_DIR}/vms"
 readonly USER_HOME_DIR="${HOME}"
 
+# Function to switch the execution mode in the config file
+switch_execution_mode() {
+  local current_mode="$1"
+  local config_file_path="$2"
+  local new_mode
+
+  if [[ "$current_mode" == "docker" ]]; then
+    new_mode="native"
+    sed -i "s/EXECUTION_STRATEGY=\"docker\"/EXECUTION_STRATEGY=\"${new_mode}\"/" "${config_file_path}"
+  else
+    new_mode="docker"
+    sed -i "s/EXECUTION_STRATEGY=\"native\"/EXECUTION_STRATEGY=\"${new_mode}\"/" "${config_file_path}"
+  fi
+
+  echo
+  ./entry.sh
+}
 
 ###
 # MAIN EXECUTION MENU
 ###
 
 # Main menu
-echo "VMware Workstation VM Management Script"
-PS3="Please select an action: "
+echo
+echo "======= VMware Workstation VM Management Script ======="
+echo
+
+PS3=">>> Please select an action: "
 options=(
-    "Setup IaC Environment"
+    "Switch Execution Mode (Current: ${EXECUTION_STRATEGY^^})" 
+    "Setup IaC Environment for Native"
+    "Setup Workstation Network"
     "Generate SSH Key"
-    "Set up Ansible Vault" 
     "Reset All" 
     "Rebuild All" 
     "Rebuild Packer" 
@@ -82,12 +117,22 @@ options=(
 select opt in "${options[@]}"; do
   # Record start time
   readonly START_TIME=$(date +%s)
+
   case $opt in
-    "Setup IaC Environment")
+    "Switch Execution Mode (Current: ${EXECUTION_STRATEGY^^})")
+      switch_execution_mode "${EXECUTION_STRATEGY}" "${CONFIG_FILE}"
+      ;;
+    "Setup IaC Environment for Native")
       echo "# Executing Setup IaC Environment workflow..."
       if check_iac_environment; then
         setup_iac_environment
       fi
+      check_vmware_workstation
+      echo "# Setup IaC Environment workflow completed successfully."
+      break
+      ;;
+    "Setup Workstation Network")
+      echo "# Executing Setup Workstation Network workflow..."
       check_vmware_workstation
       set_workstation_network
       report_execution_time
@@ -100,16 +145,10 @@ select opt in "${options[@]}"; do
       echo "# SSH Key successfully generated in the path '~/.ssh'."
       break
       ;;
-    "Set up Ansible Vault")
-      echo "# Executing Set up Ansible Vault workflow..."
-      setup_ansible_vault
-      echo "# Set up Ansible Vault workflow completed successfully."
-      break
-      ;;
     "Reset All")
       echo "# Executing Reset All workflow..."
       check_vmware_workstation
-      cleanup_vmware_vms
+      cleanup_packer_vms
       control_terraform_vms "delete"
       destroy_terraform_resources
       cleanup_packer_output
@@ -122,12 +161,13 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild All workflow..."
       check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
-      cleanup_vmware_vms
-      destroy_terraform_resources
+      cleanup_packer_vms
+      deintegrate_ssh_config
       cleanup_packer_output
       build_packer
       reset_terraform_state
       apply_terraform_stage_I
+      control_terraform_vms "start"
       verify_ssh
       apply_terraform_stage_II
       report_execution_time
@@ -138,7 +178,7 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild Packer workflow..."
       check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
-      cleanup_vmware_vms
+      cleanup_packer_vms
       cleanup_packer_output
       build_packer
       report_execution_time
@@ -152,6 +192,7 @@ select opt in "${options[@]}"; do
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform_stage_I
+      control_terraform_vms "start"
       verify_ssh
       apply_terraform_stage_II
       report_execution_time
@@ -166,6 +207,7 @@ select opt in "${options[@]}"; do
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform_stage_I
+      control_terraform_vms "start"
       verify_ssh
       report_execution_time
       echo "# Rebuild Terraform workflow completed successfully."
@@ -175,8 +217,9 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild Terraform workflow..."
       check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
+      control_terraform_vms "start"
       verify_ssh
-      apply_ansible_stage_II
+      apply_terraform_stage_II
       report_execution_time
       echo "# Rebuild Terraform workflow completed successfully."
       break
@@ -185,6 +228,7 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild Terraform workflow..."
       check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
+      control_terraform_vms "start"
       verify_ssh
       apply_ansible_stage_II
       report_execution_time

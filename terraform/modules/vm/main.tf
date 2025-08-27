@@ -1,5 +1,5 @@
 /*
-* Generate a ~/.ssh/k8s_cluster_config file in the user's home directory with an alias and a specified public key
+* Generate a ~/.ssh/iac-kubeadm-deployment_config file in the user's home directory with an alias and a specified public key
 * for passwordless SSH using the alias (e.g., ssh vm200).
 */
 resource "local_file" "ssh_config" {
@@ -8,7 +8,7 @@ resource "local_file" "ssh_config" {
     ssh_user             = var.vm_username,
     ssh_private_key_path = var.ssh_private_key_path
   })
-  filename        = pathexpand("~/.ssh/k8s_cluster_config")
+  filename        = pathexpand("~/.ssh/iac-kubeadm-deployment_config")
   file_permission = "0600"
 }
 
@@ -55,7 +55,7 @@ resource "null_resource" "configure_nodes" {
       echo 'ethernet1.virtualDev = "e1000"' >> ${each.value.path}
       vmrun -T ws start ${each.value.path} nogui
       sleep 10
-      vmrun -T ws getGuestIPAddress ${each.value.path} -wait > ${var.vms_dir}/${each.key}/nat_ip.txt || true
+      vmrun -T ws getGuestIPAddress ${each.value.path} -wait > ${var.vms_dir}/${each.key}/nat_ip.txt
     EOT
   }
 
@@ -93,10 +93,10 @@ resource "null_resource" "configure_nodes" {
       "  ethernets:",
       "    '$NAT_IFACE':",
       "      dhcp4: false",
-      "      addresses: [172.16.86.${split(".", each.value.ip)[3]}/24]",
+      "      addresses: [${var.nat_subnet_prefix}.${split(".", each.value.ip)[3]}/24]",
       "      routes:",
       "        - to: default",
-      "          via: 172.16.86.2",
+      "          via: ${var.nat_gateway}",
       "      nameservers:",
       "        addresses: [8.8.8.8, 8.8.4.4]",
       "      dhcp6: false",

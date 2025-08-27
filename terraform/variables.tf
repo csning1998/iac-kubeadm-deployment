@@ -59,3 +59,25 @@ variable "worker_ram" {
   type        = number
   default     = 4096
 }
+
+# Automatically set the variable for Terraform VMs
+
+variable "nat_gateway" {
+  description = "The gateway IP address for the NAT network (vmnet8)."
+  type        = string
+}
+
+variable "nat_subnet_prefix" {
+  description = "The first three octets of the NAT subnet (e.g., '172.16.86')."
+  type        = string
+}
+
+variable "k8s_ha_virtual_ip" {
+  description = "The virtual IP address for the Kubernetes API server load balancer."
+  type        = string
+}
+
+variable "k8s_pod_subnet" {
+  description = "The CIDR block for the Kubernetes pod network."
+  type        = string
+}

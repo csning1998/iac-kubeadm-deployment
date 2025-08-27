@@ -18,9 +18,10 @@ cleanup_packer_output() {
 # Function: Execute Packer build
 build_packer() {
   echo ">>> STEP: Starting new Packer build..."
-  cd "${PACKER_DIR}"
-  packer init .
-  packer build -var-file=common.pkrvars.hcl .
+
+  local cmd='packer init . && packer build -var-file=common.pkrvars.hcl .'
+  run_command "${cmd}" "${PACKER_DIR}"
+
   echo "#### Packer build complete. New base image (VMX) is ready."
   echo "--------------------------------------------------"
 }

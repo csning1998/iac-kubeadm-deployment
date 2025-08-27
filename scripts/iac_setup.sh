@@ -1,7 +1,56 @@
 #!/bin/bash
 
+# Function: Check if Docker environment is ready on the host.
+check_docker_environment() {
+  echo ">>> STEP: Checking Host environment for Docker..."
+  local all_installed=true
+
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "#### Docker: Not installed. Please install Docker Desktop or Docker Engine."
+    all_installed=false
+  else
+    echo "#### Docker: Installed ($(docker --version))"
+  fi
+
+  # Docker Compose is typically included with Docker Desktop but might be separate.
+  if ! docker compose version >/dev/null 2>&1; then
+    echo "#### Docker Compose: Not found. Please ensure it's installed and accessible."
+    all_installed=false
+  else
+    echo "#### Docker Compose: Installed ($(docker compose version))"
+  fi
+  
+  if ! $all_installed; then
+    echo "--------------------------------------------------"
+    echo "Error: Core dependencies are missing. Please install them to proceed."
+    exit 1
+  fi
+  echo "--------------------------------------------------"
+  return 0
+}
+
+# Function: Configure network setting of VMWare after environment setup
+set_workstation_network() {
+  # Prompt for VMware network configuration
+  echo ">>> VMware Network Editor configuration is required:"
+  echo "- Set vmnet8 to NAT with subnet ${VMNET8_SUBNET}/${VMNET8_NETMASK} and DHCP enabled."
+  echo "- Set vmnet1 to Host-only with subnet ${VMNET1_SUBNET}/${VMNET1_NETMASK} (no DHCP)."
+  read -p "Do you want to automatically configure VMware networking settings by modifying /etc/vmware/networking? (y/n): " answer
+  if [[ "$answer" =~ ^[Yy]$ ]]; then
+    echo "Configuring VMware networking settings..."
+    sudo /etc/init.d/vmware stop
+    # Use the variable loaded from config.sh
+    echo "$VMWARE_NETWORKING_CONFIG" | sudo tee /etc/vmware/networking > /dev/null
+    sudo /etc/init.d/vmware start
+    echo "#### VMware networking configuration completed."
+  else
+    echo "#### Skipping automatic VMware networking configuration. Please configure manually using VMware Network Editor."
+  fi
+  echo "--------------------------------------------------"
+}
+
 # This script contains functions related to the setup of the
-# Infrastructure as Code (IaC) environment.
+#  Infrastructure as Code (IaC) environment.
 
 # Function: Check IaC environment and return status
 check_iac_environment() {
@@ -67,23 +116,23 @@ setup_iac_environment() {
   echo
 
   read -n 1 -s -r -p "Press any key to continue..."
-
-  sudo apt update
+  echo
+  
+  sudo apt-get update
   echo "#### Install necessary packages/libraries..."
-  sudo apt install -y jq openssh-client python3 software-properties-common wget gnupg lsb-release
+  sudo apt install -y jq openssh-client python3 software-properties-common wget gnupg lsb-release whois
 
   # Install HashiCorp Toolkits (Terraform and Packer)
   echo "#### Installing HashiCorp Toolkits (Terraform and Packer)..."
   wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-  sudo apt install terraform packer -y
+  sudo apt-get install terraform packer -y
   echo "#### Terraform and Packer installation completed."
 
   # Install Ansible
   echo "#### Installing Ansible..."
-  sudo apt install software-properties-common -y
   sudo add-apt-repository --yes --update ppa:ansible/ansible
-  sudo apt install ansible -y
+  sudo apt-get install ansible ansible-lint -y
   echo "#### Ansible installation completed."
 
   # Verify installations
@@ -95,25 +144,5 @@ setup_iac_environment() {
   echo "######## Ansible version:"
   ansible --version
   echo "#### IaC environment setup and verification completed."
-  echo "--------------------------------------------------"
-}
-
-# Function: Configure network setting of VMWare after environment setup
-set_workstation_network() {
-  # Prompt for VMware network configuration
-  echo ">>> VMware Network Editor configuration is required:"
-  echo "- Set vmnet8 to NAT with subnet ${VMNET8_SUBNET}/${VMNET8_NETMASK} and DHCP enabled."
-  echo "- Set vmnet1 to Host-only with subnet ${VMNET1_SUBNET}/${VMNET1_NETMASK} (no DHCP)."
-  read -p "Do you want to automatically configure VMware networking settings by modifying /etc/vmware/networking? (y/n): " answer
-  if [[ "$answer" =~ ^[Yy]$ ]]; then
-    echo "Configuring VMware networking settings..."
-    sudo /etc/init.d/vmware stop
-    # Use the variable loaded from config.sh
-    echo "$VMWARE_NETWORKING_CONFIG" | sudo tee /etc/vmware/networking > /dev/null
-    sudo /etc/init.d/vmware start
-    echo "#### VMware networking configuration completed."
-  else
-    echo "#### Skipping automatic VMware networking configuration. Please configure manually using VMware Network Editor."
-  fi
   echo "--------------------------------------------------"
 }

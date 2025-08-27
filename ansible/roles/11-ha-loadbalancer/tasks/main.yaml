@@ -1,10 +1,40 @@
 ---
+- name: "Section 0: Dynamically discover the Host-only network interface"
+  block:
+    - name: "Step 1. Find the NAT interface to exclude"
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          ip -o -4 addr show | grep 'inet {{ nat_subnet_prefix }}.' | awk '{print $2}'
+        executable: /bin/bash
+      register: nat_iface_result
+      changed_when: false
+
+    - name: "Step 2. Find the Host-only interface by excluding NAT and loopback"
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          ip -o link show | awk -F': ' '{print $2}' | grep -v -e '^lo$' -e '^{{ nat_iface_result.stdout }}$'
+        executable: /bin/bash
+      register: hostonly_iface_result
+      changed_when: false
+
+    - name: "Step 3. Set k8s_ha_interface fact for use in templates"
+      ansible.builtin.set_fact:
+        k8s_ha_interface: "{{ hostonly_iface_result.stdout }}"
+      when: hostonly_iface_result.stdout | length > 0
+
+    - name: "Step 4. Fail if Host-only interface could not be determined"
+      ansible.builtin.fail:
+        msg: "Could not dynamically determine the Host-Only network interface."
+      when: k8s_ha_interface is not defined or k8s_ha_interface | length == 0
+
 - name: "Section A: Install HAProxy and Keepalived packages"
   block:
     - name: "Step 1. Allow binding to non-local IP addresses"
       ansible.posix.sysctl:
         name: net.ipv4.ip_nonlocal_bind
-        value: '1'
+        value: "1"
         state: present
         reload: true
 
@@ -29,11 +59,11 @@
 
     - name: "Step 2. Configure Keepalived from template"
       ansible.builtin.template:
-        src: keepalived.conf.j2   # This template uses K8S_HA_VIRTUAL_IP etc.
+        src: keepalived.conf.j2  # This template uses k8s_ha_virtual_ip etc.
         dest: /etc/keepalived/keepalived.conf
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
       notify: Restart keepalived  # Notify handler to restart the service on change
 
     - name: "Step 3. Verify Keepalived configuration syntax"
@@ -44,11 +74,11 @@
   block:
     - name: "Step 1. Configure HAProxy from template"
       ansible.builtin.template:
-        src: haproxy.cfg.j2    # This template loops through groups['master']
+        src: haproxy.cfg.j2  # This template loops through groups['master']
         dest: /etc/haproxy/haproxy.cfg
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
       notify: Restart haproxy  # Notify handler to restart the service on change
 
     - name: "Step 2. Verify HAProxy configuration syntax"
@@ -62,7 +92,7 @@
         path: /etc/rsyslog.conf
         line: "local0.* /var/log/keepalived.log"
         create: true
-        mode: '0644'
+        mode: "0644"
       notify: Restart rsyslog
 
     - name: "Step 2. Force handlers to run now for logging to take effect"
