@@ -2,8 +2,8 @@
 
 # This script contains functions for controlling VMware Workstation VMs.
 
-# Function: Clean up VMware Workstation VM registrations
-cleanup_vmware_vms() {
+# Function: Clean up VM registrations in Packer
+cleanup_packer_vms() {
   echo ">>> STEP: Cleaning up VMware Workstation VM registrations..."
   if vmrun list | grep -q "$PACKER_VM_NAME"; then
     echo "Found leftover Packer VM '$PACKER_VM_NAME'. Stopping and deleting..."

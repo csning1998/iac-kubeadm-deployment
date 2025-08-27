@@ -44,6 +44,6 @@
         name: kubelet
         enabled: true
 
-    - name: "Step 6. Pre-pull container images for control plane"
-      ansible.builtin.command: kubeadm config images pull
-      changed_when: true
+    # - name: "Step 6. Pre-pull container images for control plane"
+    #   ansible.builtin.command: kubeadm config images pull --cri-socket unix:///var/run/crio/crio.sock
+    #   changed_when: true

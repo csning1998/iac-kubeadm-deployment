@@ -3,13 +3,18 @@
 set -e -u
 
 if [ ! -f .env ]; then
-  echo ">>> Creating .env file with current user's UID, GID, and USERNAME..."
-  echo "UID=$(id -u)" > .env
-  echo "GID=$(id -g)" >> .env
+  echo ">>> Creating .env file with current user's UID and GID..."
+  echo "HOST_UID=$(id -u)" > .env
+  echo "HOST_GID=$(id -g)" >> .env
   echo "UNAME=$(whoami)" >> .env
   echo "UHOME=${HOME}" >> .env
   echo "#### .env file created."
 fi
+
+# Source the .env file to export its variables to any sub-processes
+set -o allexport
+source .env
+set +o allexport
 
 ###
 # SCRIPT INITIALIZATION AND MODULE LOADING
@@ -70,7 +75,7 @@ readonly USER_HOME_DIR="${HOME}"
 # Main menu
 echo " ======= VMware Workstation VM Management Script ======="
 
-check_docker_environment
+# check_docker_environment
 
 PS3=">>> Please select an action: "
 options=(
@@ -112,7 +117,7 @@ select opt in "${options[@]}"; do
     "Reset All")
       echo "# Executing Reset All workflow..."
       check_vmware_workstation
-      cleanup_vmware_vms
+      cleanup_packer_vms
       control_terraform_vms "delete"
       destroy_terraform_resources
       cleanup_packer_output
@@ -125,7 +130,7 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild All workflow..."
       check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
-      cleanup_vmware_vms
+      cleanup_packer_vms
       deintegrate_ssh_config
       cleanup_packer_output
       build_packer
@@ -141,7 +146,7 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild Packer workflow..."
       check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
-      cleanup_vmware_vms
+      cleanup_packer_vms
       cleanup_packer_output
       build_packer
       report_execution_time
@@ -179,7 +184,7 @@ select opt in "${options[@]}"; do
       check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
       verify_ssh
-      apply_ansible_stage_II
+      apply_terraform_stage_II
       report_execution_time
       echo "# Rebuild Terraform workflow completed successfully."
       break

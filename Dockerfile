@@ -41,31 +41,35 @@ COPY --from=terraform /bin/terraform /usr/local/bin/terraform
 COPY --from=packer /bin/packer /usr/local/bin/packer
 COPY --from=vault /bin/vault /usr/local/bin/vault
 
-# Install Ansible since the last update of official image is 7 yrs ago
-RUN pip3 install --break-system-packages ansible-core
+# Install Ansible since the last update of official image is and not for end users.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+    && add-apt-repository --yes --update ppa:ansible/ansible \
+    && apt-get install -y ansible \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Create user to match host UID:GID and username
-ARG UID
-ARG GID
+# Create user to match host HOST_UID:HOST_GID and username
+ARG HOST_UID
+ARG HOST_GID
 ARG USERNAME
 
 # user creation handler
-# 1. find and remove any existing user/group with the target UID/GID.
+# 1. find and remove any existing user/group with the target HOST_UID/HOST_GID.
 # 2. create the new user with the specified name.
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
-    EXISTING_USER=$(getent passwd ${UID} 2>/dev/null | cut -d: -f1) && \
+    EXISTING_USER=$(getent passwd ${HOST_UID} 2>/dev/null | cut -d: -f1) && \
     if [ -n "$EXISTING_USER" ]; then \
         deluser --remove-home "$EXISTING_USER" || true; \
     fi && \
-    EXISTING_GROUP=$(getent group ${GID} 2>/dev/null | cut -d: -f1) && \
+    EXISTING_GROUP=$(getent group ${HOST_GID} 2>/dev/null | cut -d: -f1) && \
     if [ -n "$EXISTING_GROUP" ]; then \
         delgroup "$EXISTING_GROUP" || true; \
     fi && \
-    groupadd -g ${GID} ${USERNAME} && \
-    useradd -u ${UID} -g ${GID} -m -s /bin/bash ${USERNAME} && \
+    groupadd -g ${HOST_GID} ${USERNAME} && \
+    useradd -u ${HOST_UID} -g ${HOST_GID} -m -s /bin/bash ${USERNAME} && \
     mkdir -p /home/${USERNAME}/.cache/packer && \
-    chown -R ${UID}:${GID} /home/${USERNAME}
+    chown -R ${HOST_UID}:${HOST_GID} /home/${USERNAME}
 
 USER ${USERNAME}
 

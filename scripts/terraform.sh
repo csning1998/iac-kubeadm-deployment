@@ -37,7 +37,7 @@ apply_terraform_stage_I() {
   echo ">>> Stage I: Applying VM creation and SSH configuration with 'parallelism = 1' ..."
 
   docker compose run --rm iac-controller bash \
-  -c "cd /app/terraform && terraform validate && terraform apply -parallelism=1 -auto-approve -var-file=terraform.tfvars -target=module.vm"
+  -c "cd /app/terraform && terraform init && terraform validate && terraform apply -parallelism=1 -auto-approve -var-file=terraform.tfvars -target=module.vm"
 
   echo "#### VM creation and SSH configuration complete."
   echo "--------------------------------------------------"
@@ -50,7 +50,7 @@ apply_terraform_stage_II() {
   cd "${TERRAFORM_DIR}" || exit 1 # Exit if cd fails
 
   docker compose run --rm iac-controller bash \
-  -c "cd /app/terraform && terraform apply -auto-approve -var-file=terraform.tfvars -target=module.ansible"
+  -c "cd /app/terraform && terraform init && terraform validate && terraform apply -auto-approve -var-file=terraform.tfvars -target=module.ansible"
 
 
   echo "#### Saving Ansible playbook outputs to log files..."

@@ -3,8 +3,8 @@ services:
     build:
       context: .
       args:
-        UID: ${UID}
-        GID: ${GID}
+        HOST_UID: ${HOST_UID}
+        HOST_GID: ${HOST_GID}
         USERNAME: ${UNAME}
     image: iac-kubeadm-controller:latest
     container_name: iac-controller
@@ -13,9 +13,12 @@ services:
     env_file:
       - .env
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix:ro  # X11 socket for non-headless mode
+      # - /tmp/.X11-unix:/tmp/.X11-unix:ro  # X11 socket for non-headless mode
       - .:/app
-      - ${UHOME}/.ssh:/home/${UNAME}/.ssh:ro
+      - /var/run/dbus:/var/run/dbus:ro
+      - /run/user/${HOST_UID}/bus:/run/user/${HOST_UID}/bus:ro
+      - ${UHOME}/.vmware:/home/${UNAME}/.vmware
+      - ${UHOME}/.ssh:/home/${UNAME}/.ssh
       - /usr/bin/vmrun:/usr/bin/vmrun:ro
       - /usr/bin/vmware-vdiskmanager:/usr/bin/vmware-vdiskmanager:ro
       - /usr/lib/vmware:/usr/lib/vmware:ro
@@ -23,7 +26,7 @@ services:
       - ${UHOME}/.cache/packer:/home/${UNAME}/.cache/packer
       - /var/run/vmware:/var/run/vmware
     environment:
-      - DISPLAY=${DISPLAY}  # display on GUI
+      # - DISPLAY=${DISPLAY}  # display on GUI
       - VMWARE_HOME=/usr/lib/vmware
       - PATH=/usr/lib/vmware/bin:/usr/local/bin:/usr/bin:/bin
     tty: true
