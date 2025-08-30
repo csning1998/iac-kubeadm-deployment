@@ -2,11 +2,12 @@ services:
   iac-controller:
     build:
       context: .
+      dockerfile: Dockerfile.workstation
       args:
         HOST_UID: ${HOST_UID}
         HOST_GID: ${HOST_GID}
         USERNAME: ${UNAME}
-    image: iac-kubeadm-controller:latest
+    image: iac-kubeadm-controller:workstation-latest
     container_name: iac-controller
     privileged: true
     network_mode: "host"

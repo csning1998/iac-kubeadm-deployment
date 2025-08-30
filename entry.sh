@@ -2,6 +2,25 @@
 
 set -e -u
 
+###
+# SCRIPT INITIALIZATION AND MODULE LOADING
+###
+
+# Define base directory and load configuration
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPTS_LIB_DIR="${SCRIPT_DIR}/scripts"
+readonly CONFIG_FILE="${SCRIPTS_LIB_DIR}/config.sh"
+readonly CONFIG_VMWARE_FILE="${SCRIPTS_LIB_DIR}/config-vmware.sh"
+
+
+###
+# MAIN ENVIRONMENT BOOTSTRAP LOGIC
+###
+
+source "${SCRIPTS_LIB_DIR}/environment.sh"
+initialize_environment
+
+# Create .env file for container environment if it doesn't exist
 if [ ! -f .env ]; then
   echo ">>> Creating .env file with current user's UID and GID..."
   echo "HOST_UID=$(id -u)" > .env
@@ -16,40 +35,14 @@ set -o allexport
 source .env
 set +o allexport
 
-###
-# SCRIPT INITIALIZATION AND MODULE LOADING
-###
-
-# Define base directory and load configuration
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly SCRIPTS_LIB_DIR="${SCRIPT_DIR}/scripts"
-readonly CONFIG_FILE="${SCRIPTS_LIB_DIR}/config.sh"
-
-# Load external configuration file from the 'scripts' directory
-if [ -f "$CONFIG_FILE" ]; then
-  # Sourcing the config file to load variables
-  # shellcheck source=scripts/config.sh
-  source "$CONFIG_FILE"
-else
-  echo "Error: Configuration file not found at '$CONFIG_FILE'." >&2
-  echo "Please ensure 'config.sh' exists in the 'scripts' directory." >&2
-  exit 1
-fi
-
 # Source all function libraries from the scripts directory
 for lib in "${SCRIPTS_LIB_DIR}"/*.sh; do
-  if [ -r "$lib" ]; then
-    # shellcheck source=scripts/iac_setup.sh
-    # shellcheck source=scripts/packer.sh
-    # shellcheck source=scripts/terraform.sh
-    # shellcheck source=scripts/ansible.sh
-    # shellcheck source=scripts/vm_control.sh
-    # shellcheck source=scripts/utils_ssh.sh
+
+  # Avoid re-sourcing the environment script
+  if [[ "$lib" != *"/environment.sh" ]]; then
     source "$lib"
-  else
-    echo "Error: Cannot read function library file '$lib'." >&2
-    exit 1
   fi
+
 done
 
 ###
@@ -63,26 +56,19 @@ user="$TF_VAR_vm_username"
 readonly ANSIBLE_DIR="${SCRIPT_DIR}/ansible"
 readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
 readonly PACKER_DIR="${SCRIPT_DIR}/packer"
-readonly PACKER_OUTPUT_DIR="${PACKER_DIR}/output/${PACKER_OUTPUT_SUBDIR}"
+# readonly PACKER_OUTPUT_DIR="${PACKER_DIR}/output/${PACKER_OUTPUT_SUBDIR}"
 readonly VMS_BASE_PATH="${TERRAFORM_DIR}/vms"
 readonly USER_HOME_DIR="${HOME}"
 
-# Function to switch the execution mode in the config file
-switch_execution_mode() {
-  local current_mode="$1"
-  local config_file_path="$2"
-  local new_mode
-
-  if [[ "$current_mode" == "docker" ]]; then
-    new_mode="native"
-    sed -i "s/EXECUTION_STRATEGY=\"docker\"/EXECUTION_STRATEGY=\"${new_mode}\"/" "${config_file_path}"
-  else
-    new_mode="docker"
-    sed -i "s/EXECUTION_STRATEGY=\"native\"/EXECUTION_STRATEGY=\"${new_mode}\"/" "${config_file_path}"
-  fi
-
-  echo
-  ./entry.sh
+# Function to switch a strategy variable in the config file
+switch_strategy() {
+  local var_name="$1"
+  local current_value="$2"
+  local new_value="$3"
+  
+  sed -i "s/${var_name}=\"${current_value}\"/${var_name}=\"${new_value}\"/" "${CONFIG_FILE}"
+  echo "Strategy '${var_name}' switched to '${new_value}'. Please restart the script to apply changes."
+  exit 0
 }
 
 ###
@@ -91,52 +77,69 @@ switch_execution_mode() {
 
 # Main menu
 echo
-echo "======= VMware Workstation VM Management Script ======="
+echo "======= IaC-Driven Virtualization Management ======="
+echo "Provider: ${VIRTUALIZATION_PROVIDER^^} | Environment: ${ENVIRONMENT_STRATEGY^^} | Engine: ${CONTAINER_ENGINE^^}"
 echo
 
 PS3=">>> Please select an action: "
-options=(
-    "Switch Execution Mode (Current: ${EXECUTION_STRATEGY^^})" 
-    "Setup IaC Environment for Native"
-    "Setup Workstation Network"
-    "Generate SSH Key"
-    "Reset All" 
-    "Rebuild All" 
-    "Rebuild Packer" 
-    "Rebuild Terraform: All Stage" 
-    "Rebuild Terraform Stage I: Configure Nodes" 
-    "Rebuild Terraform Stage II: Ansible" 
-    "[DEV] Rebuild Stage II via Ansible"
-    "Verify SSH"
-    "Check VM Status"
-    "Start All VMs"
-    "Stop All VMs"
-    "Delete All VMs"
-    "Quit"
-)
+options=()
+# Dynamically build the menu based on the environment
+options+=("Switch Virtualization Provider")
+options+=("Switch Environment Strategy")
+options+=("Switch Container Engine")
+
+options+=("Setup IaC Environment for Native")
+if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+  options+=("Setup VMware Network")
+fi
+
+options+=("Generate SSH Key")
+options+=("Reset All")
+options+=("Rebuild All")
+options+=("Rebuild Packer")
+options+=("Rebuild Terraform: All Stages")
+options+=("Rebuild Terraform Stage I: Configure Nodes")
+options+=("Rebuild Terraform Stage II: Ansible")
+options+=("[DEV] Rebuild Stage II via Ansible")
+options+=("Verify SSH")
+options+=("Check VM Status")
+options+=("Start All VMs")
+options+=("Stop All VMs")
+options+=("Delete All VMs")
+options+=("Quit")
+
 select opt in "${options[@]}"; do
   # Record start time
   readonly START_TIME=$(date +%s)
 
   case $opt in
-    "Switch Execution Mode (Current: ${EXECUTION_STRATEGY^^})")
-      switch_execution_mode "${EXECUTION_STRATEGY}" "${CONFIG_FILE}"
+    "Switch Virtualization Provider")
+      switch_virtualization_provider_handler
+      ;;
+    "Switch Environment Strategy")
+      switch_environment_strategy_handler
+      ;;
+    "Switch Container Engine")
+      switch_container_engine_handler
       ;;
     "Setup IaC Environment for Native")
       echo "# Executing Setup IaC Environment workflow..."
       if check_iac_environment; then
         setup_iac_environment
       fi
-      check_vmware_workstation
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        check_vmware_workstation
+      fi
+      # TODO: Add check for KVM environment
       echo "# Setup IaC Environment workflow completed successfully."
       break
       ;;
-    "Setup Workstation Network")
-      echo "# Executing Setup Workstation Network workflow..."
+    "Setup VMware Network")
+      echo "# Executing Setup VMware Network workflow..."
       check_vmware_workstation
       set_workstation_network
       report_execution_time
-      echo "# Setup IaC Environment workflow completed successfully."
+      echo "# Setup VMware Network workflow completed successfully."
       break
       ;;
     "Generate SSH Key")
@@ -147,9 +150,12 @@ select opt in "${options[@]}"; do
       ;;
     "Reset All")
       echo "# Executing Reset All workflow..."
-      check_vmware_workstation
-      cleanup_packer_vms
-      control_terraform_vms "delete"
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        check_vmware_workstation
+        cleanup_packer_vms
+        control_terraform_vms "delete"
+      fi
+      # TODO: Add KVM cleanup logic
       destroy_terraform_resources
       cleanup_packer_output
       reset_terraform_state
@@ -159,15 +165,21 @@ select opt in "${options[@]}"; do
       ;;
     "Rebuild All")
       echo "# Executing Rebuild All workflow..."
-      check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
-      cleanup_packer_vms
-      deintegrate_ssh_config
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        check_vmware_workstation
+        cleanup_packer_vms
+        deintegrate_ssh_config # This is SSH config, likely reusable
+      fi
+      # TODO: Add KVM cleanup logic
       cleanup_packer_output
       build_packer
       reset_terraform_state
       apply_terraform_stage_I
-      control_terraform_vms "start"
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        control_terraform_vms "start"
+      fi
+      # TODO: Add KVM start logic
       verify_ssh
       apply_terraform_stage_II
       report_execution_time
@@ -176,23 +188,32 @@ select opt in "${options[@]}"; do
       ;;
     "Rebuild Packer")
       echo "# Executing Rebuild Packer workflow..."
-      check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
-      cleanup_packer_vms
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        check_vmware_workstation
+        cleanup_packer_vms
+      fi
+      # TODO: Add KVM cleanup logic for packer
       cleanup_packer_output
       build_packer
       report_execution_time
       break
       ;;
-    "Rebuild Terraform: All Stage")
+    "Rebuild Terraform: All Stages")
       echo "# Executing Rebuild Terraform workflow..."
-      check_vmware_workstation
       if ! check_ssh_key_exists; then break; fi
-      control_terraform_vms "delete"
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        check_vmware_workstation
+        control_terraform_vms "delete"
+      fi
+      # TODO: Add KVM cleanup logic
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform_stage_I
-      control_terraform_vms "start"
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        control_terraform_vms "start"
+      fi
+      # TODO: Add KVM start logic
       verify_ssh
       apply_terraform_stage_II
       report_execution_time
@@ -200,39 +221,49 @@ select opt in "${options[@]}"; do
       break
       ;;
     "Rebuild Terraform Stage I: Configure Nodes")
-      echo "# Executing Rebuild Terraform workflow..."
-      check_vmware_workstation
+      echo "# Executing Rebuild Terraform Stage I workflow..."
       if ! check_ssh_key_exists; then break; fi
-      control_terraform_vms "delete"
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        check_vmware_workstation
+        control_terraform_vms "delete"
+      fi
+      # TODO: Add KVM cleanup logic
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform_stage_I
-      control_terraform_vms "start"
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        control_terraform_vms "start"
+      fi
+      # TODO: Add KVM start logic
       verify_ssh
       report_execution_time
-      echo "# Rebuild Terraform workflow completed successfully."
+      echo "# Rebuild Terraform Stage I workflow completed successfully."
       break
       ;;
     "Rebuild Terraform Stage II: Ansible")
-      echo "# Executing Rebuild Terraform workflow..."
-      check_vmware_workstation
+      echo "# Executing Rebuild Terraform Stage II workflow..."
       if ! check_ssh_key_exists; then break; fi
-      control_terraform_vms "start"
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        control_terraform_vms "start"
+      fi
+      # TODO: Add KVM start logic
       verify_ssh
       apply_terraform_stage_II
       report_execution_time
-      echo "# Rebuild Terraform workflow completed successfully."
+      echo "# Rebuild Terraform Stage II workflow completed successfully."
       break
       ;;
     "[DEV] Rebuild Stage II via Ansible")
-      echo "# Executing Rebuild Terraform workflow..."
-      check_vmware_workstation
+      echo "# Executing [DEV] Rebuild Stage II via Ansible..."
       if ! check_ssh_key_exists; then break; fi
-      control_terraform_vms "start"
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        control_terraform_vms "start"
+      fi
+      # TODO: Add KVM start logic
       verify_ssh
       apply_ansible_stage_II
       report_execution_time
-      echo "# Rebuild Stage II via Ansible completed successfully."
+      echo "# [DEV] Rebuild Stage II via Ansible completed successfully."
       break
       ;;
     "Verify SSH")
@@ -244,30 +275,42 @@ select opt in "${options[@]}"; do
       ;;
     "Check VM Status")
       echo "# Executing Check VM Status..."
-      control_terraform_vms "status"
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        control_terraform_vms "status"
+      fi
+      # TODO: Add KVM status check
       report_execution_time
       echo "# Check VM Status completed."
       break
       ;;
     "Start All VMs")
       echo "# Executing Start All VMs..."
-      control_terraform_vms "start"
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        control_terraform_vms "start"
+      fi
+      # TODO: Add KVM start logic
       report_execution_time
       echo "# Start All VMs completed."
       break
       ;;
     "Stop All VMs")
       echo "# Executing Stop All VMs..."
-      control_terraform_vms "stop"
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        control_terraform_vms "stop"
+      fi
+      # TODO: Add KVM stop logic
       report_execution_time
       echo "# Stop All VMs completed."
       break
       ;;
     "Delete All VMs")
       echo "# Executing Deletion of All VMs..."
-      control_terraform_vms "delete"
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        control_terraform_vms "delete"
+      fi
+      # TODO: Add KVM delete logic
       report_execution_time
-      echo "# Start All VMs completed."
+      echo "# Deletion of All VMs completed."
       break
       ;;
     "Quit")

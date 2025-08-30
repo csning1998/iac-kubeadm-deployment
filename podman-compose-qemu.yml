@@ -1,0 +1,24 @@
+services:
+  iac-controller:
+    build:
+      context: .
+      dockerfile: Dockerfile.qemu
+      args:
+        HOST_UID: ${HOST_UID}
+        HOST_GID: ${HOST_GID}
+        USERNAME: ${UNAME}
+    image: iac-kubeadm-controller:qemu-latest
+    container_name: iac-controller-qemu
+    privileged: true
+    security_opt:
+      - label=disable
+    env_file:
+      - .env
+    volumes:
+      - .:/app:z
+      - ${UHOME}/.ssh:/home/${UNAME}/.ssh:z
+      - ${UHOME}/.cache/packer:/home/${UNAME}/.cache/packer:z
+      - /dev/kvm:/dev/kvm
+      - /var/run/libvirt/libvirt-sock:/var/run/libvirt/libvirt-sock
+    tty: true
+    stdin_open: true

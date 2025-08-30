@@ -7,25 +7,68 @@ run_command() {
   local cmd_string="$1"
   local host_work_dir="$2" # Optional working directory for native mode
 
-  if [[ "${EXECUTION_STRATEGY}" == "docker" ]]; then
+  if [[ "${EXECUTION_STRATEGY}" == "container" ]]; then
 
-    check_docker_environment
+    # --- Containerized Execution Path ---
+    local compose_cmd=""
+    local compose_file=""
+    local container_name=""
 
-    # Ensure the controller service is running.
-    if ! docker ps -q --filter "name=iac-controller" | grep -q .; then
-      echo ">>> Starting iac-controller service..."
-      docker compose up -d
+    # 1. Determine the container engine and compose file
+    
+    if [[ "${CONTAINER_ENGINE}" == "docker" ]]; then
+      compose_cmd="docker compose"
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        compose_file="docker-compose-workstation.yml"
+        container_name="iac-controller"
+      else # kvm
+        compose_file="docker-compose-qemu.yml"
+        container_name="iac-controller-qemu"
+      fi
+    elif [[ "${CONTAINER_ENGINE}" == "podman" ]]; then
+      # Assumes podman-compose is installed or podman compose is available.
+      # Using podman-compose for broader compatibility for now.
+      compose_cmd="podman-compose" 
+      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+        compose_file="podman-compose-workstation.yml"
+        container_name="iac-controller"
+      else # kvm
+        compose_file="podman-compose-qemu.yml"
+        container_name="iac-controller-qemu"
+      fi
+    else
+      echo "FATAL: Invalid CONTAINER_ENGINE: '${CONTAINER_ENGINE}'" >&2
+      exit 1
     fi
 
-    # Execute the command within the container which working dir is /app.
+    # 2. Check if the required engine is installed
+    if ! command -v "${compose_cmd%% *}" >/dev/null 2>&1; then
+      echo "FATAL: Container engine '${CONTAINER_ENGINE}' not found. Please install it to proceed." >&2
+      exit 1
+    fi
+
+    # 3. Ensure the compose file exists
+    if [ ! -f "${SCRIPT_DIR}/${compose_file}" ]; then
+      echo "FATAL: Required compose file '${compose_file}' not found in project root." >&2
+      exit 1
+    fi
+
+    # 4. Ensure the controller service is running.
+    if ! "${compose_cmd%% *}" ps -q --filter "name=${container_name}" | grep -q .; then
+      echo ">>> Starting container service '${container_name}' using ${compose_file}..."
+      ${compose_cmd} -f "${compose_file}" up -d
+    fi
+
+    # 5. Execute the command within the container.
+    # The working directory inside the container is always /app.
+    # Map the host path to the container's /app path.
     local container_work_dir="${host_work_dir/#$SCRIPT_DIR//app}"
-    docker compose exec iac-controller bash -c "cd \"${container_work_dir}\" && ${cmd_string}"
+    echo "INFO: Executing command in container '${container_name}'..."
+    ${compose_cmd} -f "${compose_file}" exec "${container_name}" bash -c "cd \"${container_work_dir}\" && ${cmd_string}"
 
   else
-    # Native Mode: Execute the command directly on the host.
-    
+    # Native Mode: Execute the command directly on the host. 
     check_iac_environment
-
     (cd "${host_work_dir}" && eval "${cmd_string}")
   fi
 }

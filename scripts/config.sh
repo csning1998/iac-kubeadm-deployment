@@ -1,108 +1,39 @@
 #!/bin/bash
 
 # -----------------------------------------------------------------------------
-# Project Configuration File
+# Project Core Configuration File
 # -----------------------------------------------------------------------------
 #
 # This file contains all the user-configurable variables for the project.
-# Modify these values to suit your specific setup.
+# These settings determine the core execution strategies and can be
+# modified via the interactive menu in entry.sh
 #
 # -----------------------------------------------------------------------------
 
 ###
-# Execution Strategy
-# -----------------------------------------------------------------------------
-# "docker": Use the iac-controller container. (Default)
-# "native": Use tools installed directly on the host.
-EXECUTION_STRATEGY="native"
+# Defines the virtualization technology to be used.
+## "kvm": Use QEMU/KVM for virtualization. (Requires CPU hardware virtualization support)
+## "vmware": Use VMware Workstation Pro. (Fallback for systems without virt support on Ubuntu)
+VIRTUALIZATION_PROVIDER="kvm"
+
+###
+# Defines the environment for running IaC tools.
+## "container": Use a containerized environment (Podman or Docker). (Default)
+## "native": Use tools installed directly on the host.
+ENVIRONMENT_STRATEGY="container"
+
+###
+# Defines the container engine to use when ENVIRONMENT_STRATEGY is "container".
+## "podman": Recommended for RHEL/Fedora hosts.
+## "docker": Recommended for Ubuntu/Debian hosts.
+CONTAINER_ENGINE="podman"
+
 
 ###
 # Virtual Machine and User Configuration
-###
-
-# Default username for the virtual machines.
-# If left empty (""), the script will default to the current logged-in user (`whoami`).
+## Default username for the virtual machines.
+## If left empty (""), the script will default to the current logged-in user (`whoami`).
 VM_USERNAME=""
-
-# Packer template name. This is used for naming the output directory and for cleanup.
-PACKER_VM_NAME="ubuntu-server-k8s-based"
-
-# The subdirectory name within `packer/output/` where the built VM files will be stored.
-PACKER_OUTPUT_SUBDIR="ubuntu-server-vmware"
 
 # The generate_ssh_key function allows creating a key with a custom name.
 SSH_PRIVATE_KEY="$HOME/.ssh/id_ed25519_iac_automation"
-
-###
-# Network Configuration (Linux Distribution-Aware)
-###
-
-# Detect the Linux distribution and set network defaults accordingly.
-# This approach is more robust for supporting multiple native Linux environments.
-if [ -f /etc/os-release ]; then
-  # Source the os-release file to get variables like $ID
-  . /etc/os-release
-    
-  case $ID in
-    fedora)
-      ### [Example] Fedora / Red Hat Family Defaults ###
-      echo "INFO: Fedora environment detected. Using Red Hat family VMware defaults."
-      VMNET8_SUBNET="192.168.182.0"
-      VMNET8_NETMASK="255.255.255.0"
-      VMNET8_GATEWAY="192.168.182.2"
-
-      VMNET1_SUBNET="192.168.205.0"
-      VMNET1_NETMASK="255.255.255.0"
-      ;;    
-    ubuntu|debian)
-      ### Debian / Ubuntu Family Defaults ###
-      echo "INFO: Debian/Ubuntu environment detected. Using Debian family VMware defaults."
-      VMNET8_SUBNET="172.16.86.0"
-      VMNET8_NETMASK="255.255.255.0"
-      VMNET8_GATEWAY="172.16.86.2"
-
-      VMNET1_SUBNET="172.16.134.0"
-      VMNET1_NETMASK="255.255.255.0"
-      ;;
-    *)
-      ### Fallback for other Linux Distributions ###
-      echo "WARN: Unknown Linux distribution '$ID'. Falling back to Debian/Ubuntu family defaults."
-      echo "WARN: Please verify these network settings match your VMware Workstation configuration."
-      VMNET8_SUBNET="172.16.86.0"
-      VMNET8_NETMASK="255.255.255.0"
-      VMNET8_GATEWAY="172.16.86.2"
-
-      VMNET1_SUBNET="172.16.134.0"
-      VMNET1_NETMASK="255.255.255.0"
-      ;;
-  esac
-else
-  echo "WARN: Cannot find /etc/os-release. Using generic Debian/Ubuntu family defaults."
-  VMNET8_SUBNET="172.16.86.0"
-  VMNET8_NETMASK="255.255.255.0"
-  VMNET8_GATEWAY="172.16.86.2"
-
-  VMNET1_SUBNET="172.16.134.0"
-  VMNET1_NETMASK="255.255.255.0"
-fi
-
-
-# ====== DO NOT MODIFY THE HEREDOC BELOW ======
-# It uses the variables defined above to generate the final configuration content.
-# The HEREDOC uses "EOF" (without quotes) to allow variable expansion.
-VMWARE_NETWORKING_CONFIG=$(cat <<EOF
-VERSION=1,0
-answer VNET_1_DHCP no
-answer VNET_1_DISPLAY_NAME
-answer VNET_1_HOSTONLY_NETMASK ${VMNET1_NETMASK}
-answer VNET_1_HOSTONLY_SUBNET ${VMNET1_SUBNET}
-answer VNET_1_VIRTUAL_ADAPTER yes
-answer VNET_8_DHCP yes
-answer VNET_8_DHCP_CFG_HASH B7DE0620494D07D87DE131EBECBC26E55A0AFD74
-answer VNET_8_DISPLAY_NAME
-answer VNET_8_HOSTONLY_NETMASK ${VMNET8_NETMASK}
-answer VNET_8_HOSTONLY_SUBNET ${VMNET8_SUBNET}
-answer VNET_8_NAT yes
-answer VNET_8_VIRTUAL_ADAPTER yes
-EOF
-)

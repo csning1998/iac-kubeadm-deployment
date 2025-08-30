@@ -1,0 +1,2 @@
+# This would be done when the host is switched to RHEL 9
+# since WMware Workstation 17.6.2 could crash RHEL 10 kernel.
