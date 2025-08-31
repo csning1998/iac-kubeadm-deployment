@@ -14,7 +14,9 @@ autoinstall:
   network:
     version: 2
     ethernets:
-      ens33:
+      id-net-eth0:
+        match:
+          name: en*
         dhcp4: true
 
   # User and Hostname Configuration
@@ -34,3 +36,5 @@ autoinstall:
   late-commands:
     - curtin in-target -- /bin/bash -c "echo '${username} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/99-packer-user"
     - curtin in-target -- /bin/bash -c "chmod 0440 /etc/sudoers.d/99-packer-user"
+    - curtin in-target -- /bin/bash -c "systemctl enable ssh"
+    - curtin in-target -- /bin/bash -c "systemctl start ssh"

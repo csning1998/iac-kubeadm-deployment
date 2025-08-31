@@ -13,18 +13,24 @@ source "qemu" "ubuntu-server" {
   memory         = var.memory
   disk_size      = var.disk_size
   disk_interface = "virtio"
-  net_device     = "virtio-net"
-  headless       = true
+  net_bridge     = "virbr0"
   accelerator    = "kvm"
+  qemu_binary    = "/usr/bin/qemu-system-x86_64"
+  qemuargs       = [
+    ["-cpu", "host"]
+  ]
 
-  # HTTP Content Delivery for cloud-init
-  http_content = {
+  headless        = true
+
+  http_directory  = "http"
+  cd_content = {
     "/user-data" = templatefile("${path.root}/http/user-data", {
       username      = var.ssh_username
       password_hash = var.ssh_password_hash
     })
     "/meta-data" = file("${path.root}/http/meta-data")
   }
+  cd_label        = "cidata"
 
   # Boot & Autoinstall Configuration
   boot_wait = "5s"
@@ -32,14 +38,18 @@ source "qemu" "ubuntu-server" {
     "<wait2s>",
     "e<wait>",
     "<down><down><down><end>",
-    " autoinstall ds=nocloud-net\\;s=http://{{.HTTPIP}}:{{.HTTPPort}}/",
+    " autoinstall ds=nocloud;",
     "<f10>"
   ]
+
+  net_device     = "virtio-net"
+  vnc_port_min      = "5999"
+  vnc_port_max      = "5999"
 
   # SSH Configuration for Provisioning
   ssh_username = var.ssh_username
   ssh_password = var.ssh_password
-  ssh_timeout  = "20m"
+  ssh_timeout  = "10m"
 
   # Shutdown Command
   shutdown_command = "sudo shutdown -P now"

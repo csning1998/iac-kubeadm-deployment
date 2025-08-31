@@ -128,7 +128,7 @@ switch_strategy() {
   update_env_var "$var_name" "$new_value"
   echo
   echo "Strategy '${var_name}' in .env updated to '${new_value}'."
-  ./entry.sh
+  cd ${SCRIPT_DIR} && ./entry.sh
 }
 
 switch_virtualization_provider_handler() {
