@@ -2,7 +2,7 @@
 source "vmware-iso" "ubuntu-server" {
   # Guest OS & VM Naming
   guest_os_type = var.guest_os_type
-  vm_name       = var.vm_name
+  vm_name       = "${var.vm_name}-workstation"
 
   # ISO Configuration
   iso_url      = var.iso_url
@@ -51,26 +51,26 @@ source "vmware-iso" "ubuntu-server" {
   keep_registered  = false
 }
 
-build {
-  sources = ["source.vmware-iso.ubuntu-server"]
+# build {
+#   sources = ["source.vmware-iso.ubuntu-server"]
 
-  provisioner "ansible" {
-    playbook_file       = "../ansible/playbooks/00-provision-base-image.yaml"
-    inventory_directory = "../ansible/"
+#   provisioner "ansible" {
+#     playbook_file       = "../ansible/playbooks/00-provision-base-image.yaml"
+#     inventory_directory = "../ansible/"
 
-    user = var.ssh_username
+#     user = var.ssh_username
 
-    ansible_env_vars = [
-      "ANSIBLE_CONFIG=../ansible.cfg"
-    ]
+#     ansible_env_vars = [
+#       "ANSIBLE_CONFIG=../ansible.cfg"
+#     ]
 
-    extra_arguments = [
-      "--extra-vars", "expected_hostname=${var.vm_name}",
-      "--extra-vars", "public_key_file=${var.ssh_public_key_path}",
-      "--extra-vars", "ssh_user=${var.ssh_username}",
-      "-v",
-      # "-vv",
-      # "-vvv",
-    ]
-  }
-}
+#     extra_arguments = [
+#       "--extra-vars", "expected_hostname=${var.vm_name}",
+#       "--extra-vars", "public_key_file=${var.ssh_public_key_path}",
+#       "--extra-vars", "ssh_user=${var.ssh_username}",
+#       "-v",
+#       # "-vv",
+#       # "-vvv",
+#     ]
+#   }
+# }

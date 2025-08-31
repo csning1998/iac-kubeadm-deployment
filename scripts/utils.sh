@@ -7,12 +7,13 @@ run_command() {
   local cmd_string="$1"
   local host_work_dir="$2" # Optional working directory for native mode
 
-  if [[ "${EXECUTION_STRATEGY}" == "container" ]]; then
+  if [[ "${ENVIRONMENT_STRATEGY}" == "container" ]]; then
 
     # --- Containerized Execution Path ---
     local compose_cmd=""
     local compose_file=""
     local container_name=""
+    local service_name="iac-controller" # The service name is consistent across all compose files
 
     # 1. Determine the container engine and compose file
     
@@ -28,7 +29,7 @@ run_command() {
     elif [[ "${CONTAINER_ENGINE}" == "podman" ]]; then
       # Assumes podman-compose is installed or podman compose is available.
       # Using podman-compose for broader compatibility for now.
-      compose_cmd="podman-compose" 
+      compose_cmd="podman compose" 
       if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
         compose_file="podman-compose-workstation.yml"
         container_name="iac-controller"
@@ -56,7 +57,7 @@ run_command() {
     # 4. Ensure the controller service is running.
     if ! "${compose_cmd%% *}" ps -q --filter "name=${container_name}" | grep -q .; then
       echo ">>> Starting container service '${container_name}' using ${compose_file}..."
-      ${compose_cmd} -f "${compose_file}" up -d
+      (cd "${SCRIPT_DIR}" && ${compose_cmd} -f "${compose_file}" up -d)
     fi
 
     # 5. Execute the command within the container.
@@ -64,7 +65,7 @@ run_command() {
     # Map the host path to the container's /app path.
     local container_work_dir="${host_work_dir/#$SCRIPT_DIR//app}"
     echo "INFO: Executing command in container '${container_name}'..."
-    ${compose_cmd} -f "${compose_file}" exec "${container_name}" bash -c "cd \"${container_work_dir}\" && ${cmd_string}"
+    (cd "${SCRIPT_DIR}" && ${compose_cmd} -f "${compose_file}" exec "${service_name}" bash -c "cd \"${container_work_dir}\" && ${cmd_string}")
 
   else
     # Native Mode: Execute the command directly on the host. 
