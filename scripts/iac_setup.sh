@@ -54,51 +54,30 @@ set_workstation_network() {
 
 # Function: Check IaC environment and return status
 check_iac_environment() {
-  echo ">>> STEP: Checking IaC environment..."
+  echo ">>> STEP: Checking native IaC environment..."
   local all_installed=true
-  local packer_version terraform_version ansible_version
 
-  # Check Packer
-  if command -v packer >/dev/null 2>&1; then
-    packer_version=$(packer --version 2>/dev/null || echo "Unknown")
-    echo "#### Packer: Installed (Version: $packer_version)"
-  else
-    packer_version="Not installed"
-    all_installed=false
-    echo "#### Packer: Not installed"
-  fi
+  command -v packer >/dev/null 2>&1 || { echo "#### Packer: Not installed"; all_installed=false; }
+  command -v terraform >/dev/null 2>&1 || { echo "#### Terraform: Not installed"; all_installed=false; }
+  command -v ansible >/dev/null 2>&1 || { echo "#### Ansible: Not installed"; all_installed=false; }
 
-  # Check Terraform
-  if command -v terraform >/dev/null 2>&1; then
-    terraform_version=$(terraform --version 2>/dev/null | head -n 1 || echo "Unknown")
-    echo "#### Terraform: Installed (Version: $terraform_version)"
-  else
-    terraform_version="Not installed"
-    all_installed=false
-    echo "#### Terraform: Not installed"
-  fi
-
-  # Check Ansible
-  if command -v ansible >/dev/null 2>&1; then
-    ansible_version=$(ansible --version 2>/dev/null | head -n 1 || echo "Unknown")
-    echo "#### Ansible: Installed (Version: $ansible_version)"
-  else
-    ansible_version="Not installed"
-    all_installed=false
-    echo "#### Ansible: Not installed"
+  # Check provider-specific tools
+  if [[ "${VIRTUALIZATION_PROVIDER}" == "kvm" ]]; then
+    command -v qemu-system-x86_64 >/dev/null 2>&1 || { echo "#### QEMU/KVM: Not installed or not in PATH"; all_installed=false; }
+    command -v virsh >/dev/null 2>&1 || { echo "#### Libvirt Client (virsh): Not installed"; all_installed=false; }
   fi
 
   echo "--------------------------------------------------"
   if $all_installed; then
-    echo "#### All required IaC tools are already installed."
-    read -p "######## Do you want to reinstall the IaC environment? (y/n): " reinstall_answer
+    echo "#### All required IaC tools for the selected provider are already installed."
+    read -p "######## Do you want to reinstall them? (y/n): " reinstall_answer
     if [[ ! "$reinstall_answer" =~ ^[Yy]$ ]]; then
       echo "#### Skipping IaC environment installation."
       return 1
     fi
   else
-    echo "#### Some IaC tools are missing or not installed."
-    read -p "######## Do you want to proceed with installing the IaC environment? (y/n): " install_answer
+    echo "#### Some required IaC tools are missing."
+    read -p "######## Do you want to proceed with the installation? (y/n): " install_answer
     if [[ ! "$install_answer" =~ ^[Yy]$ ]]; then
       echo "#### Skipping IaC environment installation."
       return 1
@@ -107,35 +86,67 @@ check_iac_environment() {
   return 0
 }
 
-# Function: Setup IaC Environment
+# Function: Setup IaC Environment for the detected OS Family
 setup_iac_environment() {
-  echo ">>> STEP: Setting up IaC environment..."
+  echo ">>> STEP: Setting up native IaC environment for OS Family: ${HOST_OS_FAMILY^^}..."
 
-  echo "Prior to executing other options, registration is required on Broadcom.com to download and install VMWare Workstation Pro 17.5+."
-  echo "Link: https://support.broadcom.com/group/ecx/my-dashboard"
-  echo
+  if [[ "${HOST_OS_FAMILY}" == "rhel" ]]; then
+    # --- RHEL / Fedora Family Setup ---
+    echo "#### Installing base packages using DNF..."
+    sudo dnf install -y jq openssh-clients python3 python3-pip wget gnupg whois curl
 
-  read -n 1 -s -r -p "Press any key to continue..."
-  echo
-  
-  sudo apt-get update
-  echo "#### Install necessary packages/libraries..."
-  sudo apt install -y jq openssh-client python3 software-properties-common wget gnupg lsb-release whois
+    # Install KVM/QEMU packages if the provider is KVM
+    if [[ "${VIRTUALIZATION_PROVIDER}" == "kvm" ]]; then
+      echo "#### Installing KVM/QEMU packages..."
+      sudo dnf install -y qemu-kvm libvirt-client virt-install
+      echo "#### Enabling and starting libvirt service..."
+      sudo systemctl enable --now libvirtd
+      # Create the required symlink for Packer, as discovered
+      if [ -f /usr/libexec/qemu-kvm ] && [ ! -f /usr/bin/qemu-system-x86_64 ]; then
+        echo "#### Creating symlink for qemu-system-x86_64..."
+        sudo ln -s /usr/libexec/qemu-kvm /usr/bin/qemu-system-x86_64
+      fi
+    fi
 
-  # Install HashiCorp Toolkits (Terraform and Packer)
-  echo "#### Installing HashiCorp Toolkits (Terraform and Packer)..."
-  wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-  sudo apt-get install terraform packer -y
-  echo "#### Terraform and Packer installation completed."
+    echo "#### Installing Ansible..."
+    sudo dnf install -y ansible-core ansible-lint
 
-  # Install Ansible
-  echo "#### Installing Ansible..."
-  sudo add-apt-repository --yes --update ppa:ansible/ansible
-  sudo apt-get install ansible ansible-lint -y
-  echo "#### Ansible installation completed."
+    echo "#### Installing HashiCorp Toolkits (Terraform and Packer)..."
+    # Create a temporary repository file forcing the RHEL 9 version
+    cat <<EOF | sudo tee /etc/yum.repos.d/temp-hashicorp.repo
+[hashicorp-temp]
+name=HashiCorp Stable - \$basearch
+baseurl=https://rpm.releases.hashicorp.com/RHEL/9/\$basearch/stable
+enabled=1
+gpgcheck=1
+gpgkey=https://rpm.releases.hashicorp.com/gpg
+EOF
+    # Install using the temporary repo, then clean up
+    sudo dnf -y install terraform packer --enablerepo=hashicorp-temp --refresh
+    sudo rm /etc/yum.repos.d/temp-hashicorp.repo
+    sudo dnf clean all
 
-  # Verify installations
+  elif [[ "${HOST_OS_FAMILY}" == "debian" ]]; then
+    # --- Debian / Ubuntu Family Setup ---
+    sudo apt-get update
+    echo "#### Install necessary packages/libraries..."
+    sudo apt install -y jq openssh-client python3 python3-pip software-properties-common wget gnupg lsb-release whois curl
+
+    echo "#### Installing HashiCorp repository and tools (Terraform and Packer)..."
+    wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+    sudo apt-get update
+    sudo apt-get install terraform packer -y
+
+    echo "#### Installing Ansible..."
+    sudo add-apt-repository --yes --update ppa:ansible/ansible
+    sudo apt-get install ansible ansible-lint -y
+  else
+    echo "FATAL: Unsupported OS family for native installation: ${HOST_OS_FAMILY}" >&2
+    exit 1
+  fi
+
+  # --- Common Verification Step ---
   echo "#### Verifying installed tools..."
   echo "######## Packer version:"
   packer --version
@@ -143,6 +154,11 @@ setup_iac_environment() {
   terraform --version
   echo "######## Ansible version:"
   ansible --version
-  echo "#### IaC environment setup and verification completed."
+  if [[ "${VIRTUALIZATION_PROVIDER}" == "kvm" ]]; then
+    qemu-system-x86_64 --version
+    virsh --version
+  fi
+
+  echo "#### Native IaC environment setup and verification completed."
   echo "--------------------------------------------------"
 }

@@ -65,6 +65,10 @@ generate_ssh_key() {
   echo "#### Key generated successfully:"
   ls -l "$private_key_path" "$public_key_path"
   echo "--------------------------------------------------"
+  echo ">>> Updating SSH_PRIVATE_KEY in .env file to: ${private_key_path}"
+  # Call the helper function to update the .env file
+  update_env_var "SSH_PRIVATE_KEY" "${private_key_path}"
+
   echo "#### IMPORTANT: Please update your configuration file"
   echo "####   e.g., in 'packer/secret.auto.pkrvars.hcl' or terraform/*.tfvars"
   echo "#### to use the following paths:"

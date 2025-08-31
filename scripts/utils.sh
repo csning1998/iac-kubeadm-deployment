@@ -82,10 +82,11 @@ check_vmware_workstation() {
     echo "#### VMware Workstation: Installed (Version: $vmware_version)"
   else
     vmware_version="Not installed"
-    echo "#### VMware Workstation: Not installed"
-    echo "Prior to executing other options, registration is required on Broadcom.com to download and install VMWare Workstation Pro 17.5+."
+    echo "Prior to executing other options, registration is required on Broadcom.com to download and install VMWare Workstation Pro 17.6.2+."
     echo "Link: https://support.broadcom.com/group/ecx/my-dashboard"
-    read -n 1 -s -r -p "Press any key to continue..."
+    echo
+
+    read -n 1 -s -r -p "Press any key to exit..."
     exit 1
   fi
 }

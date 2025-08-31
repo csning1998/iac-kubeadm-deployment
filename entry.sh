@@ -9,40 +9,28 @@ set -e -u
 # Define base directory and load configuration
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPTS_LIB_DIR="${SCRIPT_DIR}/scripts"
-readonly CONFIG_FILE="${SCRIPTS_LIB_DIR}/config.sh"
 readonly CONFIG_VMWARE_FILE="${SCRIPTS_LIB_DIR}/config-vmware.sh"
 
+source "${SCRIPTS_LIB_DIR}/utils_environment.sh"
 
 ###
 # MAIN ENVIRONMENT BOOTSTRAP LOGIC
 ###
-
-source "${SCRIPTS_LIB_DIR}/environment.sh"
-initialize_environment
-
-# Create .env file for container environment if it doesn't exist
-if [ ! -f .env ]; then
-  echo ">>> Creating .env file with current user's UID and GID..."
-  echo "HOST_UID=$(id -u)" > .env
-  echo "HOST_GID=$(id -g)" >> .env
-  echo "UNAME=$(whoami)" >> .env
-  echo "UHOME=${HOME}" >> .env
-  echo "#### .env file created."
-fi
+check_os_details
+check_virtual_support
+generate_env_file
 
 # Source the .env file to export its variables to any sub-processes
 set -o allexport
 source .env
 set +o allexport
 
-# Source all function libraries from the scripts directory
-for lib in "${SCRIPTS_LIB_DIR}"/*.sh; do
+initialize_environment
 
-  # Avoid re-sourcing the environment script
-  if [[ "$lib" != *"/environment.sh" ]]; then
+for lib in "${SCRIPTS_LIB_DIR}"/*.sh; do
+  if [[ "$lib" != *"/utils_environment.sh" ]]; then
     source "$lib"
   fi
-
 done
 
 ###
@@ -50,8 +38,6 @@ done
 ###
 
 # Set user and other readonly variables after loading configs
-TF_VAR_vm_username=${VM_USERNAME:-$(whoami)}
-user="$TF_VAR_vm_username"
 
 readonly ANSIBLE_DIR="${SCRIPT_DIR}/ansible"
 readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
@@ -59,21 +45,6 @@ readonly PACKER_DIR="${SCRIPT_DIR}/packer"
 # readonly PACKER_OUTPUT_DIR="${PACKER_DIR}/output/${PACKER_OUTPUT_SUBDIR}"
 readonly VMS_BASE_PATH="${TERRAFORM_DIR}/vms"
 readonly USER_HOME_DIR="${HOME}"
-
-# Function to switch a strategy variable in the config file
-switch_strategy() {
-  local var_name="$1"
-  local current_value="$2"
-  local new_value="$3"
-  
-  sed -i "s/${var_name}=\"${current_value}\"/${var_name}=\"${new_value}\"/" "${CONFIG_FILE}"
-  echo "Strategy '${var_name}' switched to '${new_value}'. Please restart the script to apply changes."
-  exit 0
-}
-
-###
-# MAIN EXECUTION MENU
-###
 
 # Main menu
 echo

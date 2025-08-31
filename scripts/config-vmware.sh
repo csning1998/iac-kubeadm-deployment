@@ -10,16 +10,6 @@
 #
 # -----------------------------------------------------------------------------
 
-###
-# VM Network Configuration (Linux Distribution-Aware)
-###
-
-# Packer template name. This is used for naming the output directory and for cleanup.
-PACKER_VM_NAME="ubuntu-server-k8s-based"
-
-# The subdirectory name within `packer/output/` where the built VM files will be stored.
-PACKER_OUTPUT_SUBDIR="ubuntu-server-vmware"
-
 # Detect the Linux distribution and set network defaults accordingly.
 # This approach is more robust for supporting multiple native Linux environments.
 if [ -f /etc/os-release ]; then
