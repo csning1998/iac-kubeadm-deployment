@@ -38,6 +38,8 @@ build_packer() {
     -var-file=common.pkrvars.hcl \
     -var-file=secret.auto.pkrvars.hcl \
     ."
+  # Add this to abort and debug if packer build failed.
+  # -on-error=abort \ 
 
   run_command "${cmd}" "${PACKER_DIR}"
 

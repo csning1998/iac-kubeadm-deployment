@@ -1,0 +1,4 @@
+---
+- name: "Include VMware specific tasks"
+  ansible.builtin.include_tasks: option-workstation.yaml
+  when: ansible_virtualization_type == "vmware"

@@ -1,0 +1,26 @@
+---
+- name: Section A. Run OS prerequisites setup
+  block:
+    - name: "Step 1. Action: Add Universe and Multiverse repositories"
+      ansible.builtin.apt_repository:
+        repo: "deb http://archive.ubuntu.com/ubuntu {{ ansible_distribution_release }} main restricted universe multiverse"
+        state: present
+        filename: 'ubuntu-with-community'
+        update_cache: true
+
+    - name: "Step 2. Action: Install build dependencies"
+      ansible.builtin.apt:
+        name:
+          - build-essential
+          - dkms
+          - "linux-headers-{{ ansible_kernel }}"
+          - perl
+          - libelf-dev
+        state: present
+        update_cache: true
+
+    - name: "Step 3. Harden: Ensure sshd service is enabled and starts on boot"
+      ansible.builtin.systemd:
+        name: ssh
+        state: started
+        enabled: true
