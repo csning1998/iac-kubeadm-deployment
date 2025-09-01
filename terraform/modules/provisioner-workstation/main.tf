@@ -1,35 +1,3 @@
-/*
-* Generate a ~/.ssh/iac-kubeadm-deployment_config file in the user's home directory with an alias and a specified public key
-* for passwordless SSH using the alias (e.g., ssh vm200).
-*/
-resource "local_file" "ssh_config" {
-  content = templatefile("${path.root}/templates/ssh_config.tftpl", {
-    nodes                = var.all_nodes,
-    ssh_user             = var.vm_username,
-    ssh_private_key_path = var.ssh_private_key_path
-  })
-  filename        = pathexpand("~/.ssh/iac-kubeadm-deployment_config")
-  file_permission = "0600"
-}
-
-/*
-* NOTE: Call functions in `utils_ssh.sh` via local-exec to manage the ~/.ssh/config file. 
-* This avoids deletion during `terraform destroy()` in `scripts/terraform.sh`.
-*/
-resource "null_resource" "ssh_config_include" {
-  depends_on = [local_file.ssh_config]
-
-  provisioner "local-exec" {
-    command     = ". ${path.root}/../scripts/utils_ssh.sh && integrate_ssh_config"
-    interpreter = ["/bin/bash", "-c"]
-  }
-
-  provisioner "local-exec" {
-    when        = destroy
-    command     = ". ${path.root}/../scripts/utils_ssh.sh && deintegrate_ssh_config"
-    interpreter = ["/bin/bash", "-c"]
-  }
-}
 
 /*
 * NOTE: Using local-exec and remote-exec to configure VMs as a workaround 
@@ -37,8 +5,7 @@ resource "null_resource" "ssh_config_include" {
 * This is a known technical debt.
 */
 resource "null_resource" "configure_nodes" {
-  depends_on = [local_file.ssh_config, null_resource.ssh_config_include]
-  for_each   = { for node in var.all_nodes : node.key => node }
+  for_each = { for node in var.all_nodes : node.key => node }
 
   provisioner "local-exec" {
     command = <<EOT
@@ -116,24 +83,5 @@ resource "null_resource" "configure_nodes" {
       "sudo systemctl restart sshd"
     ]
     on_failure = continue
-  }
-}
-
-/*
-* This makes sure this resource runs only after the "for_each" loop
-* in "configure_nodes" has completed for all nodes.
-*/
-resource "null_resource" "prepare_ssh_access" {
-  depends_on = [null_resource.configure_nodes]
-
-  provisioner "local-exec" {
-    command     = <<-EOT
-      set -e
-      echo ">>> Verifying VM liveness and preparing SSH access..."
-      . ${path.root}/../scripts/utils_ssh.sh
-      bootstrap_ssh_known_hosts ${join(" ", [for node in var.all_nodes : node.ip])}
-      echo ">>> Liveness check passed. SSH access is ready."
-    EOT
-    interpreter = ["/bin/bash", "-c"]
   }
 }

@@ -14,5 +14,5 @@
 
 output "ansible_log" {
   description = "Path to Ansible execution log"
-  value = "${var.ansible_path}/logs/ansible-latest.log"
+  value       = "${var.ansible_path}/logs/ansible-latest.log"
 }

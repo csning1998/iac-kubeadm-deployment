@@ -12,6 +12,11 @@ variable "vm_password" {
   sensitive   = true
 }
 
+variable "ssh_public_key_path" {
+  type        = string
+  description = "Path to the SSH public key for connecting to the VMs."
+}
+
 variable "ssh_private_key_path" {
   type        = string
   description = "Path to the SSH private key for connecting to the VMs."
@@ -80,4 +85,34 @@ variable "k8s_ha_virtual_ip" {
 variable "k8s_pod_subnet" {
   description = "The CIDR block for the Kubernetes pod network."
   type        = string
+}
+
+# 新增這個變數來控制使用哪個佈建器
+variable "provisioner_type" {
+  description = "The type of provisioner to use: 'kvm' or 'workstation'"
+  type        = string
+  default     = "kvm"
+
+  validation {
+    condition     = contains(["kvm", "workstation"], var.provisioner_type)
+    error_message = "Allowed values for provisioner_type are 'kvm' or 'workstation'."
+  }
+}
+
+# 新增這個變數，指向 Packer 產生的 qcow2 映像檔
+variable "qemu_base_image_path" {
+  description = "Path to the Packer-built qcow2 image for KVM"
+  type        = string
+}
+
+variable "hostonly_network_name" {
+  description = "Name for the Host-only libvirt network"
+  type        = string
+  default     = "iac-kubeadm-hostonly-net"
+}
+
+variable "kvm_hostonly_cidr" {
+  description = "CIDR for the KVM host-only network, should match the subnet of master/worker IPs"
+  type        = string
+  default     = "172.16.134.0/24"
 }

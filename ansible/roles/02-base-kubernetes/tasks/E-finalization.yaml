@@ -11,7 +11,7 @@
       ansible.builtin.file:
         path: "/home/{{ ssh_user }}/.ssh"
         state: directory
-        mode: '0700'
+        mode: "0700"
         owner: "{{ ssh_user }}"
         group: "{{ ssh_user }}"
 
@@ -29,3 +29,7 @@
       loop:
         - /tmp/crio.key
         - /tmp/kubernetes-apt-keyring.asc
+
+    - name: "Step 4. Clean cloud-init state to prepare image for cloning"
+      ansible.builtin.command: cloud-init clean --logs --seed
+      changed_when: true

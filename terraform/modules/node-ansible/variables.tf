@@ -21,7 +21,7 @@ variable "ssh_private_key_path" {
 
 variable "vm_status" {
   description = "Status of VM startup"
-  type        = string
+  type        = any
 }
 
 variable "all_nodes" {

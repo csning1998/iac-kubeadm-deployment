@@ -19,10 +19,58 @@ resource "ansible_host" "nodes" {
   }
 }
 
-# resource "ansible_vault" "secrets" {
-#   vault_file          = "${var.ansible_path}/group_vars/vault.yaml"
-#   vault_password_file = var.vault_pass_path
-# }
+/*
+* Generate a ~/.ssh/iac-kubeadm-deployment_config file in the user's home directory with an alias and a specified public key
+* for passwordless SSH using the alias (e.g., ssh vm200).
+*/
+resource "local_file" "ssh_config" {
+  content = templatefile("${path.root}/templates/ssh_config.tftpl", {
+    nodes                = var.all_nodes,
+    ssh_user             = var.vm_username,
+    ssh_private_key_path = var.ssh_private_key_path
+  })
+  filename        = pathexpand("~/.ssh/iac-kubeadm-deployment_config")
+  file_permission = "0600"
+}
+
+/*
+* NOTE: Call functions in `utils_ssh.sh` via local-exec to manage the ~/.ssh/config file. 
+* This avoids deletion during `terraform destroy()` in `scripts/terraform.sh`.
+*/
+resource "null_resource" "ssh_config_include" {
+  depends_on = [local_file.ssh_config]
+
+  provisioner "local-exec" {
+    command     = ". ${path.root}/../scripts/utils_ssh.sh && integrate_ssh_config"
+    interpreter = ["/bin/bash", "-c"]
+  }
+
+  provisioner "local-exec" {
+    when        = destroy
+    command     = ". ${path.root}/../scripts/utils_ssh.sh && deintegrate_ssh_config"
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
+
+/*
+* This makes sure this resource runs only after the "for_each" loop
+* in "configure_nodes" has completed for all nodes.
+*/
+resource "null_resource" "prepare_ssh_access" {
+  depends_on = [var.vm_status, null_resource.ssh_config_include]
+
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -e
+      echo ">>> Verifying VM liveness and preparing SSH access..."
+      . ${path.root}/../scripts/utils_ssh.sh
+      bootstrap_ssh_known_hosts ${join(" ", [for node in var.all_nodes : node.ip])}
+      echo ">>> Liveness check passed. SSH access is ready."
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
+
 
 /*
 * Generate the parameters that are necessary for Ansible inventory
@@ -55,7 +103,7 @@ resource "local_file" "inventory" {
 }
 
 resource "null_resource" "run_ansible" {
-  depends_on = [var.vm_status, local_file.inventory]
+  depends_on = [null_resource.prepare_ssh_access, local_file.inventory]
   provisioner "local-exec" {
     command     = <<-EOT
       set -e
