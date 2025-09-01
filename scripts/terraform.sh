@@ -25,7 +25,7 @@ destroy_terraform_resources() {
 apply_terraform_stage_I() {
   echo ">>> STEP: Initializing Terraform and applying VM configuration..."
   echo ">>> Stage I: Applying VM creation and SSH configuration with 'parallelism = 1' ..."
-  local cmd='terraform init && terraform validate && terraform apply -parallelism=1 -auto-approve -var-file=terraform.tfvars -target=module.vm'
+  local cmd='terraform init && terraform validate && terraform apply -parallelism=1 -auto-approve -var-file=terraform.tfvars -target=module.provisioner-workstation'
   run_command "${cmd}" "${TERRAFORM_DIR}"
   echo "#### VM creation and SSH configuration complete."
   echo "--------------------------------------------------"
@@ -36,7 +36,7 @@ apply_terraform_stage_II() {
   set -o pipefail
   echo ">>> Stage II: Applying Ansible configuration with default parallelism..."
 
-  local cmd='terraform init && terraform validate && terraform apply -auto-approve -var-file=terraform.tfvars -target=module.ansible'
+  local cmd='terraform init && terraform validate && terraform apply -auto-approve -var-file=terraform.tfvars -target=module.node-ansible'
   run_command "${cmd}" "${TERRAFORM_DIR}"
 
   echo "#### Saving Ansible playbook outputs to log files..."
