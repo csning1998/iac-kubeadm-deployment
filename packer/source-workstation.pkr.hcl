@@ -12,7 +12,7 @@ source "vmware-iso" "ubuntu-server" {
   cpus      = var.cpus
   memory    = var.memory
   disk_size = var.disk_size
-  headless  = true  # Switch to false if you want to view the build process.
+  headless  = true # Switch to false if you want to view the build process.
 
   # Hardware Interfaces
   disk_type_id         = "0" # Growable virtual disk contained in a single file (monolithic sparse).

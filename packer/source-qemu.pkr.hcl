@@ -2,7 +2,7 @@
 source "qemu" "ubuntu-server" {
 
   # Guest OS & VM Naming
-  vm_name           = "${var.vm_name}-qemu.qcow2"
+  vm_name = "${var.vm_name}-qemu.qcow2"
 
   # ISO Configuration
   iso_url      = var.iso_url
@@ -16,13 +16,13 @@ source "qemu" "ubuntu-server" {
   net_bridge     = "virbr0"
   accelerator    = "kvm"
   qemu_binary    = "/usr/bin/qemu-system-x86_64"
-  qemuargs       = [
+  qemuargs = [
     ["-cpu", "host"]
   ]
 
-  headless        = true
+  headless = true
 
-  http_directory  = "http"
+  http_directory = "http"
   cd_content = {
     "/user-data" = templatefile("${path.root}/http/user-data", {
       username      = var.ssh_username
@@ -30,7 +30,7 @@ source "qemu" "ubuntu-server" {
     })
     "/meta-data" = file("${path.root}/http/meta-data")
   }
-  cd_label        = "cidata"
+  cd_label = "cidata"
 
   # Boot & Autoinstall Configuration
   boot_wait = "5s"
@@ -42,9 +42,9 @@ source "qemu" "ubuntu-server" {
     "<f10>"
   ]
 
-  net_device     = "virtio-net"
-  vnc_port_min      = "5999"
-  vnc_port_max      = "5999"
+  net_device   = "virtio-net"
+  vnc_port_min = "5999"
+  vnc_port_max = "5999"
 
   # SSH Configuration for Provisioning
   ssh_username = var.ssh_username
@@ -53,6 +53,6 @@ source "qemu" "ubuntu-server" {
 
   # Shutdown Command
   shutdown_command = "sudo shutdown -P now"
-  output_directory  = "output/ubuntu-server-qemu"
-  format            = "qcow2"
+  output_directory = "output/ubuntu-server-qemu"
+  format           = "qcow2"
 }

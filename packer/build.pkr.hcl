@@ -1,5 +1,5 @@
 locals {
-  
+
   source_map = {
     workstation = "source.vmware-iso.ubuntu-server"
     kvm         = "source.qemu.ubuntu-server"
