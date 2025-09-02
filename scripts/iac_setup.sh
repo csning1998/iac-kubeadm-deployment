@@ -107,6 +107,13 @@ setup_iac_environment() {
         echo "#### Creating symlink for qemu-system-x86_64..."
         sudo ln -s /usr/libexec/qemu-kvm /usr/bin/qemu-system-x86_64
       fi
+      echo
+      echo "############################################################################"
+      echo "### ACTION REQUIRED: Please log out and log back in for group changes to ###"
+      echo "### take effect before running Packer or Terraform for KVM.              ###"
+      echo "############################################################################"
+      echo
+
     fi
 
     echo "#### Installing Ansible..."
@@ -133,6 +140,97 @@ EOF
     sudo apt-get update
     echo "#### Install necessary packages/libraries..."
     sudo apt install -y jq openssh-client python3 python3-pip software-properties-common wget gnupg lsb-release whois curl
+
+    if [[ "${VIRTUALIZATION_PROVIDER}" == "kvm" ]]; then
+      echo "#### Installing KVM/QEMU packages for Debian/Ubuntu..."
+      sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils
+      
+      echo "#### Enabling and starting libvirt service..."
+      sudo systemctl enable --now libvirtd
+      
+      echo "#### Adding current user to 'libvirt' and 'kvm' groups..."
+      sudo adduser "$(whoami)" libvirt
+      sudo adduser "$(whoami)" kvm
+      
+      echo
+      echo "################################################################################"
+      echo "###                      IMPORTANT: KVM Post-Install Setup                   ###"
+      echo "################################################################################"
+      echo
+      echo "#### To ensure Packer and Terraform can operate correctly, several system-level"
+      echo "#### configurations are required for KVM on Debian-based systems."
+      echo "#### The script will perform the following actions in 5 steps:"
+      echo "####   1. Stop conflicting services (VMware) and prepare for reconfiguration."
+      echo "####   2. Apply all file-based configurations for Libvirt and QEMU."
+      echo "####      (Service mode, permissions, user settings, AppArmor, bridge, etc.)"
+      echo "####   3. Restart the Libvirt service to apply new settings."
+      echo "####   4. Create and activate the 'default' libvirt storage pool."
+      echo "####   5. Perform a final service restart to ensure stability."
+      echo
+      read -p "#### Do you want to proceed with these automated changes? (y/n): " -n 1 -r
+      echo
+      if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "#### Proceeding with KVM configuration fixes..."
+
+        # Stop all services first to ensure a clean state for configuration
+        echo "--> (1/5) Stopping services for reconfiguration..."
+        sudo /etc/init.d/vmware stop >/dev/null 2>&1 || true
+        sudo systemctl stop libvirtd.service >/dev/null 2>&1 || true
+        sudo systemctl stop libvirtd.socket libvirtd-ro.socket libvirtd-admin.socket >/dev/null 2>&1 || true
+
+        # Apply all file-based configurations while services are stopped
+        echo "--> (2/5) Applying file-based configurations..."
+        sudo systemctl disable libvirtd.socket libvirtd-ro.socket libvirtd-admin.socket >/dev/null 2>&1 || true
+        
+        # libvirtd.conf
+        sudo sed -i 's/#unix_sock_group = "libvirt"/unix_sock_group = "libvirt"/' /etc/libvirt/libvirtd.conf
+        sudo sed -i 's/#unix_sock_rw_perms = "0770"/unix_sock_rw_perms = "0770"/' /etc/libvirt/libvirtd.conf
+
+        # qemu.conf
+        sudo sed -i "s/^#*user = .*/user = \"$(whoami)\"/" /etc/libvirt/qemu.conf
+        sudo sed -i "s/^#*group = .*/group = \"$(whoami)\"/" /etc/libvirt/qemu.conf
+        if sudo grep -q "^#*security_driver" /etc/libvirt/qemu.conf; then
+          sudo sed -i 's/^#*security_driver = .*/security_driver = "none"/g' /etc/libvirt/qemu.conf
+        else
+          echo 'security_driver = "none"' | sudo tee -a /etc/libvirt/qemu.conf >/dev/null
+        fi
+
+        # bridge.conf
+        sudo mkdir -p /etc/qemu
+        echo 'allow virbr0' | sudo tee /etc/qemu/bridge.conf >/dev/null
+
+        # qemu-bridge-helper permissions
+        if [ -f /usr/lib/qemu/qemu-bridge-helper ]; then
+          sudo chmod u+s /usr/lib/qemu/qemu-bridge-helper
+        fi
+
+        # Enable and restart the service with all new configurations applied
+        echo "--> (3/5) Enabling and restarting libvirtd service..."
+        sudo systemctl enable libvirtd.service >/dev/null 2>&1
+        sudo systemctl restart libvirtd.service
+        sleep 2 # Give the socket a moment to be created
+
+        # Now that the service is running, perform virsh commands
+        echo "--> (4/5) Ensuring 'default' storage pool is active..."
+        sudo virsh pool-info default >/dev/null 2>&1 || ( \
+          sudo virsh pool-define-as default dir --target /var/lib/libvirt/images >/dev/null && \
+          sudo virsh pool-build default >/dev/null \
+        )
+        sudo virsh pool-start default >/dev/null 2>&1 || true
+        sudo virsh pool-autostart default >/dev/null
+        
+        echo "--> (5/5) Final service restart to ensure all settings are loaded..."
+        sudo systemctl restart libvirtd.service
+        echo
+        echo "#### KVM fixes applied successfully."
+        echo "################################################################################"
+        echo "###    ACTION REQUIRED: Please REBOOT your system now for all changes      ###"
+        echo "###    (especially user groups and libvirt settings) to take full effect.  ###"
+      echo "################################################################################"
+      else
+        echo "#### Skipping automatic KVM configuration fixes. Packer and Terraform may fail."
+      fi
+    fi
 
     echo "#### Installing HashiCorp repository and tools (Terraform and Packer)..."
     wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
