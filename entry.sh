@@ -148,13 +148,7 @@ select opt in "${options[@]}"; do
       cleanup_packer_output
       build_packer
       reset_terraform_state
-      apply_terraform_stage_I
-      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
-        control_terraform_vms "start"
-      fi
-      # TODO: Add KVM start logic
-      verify_ssh
-      apply_terraform_stage_II
+      apply_terraform_all_stages
       report_execution_time
       echo "# Rebuild All workflow completed successfully."
       break

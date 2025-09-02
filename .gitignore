@@ -18,7 +18,7 @@ packer-playground/output
 
 ### Ignore Terraform state files
 .terraform/
-terraform/.terraform.tfstate.lock.info
+terraform/*/.terraform.tfstate.lock.info
 terraform.tfstate
 terraform.tfstate.backup
 # Ignore all VMware files

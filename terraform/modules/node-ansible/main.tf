@@ -21,7 +21,7 @@ resource "ansible_host" "nodes" {
 
 /*
 * Generate a ~/.ssh/iac-kubeadm-deployment_config file in the user's home directory with an alias and a specified public key
-* for passwordless SSH using the alias (e.g., ssh vm200).
+* for passwordless SSH using the alias (e.g., ssh k8s-master-00).
 */
 resource "local_file" "ssh_config" {
   content = templatefile("${path.module}/../../templates/ssh_config.tftpl", {
@@ -39,6 +39,11 @@ resource "local_file" "ssh_config" {
 */
 resource "null_resource" "ssh_config_include" {
   depends_on = [local_file.ssh_config]
+
+  # Re-run when the content of the ssh_config changes
+  triggers = {
+    ssh_config_content = local_file.ssh_config.content
+  }
 
   provisioner "local-exec" {
     command     = ". ${path.root}/../../scripts/utils_ssh.sh && integrate_ssh_config"
@@ -71,27 +76,13 @@ resource "null_resource" "prepare_ssh_access" {
   }
 }
 
-
-/*
-* Generate the parameters that are necessary for Ansible inventory
-*/
-locals {
-  master_nodes = [
-    for node in var.all_nodes : node if startswith(node.key, "k8s-master")
-  ]
-  worker_nodes = [
-    for node in var.all_nodes : node if startswith(node.key, "k8s-worker")
-  ]
-}
-
 /*
 * Generate the Ansible inventory file from template
 */
 resource "local_file" "inventory" {
   content = templatefile("${path.module}/../../templates/inventory.yaml.tftpl", {
-    master_nodes = local.master_nodes,
-    worker_nodes = local.worker_nodes
-
+    master_nodes      = [for node in var.all_nodes : node if startswith(node.key, "k8s-master")],
+    worker_nodes      = [for node in var.all_nodes : node if startswith(node.key, "k8s-worker")],
     k8s_master_ips    = var.k8s_master_ips,
     k8s_ha_virtual_ip = var.k8s_ha_virtual_ip,
     k8s_pod_subnet    = var.k8s_pod_subnet,
@@ -102,7 +93,7 @@ resource "local_file" "inventory" {
   file_permission = "0644"
 }
 
-resource "null_resource" "run_ansible" {
+resource "null_resource" "provision_cluster" {
   depends_on = [null_resource.prepare_ssh_access, local_file.inventory]
   provisioner "local-exec" {
 
@@ -123,20 +114,18 @@ resource "null_resource" "run_ansible" {
 #       . ${path.root}/../scripts/utils_ssh.sh && bootstrap_ssh_known_hosts ${join(" ", [for node in var.all_nodes : node.ip])}
 
 /*
- * Execute Ansible playbook using ansible_playbook resource
- */
-# resource "ansible_playbook" "provision_k8s" {
-#   for_each            = { for node in var.all_nodes : node.key => node }
-#   depends_on          = [var.vm_status, ansible_vault.secrets]
-#   playbook            = "${var.ansible_path}/playbooks/10-provision-cluster.yaml"
-#   name                = "vm${split(".", each.value.ip)[3]}"
-#   groups              = ["master", "workers"]
-#   vault_files         = ["${var.ansible_path}/group_vars/vault.yaml"]
-#   vault_password_file = var.vault_pass_path
-#   verbosity           = 2  # Use verbose output for Ansible tasks
-#   extra_vars          = {
-#     ansible_python_interpreter = "/usr/bin/python3"
-#     ansible_ssh_extra_args    = "-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=~/.ssh/known_hosts"
-#   }
-# }
 
+# * Execute Ansible playbook using ansible_playbook resource
+# */
+# resource "ansible_playbook" "provision_cluster" {
+#   depends_on = [
+#     null_resource.prepare_ssh_access,
+#     local_file.inventory,
+#     local_file.ansible_config
+#   ]
+#   name       = "provision-k8s-cluster"
+#   groups     = ["all"]
+#   playbook   = abspath("${path.root}/../../ansible/playbooks/10-provision-cluster.yaml")
+#   replayable = true
+#   verbosity  = 4
+# }
