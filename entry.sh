@@ -51,7 +51,12 @@ readonly USER_HOME_DIR="${HOME}"
 # Main menu
 echo
 echo "======= IaC-Driven Virtualization Management ======="
-echo "Provider: ${VIRTUALIZATION_PROVIDER^^} | Environment: ${ENVIRONMENT_STRATEGY^^} | Engine: ${CONTAINER_ENGINE^^}"
+echo
+echo "Provider: ${VIRTUALIZATION_PROVIDER^^} | Environment: ${ENVIRONMENT_STRATEGY^^}"
+echo
+if [[ "${ENVIRONMENT_STRATEGY}" == "container" ]]; then
+  echo "Engine: ${CONTAINER_ENGINE^^}"
+fi
 echo
 
 PS3=">>> Please select an action: "
@@ -60,12 +65,7 @@ options=()
 options+=("Switch Virtualization Provider")
 options+=("Switch Environment Strategy")
 options+=("Switch Container Engine")
-
 options+=("Setup IaC Environment for Native")
-if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
-  options+=("Setup VMware Network")
-fi
-
 options+=("Generate SSH Key")
 options+=("Reset All")
 options+=("Rebuild All")
@@ -75,10 +75,14 @@ options+=("Rebuild Terraform Stage I: Configure Nodes")
 options+=("Rebuild Terraform Stage II: Ansible")
 options+=("[DEV] Rebuild Stage II via Ansible")
 options+=("Verify SSH")
-options+=("Check VM Status")
-options+=("Start All VMs")
-options+=("Stop All VMs")
-options+=("Delete All VMs")
+if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+  options+=("Setup VMware Network")
+  options+=("Check VMware VM Status")
+  options+=("Start All VMware VMs")
+  options+=("Stop All VMware VMs")
+  options+=("Delete All VMware VMs")
+fi
+
 options+=("Quit")
 
 select opt in "${options[@]}"; do
