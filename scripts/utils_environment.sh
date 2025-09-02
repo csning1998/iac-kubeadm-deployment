@@ -50,6 +50,15 @@ generate_env_file() {
   local default_strategy="container"
   local default_ssh_key="$HOME/.ssh/id_ed25519_iac-kubeadm-deployment"
 
+  # 3a. Get the GID of the libvirt group on the host
+  local default_libvirt_gid
+  if getent group libvirt >/dev/null 2>&1; then
+      default_libvirt_gid=$(getent group libvirt | cut -d: -f3)
+  else
+      # Fallback if libvirt isn't installed yet when script first runs
+      default_libvirt_gid="999" 
+  fi
+
   # 4. Write the entire .env file
   cat > .env <<EOF
 # --- Core Strategy Selection ---
@@ -75,6 +84,9 @@ HOST_UID=$(id -u)
 HOST_GID=$(id -g)
 UNAME=$(whoami)
 UHOME=${HOME}
+
+# For Docker on Ubuntu to get the GID of the libvirt group on the host
+LIBVIRT_GID=${default_libvirt_gid}
 EOF
 
   echo "#### .env file created successfully."

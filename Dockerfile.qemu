@@ -26,11 +26,21 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     python3-pip \
     # KVM/Libvirt client tools for Packer/Terraform/virsh
     libvirt-clients \
+    qemu-system-x86 \
+    qemu-utils \
+    # Tool for creating ISO 9660 images, required by Packer for cd_content
+    xorriso \
+    genisoimage \
     # Ansible
     software-properties-common \
     && add-apt-repository --yes --update ppa:ansible/ansible \
     && apt-get install -y ansible \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Configure QEMU for non-root user bridge access, mirroring the native setup fixes.
+RUN mkdir -p /etc/qemu && \
+    echo 'allow virbr0' > /etc/qemu/bridge.conf && \
+    chmod u+s /usr/lib/qemu/qemu-bridge-helper
 
 # Copy binaries from HashiCorp stages
 COPY --from=terraform /bin/terraform /usr/local/bin/terraform

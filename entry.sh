@@ -147,8 +147,11 @@ select opt in "${options[@]}"; do
         check_vmware_workstation
         cleanup_packer_vms
         deintegrate_ssh_config # This is SSH config, likely reusable
+      elif [[ "${VIRTUALIZATION_PROVIDER}" == "kvm" ]]; then
+        # Stop VMware services on the host to prevent network conflicts with KVM
+        echo "#### KVM provider detected, stopping VMware services on host to prevent network conflicts..."
+        sudo /etc/init.d/vmware stop >/dev/null 2>&1 || true
       fi
-      # TODO: Add KVM cleanup logic
       cleanup_packer_output
       build_packer
       reset_terraform_state
@@ -175,6 +178,10 @@ select opt in "${options[@]}"; do
       if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
         check_vmware_workstation
         control_terraform_vms "delete"
+      elif [[ "${VIRTUALIZATION_PROVIDER}" == "kvm" ]]; then
+        # Stop VMware services on the host to prevent network conflicts with KVM
+        echo "#### KVM provider detected, stopping VMware services on host to prevent network conflicts..."
+        sudo /etc/init.d/vmware stop >/dev/null 2>&1 || true
       fi
       destroy_terraform_resources
       reset_terraform_state
@@ -189,6 +196,10 @@ select opt in "${options[@]}"; do
       if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
         check_vmware_workstation
         control_terraform_vms "delete"
+      elif [[ "${VIRTUALIZATION_PROVIDER}" == "kvm" ]]; then
+        # Stop VMware services on the host to prevent network conflicts with KVM
+        echo "#### KVM provider detected, stopping VMware services on host to prevent network conflicts..."
+        sudo /etc/init.d/vmware stop >/dev/null 2>&1 || true
       fi
       destroy_terraform_resources
       reset_terraform_state
