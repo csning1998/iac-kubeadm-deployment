@@ -33,6 +33,8 @@ destroy_terraform_resources() {
   echo "--------------------------------------------------"
 }
 
+### The three functions below needs further refactor.
+
 # Function: Deploy Terraform Stage 1
 apply_terraform_stage_I() {
   echo ">>> STEP: Initializing Terraform and applying VM configuration..."
@@ -40,7 +42,6 @@ apply_terraform_stage_I() {
 
   local target_module=""
   local parallelism_arg=""
-  local tf_vars="provisioner_type=${VIRTUALIZATION_PROVIDER}"
 
   if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
     target_module="module.provisioner_workstation"
@@ -82,5 +83,22 @@ apply_terraform_stage_II() {
 
   echo "#### Ansible playbook logs saved to ${ANSIBLE_DIR}/logs/${timestamp}-ansible_stdout.log and ${ANSIBLE_DIR}/logs/${timestamp}-ansible_stderr.log"
   echo "#### Ansible configuration complete."
+  echo "--------------------------------------------------"
+}
+
+# Function: Deploy all Terraform stages without target
+apply_terraform_all_stages() {
+  echo ">>> STEP: Initializing Terraform and applying ALL configurations..."
+
+  local parallelism_arg=""
+  if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+    parallelism_arg="-parallelism=1"
+  fi
+
+  # Command without -target to apply the entire configuration
+  local cmd="terraform init && terraform validate && terraform apply ${parallelism_arg} -auto-approve -var-file=../terraform.tfvars"
+  run_command "${cmd}" "${TERRAFORM_DIR}"
+
+  echo "#### Full Terraform apply complete."
   echo "--------------------------------------------------"
 }

@@ -166,7 +166,6 @@ select opt in "${options[@]}"; do
         check_vmware_workstation
         cleanup_packer_vms
       fi
-      # TODO: Add KVM cleanup logic for packer
       cleanup_packer_output
       build_packer
       report_execution_time
@@ -179,16 +178,9 @@ select opt in "${options[@]}"; do
         check_vmware_workstation
         control_terraform_vms "delete"
       fi
-      # TODO: Add KVM cleanup logic
       destroy_terraform_resources
       reset_terraform_state
-      apply_terraform_stage_I
-      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
-        control_terraform_vms "start"
-      fi
-      # TODO: Add KVM start logic
-      verify_ssh
-      apply_terraform_stage_II
+      apply_terraform_all_stages
       report_execution_time
       echo "# Rebuild Terraform workflow completed successfully."
       break
@@ -200,15 +192,12 @@ select opt in "${options[@]}"; do
         check_vmware_workstation
         control_terraform_vms "delete"
       fi
-      # TODO: Add KVM cleanup logic
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform_stage_I
       if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
         control_terraform_vms "start"
       fi
-      # TODO: Add KVM start logic
-      verify_ssh
       report_execution_time
       echo "# Rebuild Terraform Stage I workflow completed successfully."
       break
@@ -219,7 +208,6 @@ select opt in "${options[@]}"; do
       if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
         control_terraform_vms "start"
       fi
-      # TODO: Add KVM start logic
       verify_ssh
       apply_terraform_stage_II
       report_execution_time
@@ -232,7 +220,6 @@ select opt in "${options[@]}"; do
       if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
         control_terraform_vms "start"
       fi
-      # TODO: Add KVM start logic
       verify_ssh
       apply_ansible_stage_II
       report_execution_time
