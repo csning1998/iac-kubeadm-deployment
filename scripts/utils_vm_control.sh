@@ -2,17 +2,25 @@
 
 # This script contains functions for controlling VMware Workstation VMs.
 
-# Function: Ensure VMware services are running before executing a command.
+# Function: Ensure VMware services AND networks are running before executing a command.
 ensure_vmware_services_running() {
   echo "#### Checking status of VMware services..."
-  # Check for a key service process. If it's not running, start the services.
+  # Check for a key service process. If it's not running, start all services.
   if ! pgrep -f "vmware-authd" > /dev/null; then
     echo "--> VMware services appear to be stopped. Attempting to start them..."
-    if sudo /etc/init.d/vmware start; then
-      echo "--> VMware services started successfully."
+
+    echo "--> Starting VMware virtual networks (vmnet1, vmnet8)..."
+    if sudo vmware-networks --start; then
+      echo "--> VMware virtual networks started successfully."
     else
-      echo "--> ERROR: Failed to start VMware services. Please check your VMware installation."
-      # Exit the script if services cannot be started, as subsequent commands will fail.
+      echo "--> WARNING: Command to start VMware virtual networks failed. This may cause issues."
+    fi
+
+    echo "--> Starting main VMware services..."
+    if sudo /etc/init.d/vmware start; then
+      echo "--> Main VMware services started successfully."
+    else
+      echo "--> ERROR: Failed to start main VMware services. Please check your VMware installation."
       exit 1
     fi
   else
