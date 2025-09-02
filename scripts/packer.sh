@@ -2,25 +2,31 @@
 
 # This script contains functions for managing the Packer image build process.
 
-# Function: Clean up Packer output directory
+# Function: Clean up Packer output directory and related artifacts
 cleanup_packer_output() {
-  echo ">>> STEP: Cleaning Packer output directory..."
-  cd "${PACKER_DIR}"
+  echo ">>> STEP: Cleaning Packer artifacts for provider: ${VIRTUALIZATION_PROVIDER^^}..."
 
-  # 1. Clean Packer Ourput directories on the host
-  rm -rf "${PACKER_DIR}/output/ubuntu-server-workstation"
-  rm -rf "${PACKER_DIR}/output/ubuntu-server-qemu"
-  
-  # 2. Clean Packer cache
-  
+  # --- Provider-Specific Cleanup ---
+  # With keep_registered = false, Packer handles unregistering the VM.
+  # We only need to delete the output directory from the filesystem.
+  if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+    echo "#### Deleting Packer output directory for Workstation..."
+    rm -rf "${PACKER_DIR}/output/ubuntu-server-workstation"
+
+  elif [[ "${VIRTUALIZATION_PROVIDER}" == "kvm" ]]; then
+    echo "#### Deleting Packer output directory for KVM..."
+    rm -rf "${PACKER_DIR}/output/ubuntu-server-qemu"
+  fi
+
+  # --- Generic Packer Cache Cleanup ---
   if [[ "${ENVIRONMENT_STRATEGY}" == "container" ]]; then
-    echo "#### Cleaning Packer cache inside the container..."
+    echo "#### Cleaning Packer cache inside the container (preserving ISOs)..."
     local container_user_home="/home/$(whoami)"
     local cleanup_cmd="find ${container_user_home}/.cache/packer -mindepth 1 ! -name '*.iso' -exec rm -rf {} +"
     run_command "${cleanup_cmd}" "${SCRIPT_DIR}"
-  else 
+  else
     if [ -d ~/.cache/packer ]; then
-      echo "#### Cleaning Packer cache, preserving ISOs..."
+      echo "#### Cleaning Packer cache on host (preserving ISOs)..."
       find ~/.cache/packer -mindepth 1 ! -name '*.iso' -exec rm -rf {} + || true
     fi
   fi

@@ -44,7 +44,6 @@ readonly ANSIBLE_DIR="${SCRIPT_DIR}/ansible"
 # Set Terraform directory based on the selected provider
 readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform/terraform_${VIRTUALIZATION_PROVIDER}"
 readonly PACKER_DIR="${SCRIPT_DIR}/packer"
-# readonly PACKER_OUTPUT_DIR="${PACKER_DIR}/output/${PACKER_OUTPUT_SUBDIR}"
 readonly VMS_BASE_PATH="${TERRAFORM_DIR}/vms"
 readonly USER_HOME_DIR="${HOME}"
 
@@ -76,6 +75,7 @@ options+=("Rebuild Terraform Stage II: Ansible")
 options+=("[DEV] Rebuild Stage II via Ansible")
 options+=("Verify SSH")
 if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
+  ensure_vmware_services_running
   options+=("Setup VMware Network")
   options+=("Check VMware VM Status")
   options+=("Start All VMware VMs")
@@ -129,10 +129,8 @@ select opt in "${options[@]}"; do
       echo "# Executing Reset All workflow..."
       if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
         check_vmware_workstation
-        cleanup_packer_vms
         control_terraform_vms "delete"
       fi
-      # TODO: Add KVM cleanup logic
       destroy_terraform_resources
       cleanup_packer_output
       reset_terraform_state
@@ -145,7 +143,6 @@ select opt in "${options[@]}"; do
       if ! check_ssh_key_exists; then break; fi
       if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
         check_vmware_workstation
-        cleanup_packer_vms
         deintegrate_ssh_config # This is SSH config, likely reusable
       elif [[ "${VIRTUALIZATION_PROVIDER}" == "kvm" ]]; then
         # Stop VMware services on the host to prevent network conflicts with KVM
@@ -165,7 +162,7 @@ select opt in "${options[@]}"; do
       if ! check_ssh_key_exists; then break; fi
       if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
         check_vmware_workstation
-        cleanup_packer_vms
+        ensure_vmware_services_running
       fi
       cleanup_packer_output
       build_packer

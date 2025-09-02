@@ -2,17 +2,22 @@
 
 # This script contains functions for controlling VMware Workstation VMs.
 
-# Function: Clean up VM registrations in Packer
-cleanup_packer_vms() {
-  echo ">>> STEP: Cleaning up VMware Workstation VM registrations..."
-  if vmrun list | grep -q "$PACKER_VM_NAME"; then
-    echo "Found leftover Packer VM '$PACKER_VM_NAME'. Stopping and deleting..."
-    vmrun stop "${PACKER_OUTPUT_DIR}/${PACKER_VM_NAME}.vmx" hard || true
-    vmrun deleteVM "${PACKER_OUTPUT_DIR}/${PACKER_VM_NAME}.vmx" || true
+# Function: Ensure VMware services are running before executing a command.
+ensure_vmware_services_running() {
+  echo "#### Checking status of VMware services..."
+  # Check for a key service process. If it's not running, start the services.
+  if ! pgrep -f "vmware-authd" > /dev/null; then
+    echo "--> VMware services appear to be stopped. Attempting to start them..."
+    if sudo /etc/init.d/vmware start; then
+      echo "--> VMware services started successfully."
+    else
+      echo "--> ERROR: Failed to start VMware services. Please check your VMware installation."
+      # Exit the script if services cannot be started, as subsequent commands will fail.
+      exit 1
+    fi
   else
-    echo "No leftover Packer VM found. Skipping VMware cleanup."
+    echo "--> VMware services are already running."
   fi
-  echo "--------------------------------------------------"
 }
 
 # Function: Batch control VMs (start, stop, status)
@@ -129,7 +134,7 @@ control_terraform_vms() {
       done <<< "$vmx_files"
       echo "--- All VM deletion procedures completed ---"
       ;;
-  status)
+    status)
       echo ">>> Checking status of all running VMs..."
       vmrun list
       echo "--- Status check completed ---"
