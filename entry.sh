@@ -40,7 +40,9 @@ done
 # Set user and other readonly variables after loading configs
 
 readonly ANSIBLE_DIR="${SCRIPT_DIR}/ansible"
-readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
+
+# Set Terraform directory based on the selected provider
+readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform/terraform_${VIRTUALIZATION_PROVIDER}"
 readonly PACKER_DIR="${SCRIPT_DIR}/packer"
 # readonly PACKER_OUTPUT_DIR="${PACKER_DIR}/output/${PACKER_OUTPUT_SUBDIR}"
 readonly VMS_BASE_PATH="${TERRAFORM_DIR}/vms"

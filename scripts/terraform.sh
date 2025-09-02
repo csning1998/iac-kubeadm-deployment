@@ -21,12 +21,12 @@ destroy_terraform_resources() {
     parallelism_arg="-parallelism=1"
   fi
 
-  local cmd="terraform init -upgrade && terraform destroy ${parallelism_arg} -auto-approve -lock=false"
+  local cmd="terraform init -upgrade && terraform destroy ${parallelism_arg} -auto-approve -lock=false -var-file=../terraform.tfvars"
   run_command "${cmd}" "${TERRAFORM_DIR}"
 
   if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
     echo "#### Cleaning up Workstation VM files..."
-    rm -rf "${VMS_BASE_PATH:?}"/*
+    rm -rf "${TERRAFORM_DIR}/vms"/*
   fi
 
   echo "#### Terraform destroy complete."
@@ -52,7 +52,7 @@ apply_terraform_stage_I() {
     return 1
   fi
 
-  local cmd="terraform init && terraform validate && terraform apply ${parallelism_arg} -auto-approve -var-file=terraform.tfvars -var=\"${tf_vars}\" -target=${target_module}"
+  local cmd="terraform init && terraform validate && terraform apply ${parallelism_arg} -auto-approve -var-file=../terraform.tfvars -target=${target_module}"
   run_command "${cmd}" "${TERRAFORM_DIR}"
   echo "#### VM creation and SSH configuration complete."
   echo "--------------------------------------------------"
@@ -64,7 +64,7 @@ apply_terraform_stage_II() {
   echo ">>> Stage II: Applying Ansible configuration with default parallelism..."
 
   local tf_vars="provisioner_type=${VIRTUALIZATION_PROVIDER}"
-  local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=terraform.tfvars -var=\"${tf_vars}\" -target=module.node-ansible"
+  local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=../terraform.tfvars -target=module.ansible"
   run_command "${cmd}" "${TERRAFORM_DIR}"
 
   echo "#### Saving Ansible playbook outputs to log files..."

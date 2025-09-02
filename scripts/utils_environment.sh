@@ -27,6 +27,7 @@ check_virtual_support() {
 
 # Function to generate the .env file with intelligent defaults if it doesn't exist.
 generate_env_file() {
+  cd ${SCRIPT_DIR}
   if [ -f .env ]; then
     return 0 # File already exists, do nothing.
   fi
@@ -114,6 +115,7 @@ initialize_environment() {
 
 # Function to update a specific variable in the .env file
 update_env_var() {
+  cd ${SCRIPT_DIR}
   local key="$1"
   local value="$2"
   # This sed command finds the key and replaces its value, handling paths with slashes.
