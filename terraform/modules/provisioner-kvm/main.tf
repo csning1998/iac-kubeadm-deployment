@@ -7,6 +7,10 @@ terraform {
   }
 }
 
+provider "libvirt" {
+  uri = "qemu:///system"
+}
+
 locals {
   master_config = [
     for idx, ip in var.master_ip_list : {
