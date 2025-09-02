@@ -21,8 +21,8 @@ packer-playground/output
 terraform/.terraform.tfstate.lock.info
 terraform.tfstate
 terraform.tfstate.backup
-# Ignore all VMWare files
-terraform/*/vms/*
+# Ignore all VMware files
+terraform/*/vms/
 # This is processed while executing `entry.sh`
 terraform/setup_ansible.tf.bak
 

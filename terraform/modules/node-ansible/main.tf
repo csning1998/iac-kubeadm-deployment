@@ -105,9 +105,11 @@ resource "local_file" "inventory" {
 resource "null_resource" "run_ansible" {
   depends_on = [null_resource.prepare_ssh_access, local_file.inventory]
   provisioner "local-exec" {
+
+    working_dir = abspath("${path.root}/../../")
+
     command     = <<-EOT
       set -e
-      cd ..
       ansible-playbook \
         -i ${var.ansible_path}/inventory.yaml \
         --private-key ${var.ssh_private_key_path} \
