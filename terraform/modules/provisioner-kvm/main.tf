@@ -8,10 +8,25 @@ terraform {
 }
 
 locals {
-  # Combine the settings of Master and Worker nodes as a map for `for_each`
+  master_config = [
+    for idx, ip in var.master_ip_list : {
+      key  = "k8s-master-${format("%02d", idx)}"
+      ip   = ip
+      vcpu = var.master_vcpu
+      ram  = var.master_ram
+    }
+  ]
+  workers_config = [
+    for idx, ip in var.worker_ip_list : {
+      key  = "k8s-worker-${format("%02d", idx)}"
+      ip   = ip
+      vcpu = var.worker_vcpu
+      ram  = var.worker_ram
+    }
+  ]
   all_nodes_map = merge(
-    { for node in var.master_config : node.key => node },
-    { for node in var.worker_config : node.key => node }
+    { for node in local.master_config : node.key => node },
+    { for node in local.workers_config : node.key => node }
   )
 }
 

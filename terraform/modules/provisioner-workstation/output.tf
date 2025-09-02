@@ -1,6 +1,6 @@
 output "all_nodes" {
-  description = "List of all nodes (master and workers)"
-  value       = var.all_nodes
+  description = "List of all nodes (master and workers) in the standard format."
+  value       = local.all_nodes
 }
 
 output "vm_status" {

@@ -1,11 +1,33 @@
 
+locals {
+  master_config = [
+    for idx, ip in var.master_ip_list : {
+      key  = "k8s-master-${format("%02d", idx)}"
+      ip   = ip
+      vcpu = var.master_vcpu
+      ram  = var.master_ram
+      path = "${var.vms_dir}/k8s-master-${format("%02d", idx)}/k8s-master-${format("%02d", idx)}.vmx"
+    }
+  ]
+  workers_config = [
+    for idx, ip in var.worker_ip_list : {
+      key  = "k8s-worker-${format("%02d", idx)}"
+      ip   = ip
+      vcpu = var.worker_vcpu
+      ram  = var.worker_ram
+      path = "${var.vms_dir}/k8s-worker-${format("%02d", idx)}/k8s-worker-${format("%02d", idx)}.vmx"
+    }
+  ]
+  all_nodes = concat(local.master_config, local.workers_config)
+}
+
 /*
 * NOTE: Using local-exec and remote-exec to configure VMs as a workaround 
 * due to the lack of a stable VMware Workstation provider. 
 * This is a known technical debt.
 */
 resource "null_resource" "configure_nodes" {
-  for_each = { for node in var.all_nodes : node.key => node }
+  for_each = { for node in local.all_nodes : node.key => node }
 
   provisioner "local-exec" {
     command = <<EOT
@@ -71,6 +93,7 @@ resource "null_resource" "configure_nodes" {
       "      dhcp4: false",
       "      addresses: [${each.value.ip}/24]",
       "      dhcp6: false",
+      "      optional: true",
       "' | sudo tee /etc/netplan/00-installer-config.yaml",
 
       "sudo chmod 600 /etc/netplan/00-installer-config.yaml",

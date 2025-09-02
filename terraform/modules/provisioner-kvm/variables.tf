@@ -1,33 +1,17 @@
-variable "all_nodes" {
-  description = "List of all nodes (master and workers)"
-  type = list(object({
-    key  = string
-    ip   = string
-    vcpu = number
-    ram  = number
-    path = string
-  }))
+variable "master_ip_list" {
+  description = "List of IP addresses for the master nodes."
+  type        = list(string)
 }
 
-variable "master_config" {
-  description = "Configuration for master nodes"
-  type = list(object({
-    key  = string
-    ip   = string
-    vcpu = number
-    ram  = number
-  }))
+variable "worker_ip_list" {
+  description = "List of IP addresses for the worker nodes."
+  type        = list(string)
 }
 
-variable "worker_config" {
-  description = "Configuration for worker nodes"
-  type = list(object({
-    key  = string
-    ip   = string
-    vcpu = number
-    ram  = number
-  }))
-}
+variable "master_vcpu" { type = number }
+variable "master_ram" { type = number }
+variable "worker_vcpu" { type = number }
+variable "worker_ram" { type = number }
 
 variable "vm_username" {
   description = "Username for SSH access to the VMs"

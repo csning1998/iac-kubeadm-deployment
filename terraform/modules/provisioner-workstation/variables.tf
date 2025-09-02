@@ -1,3 +1,13 @@
+variable "master_ip_list" {
+  description = "List of IP addresses for the master nodes."
+  type        = list(string)
+}
+
+variable "worker_ip_list" {
+  description = "List of IP addresses for the worker nodes."
+  type        = list(string)
+}
+
 variable "vm_username" {
   description = "Username for SSH access to the VMs"
   type        = string
@@ -20,17 +30,6 @@ variable "vmx_image_path" {
   type        = string
 }
 
-variable "all_nodes" {
-  description = "List of all nodes (master and workers)"
-  type = list(object({
-    key  = string
-    ip   = string
-    vcpu = number
-    ram  = number
-    path = string
-  }))
-}
-
 variable "nat_gateway" {
   description = "The gateway IP address for the NAT network (vmnet8)."
   type        = string
@@ -40,3 +39,8 @@ variable "nat_subnet_prefix" {
   description = "The first three octets of the NAT subnet (e.g., '172.16.86')."
   type        = string
 }
+
+variable "master_vcpu" { type = number }
+variable "master_ram" { type = number }
+variable "worker_vcpu" { type = number }
+variable "worker_ram" { type = number }

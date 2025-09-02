@@ -24,7 +24,7 @@ resource "ansible_host" "nodes" {
 * for passwordless SSH using the alias (e.g., ssh vm200).
 */
 resource "local_file" "ssh_config" {
-  content = templatefile("${path.root}/templates/ssh_config.tftpl", {
+  content = templatefile("${path.module}/../../templates/ssh_config.tftpl", {
     nodes                = var.all_nodes,
     ssh_user             = var.vm_username,
     ssh_private_key_path = var.ssh_private_key_path
@@ -41,13 +41,13 @@ resource "null_resource" "ssh_config_include" {
   depends_on = [local_file.ssh_config]
 
   provisioner "local-exec" {
-    command     = ". ${path.root}/../scripts/utils_ssh.sh && integrate_ssh_config"
+    command     = ". ${path.root}/../../scripts/utils_ssh.sh && integrate_ssh_config"
     interpreter = ["/bin/bash", "-c"]
   }
 
   provisioner "local-exec" {
     when        = destroy
-    command     = ". ${path.root}/../scripts/utils_ssh.sh && deintegrate_ssh_config"
+    command     = ". ${path.root}/../../scripts/utils_ssh.sh && deintegrate_ssh_config"
     interpreter = ["/bin/bash", "-c"]
   }
 }
@@ -63,7 +63,7 @@ resource "null_resource" "prepare_ssh_access" {
     command     = <<-EOT
       set -e
       echo ">>> Verifying VM liveness and preparing SSH access..."
-      . ${path.root}/../scripts/utils_ssh.sh
+      . ${path.root}/../../scripts/utils_ssh.sh
       bootstrap_ssh_known_hosts ${join(" ", [for node in var.all_nodes : node.ip])}
       echo ">>> Liveness check passed. SSH access is ready."
     EOT
@@ -88,7 +88,7 @@ locals {
 * Generate the Ansible inventory file from template
 */
 resource "local_file" "inventory" {
-  content = templatefile("${path.root}/templates/inventory.yaml.tftpl", {
+  content = templatefile("${path.module}/../../templates/inventory.yaml.tftpl", {
     master_nodes = local.master_nodes,
     worker_nodes = local.worker_nodes
 
