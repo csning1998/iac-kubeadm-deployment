@@ -48,7 +48,7 @@ generate_env_file() {
 
   # 3. Set other defaults
   local default_strategy="container"
-  local default_ssh_key="$HOME/.ssh/id_ed25519_iac_automation"
+  local default_ssh_key="$HOME/.ssh/id_ed25519_iac-kubeadm-deployment"
 
   # 4. Write the entire .env file
   cat > .env <<EOF
