@@ -12,7 +12,7 @@ source "vmware-iso" "ubuntu-server" {
   cpus      = var.cpus
   memory    = var.memory
   disk_size = var.disk_size
-  headless  = true # Switch to false if you want to view the build process.
+  headless  = true # Switch to false if you want to view the build process. does NOT work in container
 
   # Hardware Interfaces
   disk_type_id         = "0" # Growable virtual disk contained in a single file (monolithic sparse).
@@ -45,8 +45,11 @@ source "vmware-iso" "ubuntu-server" {
   ssh_timeout  = "10m"
 
   # Shutdown & Output Configuration
+  vnc_port_min = "5999"
+  vnc_port_max = "5999"
+
   shutdown_command = "sudo shutdown -P now"
-  output_directory = "output/ubuntu-server-vmware"
+  output_directory = "output/ubuntu-server-workstation"
   format           = "vmx"
   keep_registered  = false
 }

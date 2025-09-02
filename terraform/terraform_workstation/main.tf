@@ -1,7 +1,7 @@
 locals {
   provisioner_output = module.provisioner_workstation
   vms_dir            = "${path.root}/vms"
-  vmx_image_path     = abspath("${path.root}/../../packer/output/ubuntu-server-vmware/ubuntu-server-k8s-based.vmx")
+  vmx_image_path     = abspath("${path.root}/../../packer/output/ubuntu-server-workstation/ubuntu-server-k8s-based-workstation.vmx")
   ansible_path       = abspath("${path.root}/../../ansible/")
 }
 
