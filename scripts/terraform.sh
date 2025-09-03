@@ -102,3 +102,33 @@ apply_terraform_all_stages() {
   echo "#### Full Terraform apply complete."
   echo "--------------------------------------------------"
 }
+
+# Function: Forcefully clean up all libvirt resources associated with this project.
+purge_libvirt_resources() {
+  echo ">>> STEP: Purging stale libvirt resources..."
+
+  # Destroy and undefine all VMs (domains)
+  for vm in $(virsh list --all --name | grep 'k8s-'); do
+    echo "#### Destroying and undefining VM: $vm"
+    virsh destroy "$vm" --graceful >/dev/null 2>&1 || true
+    virsh undefine "$vm" --nvram >/dev/null 2>&1 || true
+  done
+
+  # Delete all associated storage volumes
+  for vol in $(virsh vol-list default | grep 'k8s-' | awk '{print $1}'); do
+    echo "#### Deleting volume: $vol"
+    virsh vol-delete --pool default "$vol" >/dev/null 2>&1 || true
+  done
+
+  # Destroy and undefine the networks
+  for net in iac-kubeadm-nat-net iac-kubeadm-hostonly-net; do
+    if virsh net-info "$net" >/dev/null 2>&1; then
+      echo "#### Destroying and undefining network: $net"
+      virsh net-destroy "$net" >/dev/null 2>&1 || true
+      virsh net-undefine "$net" >/dev/null 2>&1 || true
+    fi
+  done
+
+  echo "#### Libvirt resource purge complete."
+  echo "--------------------------------------------------"
+}

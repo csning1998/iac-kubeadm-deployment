@@ -19,16 +19,11 @@ cleanup_packer_output() {
   fi
 
   # --- Generic Packer Cache Cleanup ---
-  if [[ "${ENVIRONMENT_STRATEGY}" == "container" ]]; then
-    echo "#### Cleaning Packer cache inside the container (preserving ISOs)..."
-    local container_user_home="/home/$(whoami)"
-    local cleanup_cmd="find ${container_user_home}/.cache/packer -mindepth 1 ! -name '*.iso' -exec rm -rf {} +"
-    run_command "${cleanup_cmd}" "${SCRIPT_DIR}"
-  else
-    if [ -d ~/.cache/packer ]; then
-      echo "#### Cleaning Packer cache on host (preserving ISOs)..."
-      find ~/.cache/packer -mindepth 1 ! -name '*.iso' -exec rm -rf {} + || true
-    fi
+  if [ -d ~/.cache/packer ]; then
+    echo "#### Cleaning Packer cache on host (preserving ISOs)..."
+    # Use 'sudo' to ensure we can remove any stale lock files created by
+    # previous runs, regardless of ownership or permissions.
+    find ~/.cache/packer -mindepth 1 ! -name '*.iso' -print0 | sudo xargs -0 rm -rf
   fi
 
   echo "#### Packer artifact cleanup completed."

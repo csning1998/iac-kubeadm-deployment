@@ -179,6 +179,7 @@ select opt in "${options[@]}"; do
         # Stop VMware services on the host to prevent network conflicts with KVM
         echo "#### KVM provider detected, stopping VMware services on host to prevent network conflicts..."
         sudo /etc/init.d/vmware stop >/dev/null 2>&1 || true
+        purge_libvirt_resources
       fi
       destroy_terraform_resources
       reset_terraform_state
