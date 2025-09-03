@@ -1,16 +1,7 @@
-locals {
-
-  source_map = {
-    workstation = "source.vmware-iso.ubuntu-server"
-    kvm         = "source.qemu.ubuntu-server"
-  }
-
-  active_source = local.source_map[var.provider]
-}
 
 build {
 
-  sources = [local.active_source]
+  sources = ["source.qemu.ubuntu-server"]
 
   provisioner "shell" {
     inline = [

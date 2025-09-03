@@ -2,21 +2,9 @@
 # Pay attention to network-related variables and boot commands,
 # as misconfigurations can lead to the build blocking or timing out.
 
-variable "provider" {
-  type        = string
-  description = "The virtualization provider to use ('workstation' or 'kvm')."
-  default     = "kvm"
-}
-
 variable "vm_name" {
   type        = string
   description = "Base name for the virtual machine and its output files."
-}
-
-variable "guest_os_type" {
-  type        = string
-  description = "The guest OS type for VirtualBox."
-  default     = "ubuntu-64" # A sensible default for workstation
 }
 
 # --- ISO Configuration ---

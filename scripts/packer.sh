@@ -35,7 +35,6 @@ build_packer() {
   echo ">>> STEP: Starting new Packer build for provider: ${VIRTUALIZATION_PROVIDER^^}..."
 
   local cmd="packer init . && packer build \
-    -var='provider=${VIRTUALIZATION_PROVIDER}' \
     -var-file=common.pkrvars.hcl \
     -var-file=secret.auto.pkrvars.hcl \
     ."

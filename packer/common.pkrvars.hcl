@@ -1,7 +1,5 @@
 
-vm_name       = "ubuntu-server-k8s-based"
-guest_os_type = "ubuntu-64"
-provider      = "kvm" # Spccify Provider using either kvm or workstation
+vm_name = "ubuntu-server-k8s-based"
 
 /*
 The latest version is available at https://cdimage.ubuntu.com/ubuntu/releases/24.04/release/ , 
