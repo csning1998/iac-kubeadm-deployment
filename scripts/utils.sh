@@ -19,24 +19,12 @@ run_command() {
     
     if [[ "${CONTAINER_ENGINE}" == "docker" ]]; then
       compose_cmd="docker compose"
-      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
-        compose_file="docker-compose-workstation.yml"
-        container_name="iac-controller"
-      else # kvm
-        compose_file="docker-compose-qemu.yml"
-        container_name="iac-controller-qemu"
-      fi
+      compose_file="docker-compose-qemu.yml"
+      container_name="iac-controller-qemu"
     elif [[ "${CONTAINER_ENGINE}" == "podman" ]]; then
-      # Assumes podman-compose is installed or podman compose is available.
-      # Using podman-compose for broader compatibility for now.
       compose_cmd="podman compose" 
-      if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
-        compose_file="podman-compose-workstation.yml"
-        container_name="iac-controller"
-      else # kvm
-        compose_file="podman-compose-qemu.yml"
-        container_name="iac-controller-qemu"
-      fi
+      compose_file="podman-compose-qemu.yml"
+      container_name="iac-controller-qemu"
     else
       echo "FATAL: Invalid CONTAINER_ENGINE: '${CONTAINER_ENGINE}'" >&2
       exit 1
@@ -70,23 +58,6 @@ run_command() {
   else
     # Native Mode: Execute the command directly on the host. 
     (cd "${host_work_dir}" && eval "${cmd_string}")
-  fi
-}
-
-# Function: Check if VMWare Workstation is installed
-check_vmware_workstation() {
-  # Check VMware Workstation
-  if command -v vmware >/dev/null 2>&1; then
-    vmware_version=$(vmware --version 2>/dev/null || echo "Unknown")
-    echo "#### VMware Workstation: Installed (Version: $vmware_version)"
-  else
-    vmware_version="Not installed"
-    echo "Prior to executing other options, registration is required on Broadcom.com to download and install VMWare Workstation Pro 17.6.2+."
-    echo "Link: https://support.broadcom.com/group/ecx/my-dashboard"
-    echo
-
-    read -n 1 -s -r -p "Press any key to exit..."
-    exit 1
   fi
 }
 

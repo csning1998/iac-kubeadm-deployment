@@ -4,19 +4,12 @@
 
 # Function: Clean up Packer output directory and related artifacts
 cleanup_packer_output() {
-  echo ">>> STEP: Cleaning Packer artifacts for provider: ${VIRTUALIZATION_PROVIDER^^}..."
+  echo ">>> STEP: Cleaning Packer artifacts..."
 
   # --- Provider-Specific Cleanup ---
   # With keep_registered = false, Packer handles unregistering the VM.
   # We only need to delete the output directory from the filesystem.
-  if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
-    echo "#### Deleting Packer output directory for Workstation..."
-    rm -rf "${PACKER_DIR}/output/ubuntu-server-workstation"
-
-  elif [[ "${VIRTUALIZATION_PROVIDER}" == "kvm" ]]; then
-    echo "#### Deleting Packer output directory for KVM..."
-    rm -rf "${PACKER_DIR}/output/ubuntu-server-qemu"
-  fi
+  rm -rf "${PACKER_DIR}/output/ubuntu-server-qemu"
 
   # --- Generic Packer Cache Cleanup ---
   if [ -d ~/.cache/packer ]; then
@@ -32,7 +25,7 @@ cleanup_packer_output() {
 
 # Function: Execute Packer build
 build_packer() {
-  echo ">>> STEP: Starting new Packer build for provider: ${VIRTUALIZATION_PROVIDER^^}..."
+  echo ">>> STEP: Starting new Packer build..."
 
   local cmd="packer init . && packer build \
     -var-file=common.pkrvars.hcl \
@@ -43,6 +36,6 @@ build_packer() {
 
   run_command "${cmd}" "${PACKER_DIR}"
 
-  echo "#### Packer build complete. New base image for ${VIRTUALIZATION_PROVIDER^^} is ready."
+  echo "#### Packer build complete. New base image is ready."
   echo "--------------------------------------------------"
 }

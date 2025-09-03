@@ -13,21 +13,10 @@ reset_terraform_state() {
 
 # Function: Destroy Terraform resources
 destroy_terraform_resources() {
-  echo ">>> STEP: Destroying existing Terraform-managed VMs for provider: ${VIRTUALIZATION_PROVIDER^^}..."
+  echo ">>> STEP: Destroying existing Terraform-managed VMs..."
 
-  local parallelism_arg=""
-
-  if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
-    parallelism_arg="-parallelism=1"
-  fi
-
-  local cmd="terraform init -upgrade && terraform destroy ${parallelism_arg} -auto-approve -lock=false -var-file=../terraform.tfvars"
+  local cmd="terraform init -upgrade && terraform destroy -auto-approve -lock=false -var-file=../terraform.tfvars"
   run_command "${cmd}" "${TERRAFORM_DIR}"
-
-  if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
-    echo "#### Cleaning up Workstation VM files..."
-    rm -rf "${TERRAFORM_DIR}/vms"/*
-  fi
 
   echo "#### Terraform destroy complete."
   echo "--------------------------------------------------"
@@ -38,22 +27,9 @@ destroy_terraform_resources() {
 # Function: Deploy Terraform Stage 1
 apply_terraform_stage_I() {
   echo ">>> STEP: Initializing Terraform and applying VM configuration..."
-  echo ">>> Stage I: Applying VM creation for provider: ${VIRTUALIZATION_PROVIDER^^}..."
+  echo ">>> Stage I: Applying VM creation..."
 
-  local target_module=""
-  local parallelism_arg=""
-
-  if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
-    target_module="module.provisioner_workstation"
-    parallelism_arg="-parallelism=1"
-  elif [[ "${VIRTUALIZATION_PROVIDER}" == "kvm" ]]; then
-    target_module="module.provisioner_kvm"
-  else
-    echo "Error: Invalid VIRTUALIZATION_PROVIDER: '${VIRTUALIZATION_PROVIDER}'"
-    return 1
-  fi
-
-  local cmd="terraform init && terraform validate && terraform apply ${parallelism_arg} -auto-approve -var-file=../terraform.tfvars -target=${target_module}"
+  local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=../terraform.tfvars -target=module.provisioner_kvm"
   run_command "${cmd}" "${TERRAFORM_DIR}"
   echo "#### VM creation and SSH configuration complete."
   echo "--------------------------------------------------"
@@ -64,7 +40,6 @@ apply_terraform_stage_II() {
   set -o pipefail
   echo ">>> Stage II: Applying Ansible configuration with default parallelism..."
 
-  local tf_vars="provisioner_type=${VIRTUALIZATION_PROVIDER}"
   local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=../terraform.tfvars -target=module.ansible"
   run_command "${cmd}" "${TERRAFORM_DIR}"
 
@@ -90,13 +65,8 @@ apply_terraform_stage_II() {
 apply_terraform_all_stages() {
   echo ">>> STEP: Initializing Terraform and applying ALL configurations..."
 
-  local parallelism_arg=""
-  if [[ "${VIRTUALIZATION_PROVIDER}" == "workstation" ]]; then
-    parallelism_arg="-parallelism=1"
-  fi
-
   # Command without -target to apply the entire configuration
-  local cmd="terraform init && terraform validate && terraform apply ${parallelism_arg} -auto-approve -var-file=../terraform.tfvars"
+  local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=../terraform.tfvars"
   run_command "${cmd}" "${TERRAFORM_DIR}"
 
   echo "#### Full Terraform apply complete."
@@ -104,31 +74,31 @@ apply_terraform_all_stages() {
 }
 
 # Function: Forcefully clean up all libvirt resources associated with this project.
-purge_libvirt_resources() {
-  echo ">>> STEP: Purging stale libvirt resources..."
+# purge_libvirt_resources() {
+#   echo ">>> STEP: Purging stale libvirt resources..."
 
-  # Destroy and undefine all VMs (domains)
-  for vm in $(virsh list --all --name | grep 'k8s-'); do
-    echo "#### Destroying and undefining VM: $vm"
-    virsh destroy "$vm" --graceful >/dev/null 2>&1 || true
-    virsh undefine "$vm" --nvram >/dev/null 2>&1 || true
-  done
+#   # Destroy and undefine all VMs (domains)
+#   for vm in $(virsh list --all --name | grep 'k8s-'); do
+#     echo "#### Destroying and undefining VM: $vm"
+#     virsh destroy "$vm" --graceful >/dev/null 2>&1 || true
+#     virsh undefine "$vm" --nvram >/dev/null 2>&1 || true
+#   done
 
-  # Delete all associated storage volumes
-  for vol in $(virsh vol-list default | grep 'k8s-' | awk '{print $1}'); do
-    echo "#### Deleting volume: $vol"
-    virsh vol-delete --pool default "$vol" >/dev/null 2>&1 || true
-  done
+#   # Delete all associated storage volumes
+#   for vol in $(virsh vol-list default | grep 'k8s-' | awk '{print $1}'); do
+#     echo "#### Deleting volume: $vol"
+#     virsh vol-delete --pool default "$vol" >/dev/null 2>&1 || true
+#   done
 
-  # Destroy and undefine the networks
-  for net in iac-kubeadm-nat-net iac-kubeadm-hostonly-net; do
-    if virsh net-info "$net" >/dev/null 2>&1; then
-      echo "#### Destroying and undefining network: $net"
-      virsh net-destroy "$net" >/dev/null 2>&1 || true
-      virsh net-undefine "$net" >/dev/null 2>&1 || true
-    fi
-  done
+#   # Destroy and undefine the networks
+#   for net in iac-kubeadm-nat-net iac-kubeadm-hostonly-net; do
+#     if virsh net-info "$net" >/dev/null 2>&1; then
+#       echo "#### Destroying and undefining network: $net"
+#       virsh net-destroy "$net" >/dev/null 2>&1 || true
+#       virsh net-undefine "$net" >/dev/null 2>&1 || true
+#     fi
+#   done
 
-  echo "#### Libvirt resource purge complete."
-  echo "--------------------------------------------------"
-}
+#   echo "#### Libvirt resource purge complete."
+#   echo "--------------------------------------------------"
+# }
