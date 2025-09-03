@@ -23,7 +23,7 @@ run_command() {
       container_name="iac-controller-qemu"
     elif [[ "${CONTAINER_ENGINE}" == "podman" ]]; then
       compose_cmd="podman compose" 
-      compose_file="podman-compose-qemu.yml"
+      compose_file="compose.yml"
       container_name="iac-controller-qemu"
     else
       echo "FATAL: Invalid CONTAINER_ENGINE: '${CONTAINER_ENGINE}'" >&2

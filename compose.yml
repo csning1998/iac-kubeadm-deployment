@@ -2,7 +2,7 @@ services:
   iac-controller:
     build:
       context: .
-      dockerfile: Dockerfile.qemu
+      dockerfile: Containerfile
       args:
         HOST_UID: ${HOST_UID}
         HOST_GID: ${HOST_GID}
@@ -10,15 +10,22 @@ services:
     image: iac-kubeadm-controller:qemu-latest
     container_name: iac-controller-qemu
     privileged: true
+    cap_add:
+      - NET_ADMIN
+    network_mode: "host"
     security_opt:
       - label=disable
+      - apparmor=unconfined # Do not apply any AppArmor security profile to it
+    group_add:
+      - "${LIBVIRT_GID}" # Add container user to the host's libvirt group by GID
     env_file:
       - .env
     volumes:
-      - .:/app:z
-      - ${UHOME}/.ssh:/home/${UNAME}/.ssh:z
-      - ${UHOME}/.cache/packer:/home/${UNAME}/.cache/packer:z
+      - .:/app:U,z
+      - ${UHOME}/.cache/packer:/home/${UNAME}/.cache/packer:U,z
+      - ${UHOME}/.ssh:/home/${UNAME}/.ssh:U,z
       - /dev/kvm:/dev/kvm
       - /var/run/libvirt/libvirt-sock:/var/run/libvirt/libvirt-sock
+      - /dev/net/tun:/dev/net/tun
     tty: true
     stdin_open: true

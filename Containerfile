@@ -40,33 +40,40 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
 # Configure QEMU for non-root user bridge access, mirroring the native setup fixes.
 RUN mkdir -p /etc/qemu && \
     echo 'allow virbr0' > /etc/qemu/bridge.conf && \
-    chmod u+s /usr/lib/qemu/qemu-bridge-helper
+    chmod u+r /etc/qemu/bridge.conf
 
 # Copy binaries from HashiCorp stages
 COPY --from=terraform /bin/terraform /usr/local/bin/terraform
 COPY --from=packer /bin/packer /usr/local/bin/packer
 COPY --from=vault /bin/vault /usr/local/bin/vault
 
-# Create user to match host HOST_UID:HOST_GID and username
+# # Create user to match host HOST_UID:HOST_GID and username
 ARG HOST_UID
 ARG HOST_GID
 ARG USERNAME
 
-# User creation handler to avoid permission issues with mounted volumes.
-# This logic is preserved from the original Dockerfile.
-RUN export DEBIAN_FRONTEND=noninteractive && \
-    EXISTING_USER=$(getent passwd ${HOST_UID} 2>/dev/null | cut -d: -f1) && \
-    if [ -n "$EXISTING_USER" ]; then \
-        deluser --remove-home "$EXISTING_USER" || true; \
+RUN \
+    # First, handle the group
+    if ! getent group ${HOST_GID} > /dev/null 2>&1; then \
+        # Group with GID does not exist, create it
+        groupadd -g ${HOST_GID} ${USERNAME}; \
+    else \
+        # Group with GID exists, rename it if the name doesn't match
+        EXISTING_GROUP_NAME=$(getent group ${HOST_GID} | cut -d: -f1); \
+        if [ "${EXISTING_GROUP_NAME}" != "${USERNAME}" ]; then \
+            groupmod -n ${USERNAME} ${EXISTING_GROUP_NAME}; \
+        fi; \
     fi && \
-    EXISTING_GROUP=$(getent group ${HOST_GID} 2>/dev/null | cut -d: -f1) && \
-    if [ -n "$EXISTING_GROUP" ]; then \
-        delgroup "$EXISTING_GROUP" || true; \
-    fi && \
-    groupadd -g ${HOST_GID} ${USERNAME} && \
-    useradd -u ${HOST_UID} -g ${HOST_GID} -m -s /bin/bash ${USERNAME} && \
-    mkdir -p /home/${USERNAME}/.cache/packer && \
-    chown -R ${HOST_UID}:${HOST_GID} /home/${USERNAME}
+    \
+    # Second, handle the user
+    if ! getent passwd ${HOST_UID} > /dev/null 2>&1; then \
+        # User with UID does not exist, create it
+        useradd -u ${HOST_UID} -g ${HOST_GID} -m -s /bin/bash ${USERNAME}; \
+    else \
+        # User with UID exists, modify it to match our needs
+        EXISTING_USER_NAME=$(getent passwd ${HOST_UID} | cut -d: -f1); \
+        usermod -l ${USERNAME} -u ${HOST_UID} -g ${HOST_GID} -d /home/${USERNAME} -m ${EXISTING_USER_NAME}; \
+    fi
 
 USER ${USERNAME}
 

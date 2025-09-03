@@ -14,6 +14,7 @@ source "qemu" "ubuntu-server" {
   disk_size      = var.disk_size
   disk_interface = "virtio"
   net_bridge     = "virbr0"
+  net_device     = "virtio-net"
   accelerator    = "kvm"
   qemu_binary    = "/usr/bin/qemu-system-x86_64"
   qemuargs = [
@@ -42,7 +43,6 @@ source "qemu" "ubuntu-server" {
     "<f10>"
   ]
 
-  net_device   = "virtio-net"
   vnc_port_min = "5999"
   vnc_port_max = "5999"
 
