@@ -159,7 +159,6 @@ select opt in "${options[@]}"; do
     "Rebuild Terraform Stage II: Ansible")
       echo "# Executing Rebuild Terraform Stage II workflow..."
       if ! check_ssh_key_exists; then break; fi
-      verify_ssh
       ensure_libvirt_services_running
       apply_terraform_stage_II
       report_execution_time

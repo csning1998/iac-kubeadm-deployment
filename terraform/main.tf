@@ -1,10 +1,10 @@
 locals {
   provisioner_output = module.provisioner_kvm
-  ansible_path       = abspath("${path.root}/../../ansible/")
+  ansible_path       = abspath("${path.root}/../ansible/")
 }
 
 module "provisioner_kvm" {
-  source = "../modules/provisioner-kvm"
+  source = "./modules/provisioner-kvm"
 
   master_ip_list        = var.master_ip_list
   worker_ip_list        = var.worker_ip_list
@@ -24,7 +24,7 @@ module "provisioner_kvm" {
 }
 
 module "ansible" {
-  source = "../modules/node-ansible"
+  source = "./modules/node-ansible"
 
   ansible_path = local.ansible_path
 

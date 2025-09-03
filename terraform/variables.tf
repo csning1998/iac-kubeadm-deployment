@@ -87,17 +87,6 @@ variable "k8s_pod_subnet" {
   type        = string
 }
 
-variable "provisioner_type" {
-  description = "The type of provisioner to use: 'kvm' or 'workstation'"
-  type        = string
-  default     = "kvm"
-
-  validation {
-    condition     = contains(["kvm", "workstation"], var.provisioner_type)
-    error_message = "Allowed values for provisioner_type are 'kvm' or 'workstation'."
-  }
-}
-
 variable "qemu_base_image_path" {
   description = "Path to the Packer-built qcow2 image for KVM"
   type        = string
