@@ -139,7 +139,7 @@ EOF
     echo "####   2. Apply all file-based configurations for Libvirt and QEMU."
     echo "####      (Service mode, permissions, user settings, AppArmor, bridge, etc.)"
     echo "####   3. Restart the Libvirt service to apply new settings."
-    echo "####   4. Create and activate the 'default' libvirt storage pool."
+    echo "####   4. Create and activate the 'iac-kubeadm' libvirt storage pool."
     echo "####   5. Perform a final service restart to ensure stability."
     echo
     read -p "#### Do you want to proceed with these automated changes? (y/n): " -n 1 -r
@@ -186,13 +186,13 @@ EOF
       sleep 2 # Give the socket a moment to be created
 
       # Now that the service is running, perform virsh commands
-      echo "--> (4/5) Ensuring 'default' storage pool is active..."
-      sudo virsh pool-info default >/dev/null 2>&1 || ( \
-        sudo virsh pool-define-as default dir --target /var/lib/libvirt/images >/dev/null && \
-        sudo virsh pool-build default >/dev/null \
+      echo "--> (4/5) Ensuring 'iac-kubeadm' storage pool is active..."
+      sudo virsh pool-info iac-kubeadm >/dev/null 2>&1 || ( \
+        sudo virsh pool-define-as iac-kubeadm dir --target /var/lib/libvirt/images >/dev/null && \
+        sudo virsh pool-build iac-kubeadm >/dev/null \
       )
-      sudo virsh pool-start default >/dev/null 2>&1 || true
-      sudo virsh pool-autostart default >/dev/null
+      sudo virsh pool-start iac-kubeadm >/dev/null 2>&1 || true
+      sudo virsh pool-autostart iac-kubeadm >/dev/null
       
       echo "--> (5/5) Final service restart to ensure all settings are loaded..."
       sudo systemctl restart libvirtd.service

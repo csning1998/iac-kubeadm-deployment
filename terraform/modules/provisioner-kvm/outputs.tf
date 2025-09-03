@@ -3,9 +3,9 @@ output "all_nodes" {
   value = [
     for key, node in libvirt_domain.nodes : {
       key  = key
-      ip   = local.all_nodes_map[key].ip
-      ram  = local.all_nodes_map[key].ram
-      vcpu = local.all_nodes_map[key].vcpu
+      ip   = var.all_nodes_map[key].ip
+      ram  = var.all_nodes_map[key].ram
+      vcpu = var.all_nodes_map[key].vcpu
       path = ""
     }
   ]

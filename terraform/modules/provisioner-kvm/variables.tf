@@ -1,17 +1,11 @@
-variable "master_ip_list" {
-  description = "List of IP addresses for the master nodes."
-  type        = list(string)
+variable "all_nodes_map" {
+  description = "Definitions of all nodes passed in from the root module"
+  type = map(object({
+    ip   = string
+    vcpu = number
+    ram  = number
+  }))
 }
-
-variable "worker_ip_list" {
-  description = "List of IP addresses for the worker nodes."
-  type        = list(string)
-}
-
-variable "master_vcpu" { type = number }
-variable "master_ram" { type = number }
-variable "worker_vcpu" { type = number }
-variable "worker_ram" { type = number }
 
 variable "vm_username" {
   description = "Username for SSH access to the VMs"
@@ -38,7 +32,7 @@ variable "qemu_base_image_path" {
 variable "libvirt_pool" {
   description = "The name of the libvirt storage pool to use"
   type        = string
-  default     = "default"
+  default     = "iac-kubeadm" # Links to the function: setup_iac_environment()
 }
 
 variable "nat_gateway" {

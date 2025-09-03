@@ -15,29 +15,6 @@ provider "libvirt" {
   uri = "qemu:///system"
 }
 
-locals {
-  master_config = [
-    for idx, ip in var.master_ip_list : {
-      key  = "k8s-master-${format("%02d", idx)}"
-      ip   = ip
-      vcpu = var.master_vcpu
-      ram  = var.master_ram
-    }
-  ]
-  workers_config = [
-    for idx, ip in var.worker_ip_list : {
-      key  = "k8s-worker-${format("%02d", idx)}"
-      ip   = ip
-      vcpu = var.worker_vcpu
-      ram  = var.worker_ram
-    }
-  ]
-  all_nodes_map = merge(
-    { for node in local.master_config : node.key => node },
-    { for node in local.workers_config : node.key => node }
-  )
-}
-
 data "local_file" "ssh_public_key" {
   filename = pathexpand(var.ssh_public_key_path)
 }
@@ -69,7 +46,7 @@ resource "libvirt_network" "hostonly_net" {
 }
 
 resource "libvirt_volume" "os_disk" {
-  for_each = local.all_nodes_map
+  for_each = var.all_nodes_map
   name     = "${each.key}-os.qcow2"
   pool     = var.libvirt_pool
   source   = var.qemu_base_image_path
@@ -77,7 +54,7 @@ resource "libvirt_volume" "os_disk" {
 }
 
 resource "libvirt_cloudinit_disk" "cloud_init" {
-  for_each       = local.all_nodes_map
+  for_each       = var.all_nodes_map
   name           = "${each.key}-cloud-init.iso"
   pool           = var.libvirt_pool
   user_data      = data.template_file.user_data[each.key].rendered
@@ -85,7 +62,7 @@ resource "libvirt_cloudinit_disk" "cloud_init" {
 }
 
 data "template_file" "user_data" {
-  for_each = local.all_nodes_map
+  for_each = var.all_nodes_map
 
   template = <<-EOT
     #cloud-config
@@ -102,7 +79,7 @@ data "template_file" "user_data" {
 }
 
 data "template_file" "network_config" {
-  for_each = local.all_nodes_map
+  for_each = var.all_nodes_map
   template = <<-EOT
     #cloud-config
     version: 2
@@ -117,7 +94,7 @@ data "template_file" "network_config" {
 
 resource "libvirt_domain" "nodes" {
 
-  for_each = local.all_nodes_map
+  for_each = var.all_nodes_map
 
   name   = each.key
   memory = each.value.ram
