@@ -27,7 +27,6 @@ variable "ssh_public_key_path" {
 variable "qemu_base_image_path" {
   description = "Path to the Packer-built qcow2 base image"
   type        = string
-  default     = "../packer/output/ubuntu-server-qemu/ubuntu-server-k8s-based-qemu.qcow2"
 }
 
 variable "nat_gateway" {

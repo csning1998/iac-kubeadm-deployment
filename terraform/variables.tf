@@ -70,6 +70,7 @@ variable "k8s_pod_subnet" {
 variable "qemu_base_image_path" {
   description = "Path to the Packer-built qcow2 image for KVM"
   type        = string
+  default     = "../packer/output/ubuntu-server-qemu/ubuntu-server-k8s-based-qemu.qcow2"
 }
 
 variable "hostonly_network_name" {
