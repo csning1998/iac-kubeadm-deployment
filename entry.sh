@@ -126,6 +126,7 @@ select opt in "${options[@]}"; do
     "Rebuild Packer")
       echo "# Executing Rebuild Packer workflow..."
       if ! check_ssh_key_exists; then break; fi
+      ensure_libvirt_services_running
       cleanup_packer_output
       build_packer
       report_execution_time
@@ -135,6 +136,7 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild Terraform workflow..."
       if ! check_ssh_key_exists; then break; fi
       # purge_libvirt_resources
+      ensure_libvirt_services_running
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform_all_stages
@@ -146,6 +148,7 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild Terraform Stage I workflow..."
       if ! check_ssh_key_exists; then break; fi
       # purge_libvirt_resources
+      ensure_libvirt_services_running
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform_stage_I
@@ -157,6 +160,7 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild Terraform Stage II workflow..."
       if ! check_ssh_key_exists; then break; fi
       verify_ssh
+      ensure_libvirt_services_running
       apply_terraform_stage_II
       report_execution_time
       echo "# Rebuild Terraform Stage II workflow completed successfully."
@@ -166,6 +170,7 @@ select opt in "${options[@]}"; do
       echo "# Executing [DEV] Rebuild Stage II via Ansible..."
       if ! check_ssh_key_exists; then break; fi
       verify_ssh
+      ensure_libvirt_services_running
       apply_ansible_stage_II
       report_execution_time
       echo "# [DEV] Rebuild Stage II via Ansible completed successfully."
