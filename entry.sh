@@ -42,7 +42,7 @@ done
 readonly ANSIBLE_DIR="${SCRIPT_DIR}/ansible"
 
 # Set Terraform directory based on the selected provider
-readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform/terraform_kvm"
+readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
 readonly PACKER_DIR="${SCRIPT_DIR}/packer"
 readonly VMS_BASE_PATH="${TERRAFORM_DIR}/vms"
 readonly USER_HOME_DIR="${HOME}"
@@ -103,7 +103,7 @@ select opt in "${options[@]}"; do
       ;;
     "Reset All")
       echo "# Executing Reset All workflow..."
-      # purge_libvirt_resources
+      purge_libvirt_resources
       destroy_terraform_resources
       cleanup_packer_output
       reset_terraform_state
@@ -114,7 +114,7 @@ select opt in "${options[@]}"; do
     "Rebuild All")
       echo "# Executing Rebuild All workflow..."
       if ! check_ssh_key_exists; then break; fi
-      # purge_libvirt_resources
+      purge_libvirt_resources
       cleanup_packer_output
       build_packer
       reset_terraform_state
@@ -135,7 +135,7 @@ select opt in "${options[@]}"; do
     "Rebuild Terraform: All Stages")
       echo "# Executing Rebuild Terraform workflow..."
       if ! check_ssh_key_exists; then break; fi
-      # purge_libvirt_resources
+      purge_libvirt_resources
       ensure_libvirt_services_running
       destroy_terraform_resources
       reset_terraform_state
@@ -147,7 +147,7 @@ select opt in "${options[@]}"; do
     "Rebuild Terraform Stage I: Configure Nodes")
       echo "# Executing Rebuild Terraform Stage I workflow..."
       if ! check_ssh_key_exists; then break; fi
-      # purge_libvirt_resources
+      purge_libvirt_resources
       ensure_libvirt_services_running
       destroy_terraform_resources
       reset_terraform_state
