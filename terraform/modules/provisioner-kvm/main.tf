@@ -45,18 +45,32 @@ resource "libvirt_network" "hostonly_net" {
   }
 }
 
+resource "libvirt_pool" "kube_pool" {
+  name = "iac-kubeadm"
+  type = "dir"
+  target {
+    path = abspath("/var/lib/libvirt/images")
+  }
+}
+
 resource "libvirt_volume" "os_disk" {
+
+  depends_on = [libvirt_pool.kube_pool]
+
   for_each = var.all_nodes_map
   name     = "${each.key}-os.qcow2"
-  pool     = var.libvirt_pool
+  pool     = libvirt_pool.kube_pool.name
   source   = var.qemu_base_image_path
   format   = "qcow2"
 }
 
 resource "libvirt_cloudinit_disk" "cloud_init" {
+
+  depends_on = [libvirt_pool.kube_pool]
+
   for_each       = var.all_nodes_map
   name           = "${each.key}-cloud-init.iso"
-  pool           = var.libvirt_pool
+  pool           = libvirt_pool.kube_pool.name
   user_data      = data.template_file.user_data[each.key].rendered
   network_config = data.template_file.network_config[each.key].rendered
 }

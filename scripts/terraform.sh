@@ -85,9 +85,9 @@ purge_libvirt_resources() {
   done
 
   # Delete all associated storage volumes
-  for vol in $(sudo virsh vol-list default | grep 'k8s-' | awk '{print $1}'); do
+  for vol in $(sudo virsh vol-list iac-kubeadm | grep 'k8s-' | awk '{print $1}'); do
     echo "#### Deleting volume: $vol"
-    sudo virsh vol-delete --pool default "$vol" >/dev/null 2>&1 || true
+    sudo virsh vol-delete --pool iac-kubeadm "$vol" >/dev/null 2>&1 || true
   done
 
   # Destroy and undefine the networks

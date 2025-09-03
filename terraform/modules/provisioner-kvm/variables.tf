@@ -27,12 +27,7 @@ variable "ssh_public_key_path" {
 variable "qemu_base_image_path" {
   description = "Path to the Packer-built qcow2 base image"
   type        = string
-}
-
-variable "libvirt_pool" {
-  description = "The name of the libvirt storage pool to use"
-  type        = string
-  default     = "iac-kubeadm" # Links to the function: setup_iac_environment()
+  default     = "../packer/output/ubuntu-server-qemu/ubuntu-server-k8s-based-qemu.qcow2"
 }
 
 variable "nat_gateway" {
