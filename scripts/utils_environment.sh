@@ -111,16 +111,16 @@ switch_environment_strategy_handler() {
 
 switch_container_engine_handler() {
   if [[ "${HOST_OS_FAMILY}" == "rhel" && "$CONTAINER_ENGINE" == "podman" ]]; then
-      echo
-      echo "WARN: You are switching to Docker on a RHEL-based host."
-      echo "      This project does not manage the installation of Docker on RHEL."
-      echo "      Please ensure you have manually installed Docker CE correctly before proceeding."
-      read -p "      Are you sure you want to continue? (y/n): " -n 1 -r
-      echo
-      if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-          echo "      Switch cancelled."
-          return
-      fi
+    echo
+    echo "WARN: You are switching to Docker on a RHEL-based host."
+    echo "      This project does not manage the installation of Docker on RHEL."
+    echo "      Please ensure you have manually installed Docker CE correctly before proceeding."
+    read -p "      Are you sure you want to continue? (y/n): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "      Switch cancelled."
+        return
+    fi
   fi
   local new_engine
   new_engine=$([[ "$CONTAINER_ENGINE" == "docker" ]] && echo "podman" || echo "docker")

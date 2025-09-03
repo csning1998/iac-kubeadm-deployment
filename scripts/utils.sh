@@ -13,16 +13,18 @@ run_command() {
     local compose_cmd=""
     local compose_file=""
     local container_name=""
+    local engine_cmd=""  # For ps, exec..., etc.
     local service_name="iac-controller" # The service name is consistent across all compose files
 
     # 1. Determine the container engine and compose file
-    
     if [[ "${CONTAINER_ENGINE}" == "docker" ]]; then
+      engine_cmd="docker"
       compose_cmd="docker compose"
       compose_file="docker-compose-qemu.yml"
       container_name="iac-controller-qemu"
     elif [[ "${CONTAINER_ENGINE}" == "podman" ]]; then
-      compose_cmd="podman compose" 
+      engine_cmd="sudo podman"
+      compose_cmd="sudo podman compose"
       compose_file="compose.yml"
       container_name="iac-controller-qemu"
     else
@@ -31,8 +33,8 @@ run_command() {
     fi
 
     # 2. Check if the required engine is installed
-    if ! command -v "${compose_cmd%% *}" >/dev/null 2>&1; then
-      echo "FATAL: Container engine '${CONTAINER_ENGINE}' not found. Please install it to proceed." >&2
+    if ! command -v "${engine_cmd##* }" >/dev/null 2>&1; then
+      echo "FATAL: Container engine command '${engine_cmd##* }' not found. Please install it to proceed." >&2
       exit 1
     fi
 
@@ -43,7 +45,7 @@ run_command() {
     fi
 
     # 4. Ensure the controller service is running.
-    if ! "${compose_cmd%% *}" ps -q --filter "name=${container_name}" | grep -q .; then
+    if ! ${engine_cmd} ps -q --filter "name=${container_name}" | grep -q .; then
       echo ">>> Starting container service '${container_name}' using ${compose_file}..."
       (cd "${SCRIPT_DIR}" && ${compose_cmd} -f "${compose_file}" up -d)
     fi
