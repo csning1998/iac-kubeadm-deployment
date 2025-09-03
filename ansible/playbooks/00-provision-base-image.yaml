@@ -1,11 +1,5 @@
 ---
-- name: "Play 1: Apply hypervisor-specific prerequisites"
-  hosts: all
-  become: true
-  roles:
-    - 01-hypervisor-prereqs
-
-- name: "Play 2: Apply common prerequisites to all Kubernetes nodes"
+- name: "Play 1: Apply common prerequisites to all Kubernetes nodes"
   hosts: all
   become: true
   roles:
