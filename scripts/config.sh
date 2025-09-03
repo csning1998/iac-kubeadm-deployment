@@ -31,7 +31,7 @@ PACKER_VM_NAME="ubuntu-server-k8s-based"
 PACKER_OUTPUT_SUBDIR="ubuntu-server-vmware"
 
 # The generate_ssh_key function allows creating a key with a custom name.
-SSH_PRIVATE_KEY="$HOME/.ssh/id_ed25519_iac_automation"
+SSH_PRIVATE_KEY="$HOME/.ssh/id_ed25519_iac-kubeadm-deployment"
 
 ###
 # Network Configuration (Linux Distribution-Aware)

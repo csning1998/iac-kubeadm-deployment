@@ -47,7 +47,7 @@ INFO: Debian/Ubuntu environment detected. Using Debian family VMware defaults.
 7) Rebuild Packer                               16) Delete All VMs
 8) Rebuild Terraform: All Stage                 17) Quit
 9) Rebuild Terraform Stage I: Configure Nodes
->>> Please select an action: 
+>>> Please select an action:
 ```
 
 **A description of how to use this script follows below.**
@@ -139,9 +139,11 @@ After installation, configure VMware Network Editor:
 ### Option 2. Install on Docker: For Ubuntu, Debian, Fedora, RHEL, Arch
 
 1. Please ensure Docker is installed correctly. You can refer to the following URL and choose the installation method corresponding to your platform
+
    > _Reference: [Install Docker Engine for Linux Distro / WSL2](https://docs.docker.com/engine/install/)_
 
 2. After completing the Docker installation, please switch to the project root directory:
+
    1. If using for the first time, execute the following command
 
       ```shell
@@ -164,7 +166,7 @@ After installation, configure VMware Network Editor:
 
 ### Miscellaneous
 
-- **Suggested Plugins for VSCode:** Enhance productivity with syntax support:
+-  **Suggested Plugins for VSCode:** Enhance productivity with syntax support:
 
    1. Ansible language support extension. [Marketplace Link of Ansible](https://marketplace.visualstudio.com/items?itemName=redhat.ansible)
 
@@ -203,7 +205,7 @@ To ensure the project runs smoothly, please follow the procedures below to compl
 
 1. **Switch Environment:** You can switch between "Docker" or "Native" environment by using `./entry.sh` and entering `1`. Please refer to the descriptions in Section 1's Option A or B, and switch to the appropriate mode based on your operating system.
 
-2. **Generate SSH Key:** During the execution of Terraform and Ansible, SSH keys will be used for node access authentication and configuration management. You can generate these by running `./entry.sh` and entering `4` to access the _"Generate SSH Key"_ option. You can enter your desired key name or simply use the default value `id_ed25519_iac_automation`. The generated public and private key pair will be stored in the `~/.ssh` directory
+2. **Generate SSH Key:** During the execution of Terraform and Ansible, SSH keys will be used for node access authentication and configuration management. You can generate these by running `./entry.sh` and entering `4` to access the _"Generate SSH Key"_ option. You can enter your desired key name or simply use the default value `id_ed25519_iac-kubeadm-deployment`. The generated public and private key pair will be stored in the `~/.ssh` directory
 
 3. **Create Secret Variable Files (Would be further integrated into HashiCorp Vault)**
 
@@ -221,7 +223,7 @@ To ensure the project runs smoothly, please follow the procedures below to compl
       ssh_username = "$VM_USERNAME"
       ssh_password = "$VM_PASSWORD"
       ssh_password_hash = "$HASHED_PASSWORD"
-      ssh_public_key_path = "~/.ssh/id_ed25519_iac_automation.pub"
+      ssh_public_key_path = "~/.ssh/id_ed25519_iac-kubeadm-deployment.pub"
       EOF
       ```
 
@@ -240,7 +242,7 @@ To ensure the project runs smoothly, please follow the procedures below to compl
 
       vm_username = "$VM_USERNAME"
       vm_password = "$VM_PASSWORD"
-      ssh_private_key_path = "~/.ssh/id_ed25519_iac_automation"
+      ssh_private_key_path = "~/.ssh/id_ed25519_iac-kubeadm-deployment"
 
       # For cluster with single master
       master_ip_list = ["172.16.134.200"]
@@ -389,13 +391,13 @@ The primary goal is to achieve HA Cluster deployment by directly adjusting the `
 
    The benefit of this is that future users only need to modify `master_ip_list` or related parameters. With correct settings, re-running the `./entry.sh` command will deploy an HA Cluster. The internal Kubernetes facilities can be configured via the `HashiCorp/Kubernetes` provider without the risk of destroying declared resources.
 
-2.  **Parameterization:**
+2. **Parameterization:**
 
-   This was done because many users have variables they wish to change, such as `username` and network settings. Each user has their own preferences, and the goal is to minimally intervene in the user's host settings.
+This was done because many users have variables they wish to change, such as `username` and network settings. Each user has their own preferences, and the goal is to minimally intervene in the user's host settings.
 
-   A further consideration was how to prevent the project from requiring excessive variables to be set in multiple locations. Since the project is already automated, it is fundamental that a user should be able to configure the entire project by declaring variables in a single SSoT (Single Source of Truth) block.
+A further consideration was how to prevent the project from requiring excessive variables to be set in multiple locations. Since the project is already automated, it is fundamental that a user should be able to configure the entire project by declaring variables in a single SSoT (Single Source of Truth) block.
 
-   Therefore, after organizing the parameters, they can be integrated into HashiCorp Vault. Another reason for choosing HashiCorp Vault over Ansible Vault is that this project is intended to be integrated into a CI/CD pipeline. The underlying reason is that handling static encrypted files like those in Ansible Vault is cumbersome in CI/CD, as it requires managing a separate decryption key. By integrating with HashiCorp Vault and using the variable passing mechanism, only one setup process is needed.
+Therefore, after organizing the parameters, they can be integrated into HashiCorp Vault. Another reason for choosing HashiCorp Vault over Ansible Vault is that this project is intended to be integrated into a CI/CD pipeline. The underlying reason is that handling static encrypted files like those in Ansible Vault is cumbersome in CI/CD, as it requires managing a separate decryption key. By integrating with HashiCorp Vault and using the variable passing mechanism, only one setup process is needed.
 
 ### Phase 6. Handling Network and Concurrent Process-Triggered Race Conditions
 

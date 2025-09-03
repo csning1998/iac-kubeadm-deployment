@@ -39,7 +39,7 @@ check_ssh_key_exists() {
 
 # Function: Generate an SSH key for IaC automation (unattended mode)
 generate_ssh_key() {
-  local default_key_name="id_ed25519_iac_automation"
+  local default_key_name="id_ed25519_iac-kubeadm-deployment"
   local key_name
 
   echo "#### This utility will generate an SSH key for IaC automation (unattended mode)."
