@@ -9,7 +9,6 @@ set -e -u
 # Define base directory and load configuration
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPTS_LIB_DIR="${SCRIPT_DIR}/scripts"
-readonly CONFIG_VMWARE_FILE="${SCRIPTS_LIB_DIR}/config-vmware.sh"
 
 source "${SCRIPTS_LIB_DIR}/utils_environment.sh"
 
@@ -33,6 +32,18 @@ for lib in "${SCRIPTS_LIB_DIR}"/*.sh; do
   fi
 done
 
+### Set correct permissions since 
+
+if [[ "${ENVIRONMENT_STRATEGY}" == "native" ]]; then
+  echo "INFO: Switching to 'native' mode. Running pre-emptive permission check..."
+  check_and_fix_permissions
+  # Exit if the fix failed, preventing a switch to a broken state.
+  if [ $? -ne 0 ]; then
+    echo "FATAL: Permission fix failed. Aborting strategy switch." >&2
+    exit 1
+  fi
+fi
+
 ###
 # DERIVED GLOBAL VARIABLES (From Config)
 ###
@@ -44,7 +55,6 @@ readonly ANSIBLE_DIR="${SCRIPT_DIR}/ansible"
 # Set Terraform directory based on the selected provider
 readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
 readonly PACKER_DIR="${SCRIPT_DIR}/packer"
-readonly VMS_BASE_PATH="${TERRAFORM_DIR}/vms"
 readonly USER_HOME_DIR="${HOME}"
 
 # Main menu
