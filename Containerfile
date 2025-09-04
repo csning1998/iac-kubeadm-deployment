@@ -51,29 +51,35 @@ COPY --from=vault /bin/vault /usr/local/bin/vault
 ARG HOST_UID
 ARG HOST_GID
 ARG USERNAME
+ARG LIBVIRT_GID
 
 RUN \
-    # First, handle the group
-    if ! getent group ${HOST_GID} > /dev/null 2>&1; then \
-        # Group with GID does not exist, create it
-        groupadd -g ${HOST_GID} ${USERNAME}; \
+    # Ensure the libvirt group exists and the GID is correct
+    if ! getent group ${LIBVIRT_GID} > /dev/null 2>&1; then \
+        groupadd -g ${LIBVIRT_GID} libvirt; \
     else \
-        # Group with GID exists, rename it if the name doesn't match
-        EXISTING_GROUP_NAME=$(getent group ${HOST_GID} | cut -d: -f1); \
-        if [ "${EXISTING_GROUP_NAME}" != "${USERNAME}" ]; then \
-            groupmod -n ${USERNAME} ${EXISTING_GROUP_NAME}; \
-        fi; \
+        EXISTING_LIBVIRT_GROUP_NAME=$(getent group ${LIBVIRT_GID} | cut -d: -f1); \
+        if [ "${EXISTING_LIBVIRT_GROUP_NAME}" != "libvirt" ]; then groupmod -n libvirt ${EXISTING_LIBVIRT_GROUP_NAME}; fi; \
     fi && \
     \
-    # Second, handle the user
+    # Handle user's primary group
+    if ! getent group ${HOST_GID} > /dev/null 2>&1; then \
+        groupadd -g ${HOST_GID} ${USERNAME}; \
+    else \
+        EXISTING_GROUP_NAME=$(getent group ${HOST_GID} | cut -d: -f1); \
+        if [ "${EXISTING_GROUP_NAME}" != "${USERNAME}" ]; then groupmod -n ${USERNAME} ${EXISTING_GROUP_NAME}; fi; \
+    fi && \
+    \
+    # Handle user
     if ! getent passwd ${HOST_UID} > /dev/null 2>&1; then \
-        # User with UID does not exist, create it
         useradd -u ${HOST_UID} -g ${HOST_GID} -m -s /bin/bash ${USERNAME}; \
     else \
-        # User with UID exists, modify it to match our needs
         EXISTING_USER_NAME=$(getent passwd ${HOST_UID} | cut -d: -f1); \
         usermod -l ${USERNAME} -u ${HOST_UID} -g ${HOST_GID} -d /home/${USERNAME} -m ${EXISTING_USER_NAME}; \
-    fi
+    fi && \
+    \
+    # Unconditionally add the final user to the libvirt group
+    usermod -a -G libvirt ${USERNAME}
 
 USER ${USERNAME}
 

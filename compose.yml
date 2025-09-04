@@ -6,6 +6,7 @@ services:
       args:
         HOST_UID: ${HOST_UID}
         HOST_GID: ${HOST_GID}
+        LIBVIRT_GID: ${LIBVIRT_GID}
         USERNAME: ${UNAME}
     image: iac-kubeadm-controller:qemu-latest
     container_name: iac-controller-qemu
