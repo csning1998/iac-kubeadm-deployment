@@ -34,17 +34,11 @@ generate_env_file() {
 
   echo ">>> .env file not found. Generating a new one with smart defaults..."
 
-  # 1. Determine default container engine based on OS family
-  local default_engine="docker"
-  if [[ "${HOST_OS_FAMILY}" == "rhel" ]]; then
-    default_engine="podman"
-  fi
-
-  # 2. Set other defaults
+  # 1. Set defaults
   local default_strategy="container"
   local default_ssh_key="$HOME/.ssh/id_ed25519_iac-kubeadm-deployment"
 
-  # 3. Get the GID of the libvirt group on the host
+  # 2. Get the GID of the libvirt group on the host
   local default_libvirt_gid
   if getent group libvirt > /dev/null 2>&1; then
     default_libvirt_gid=$(getent group libvirt | cut -d: -f3)
@@ -54,7 +48,7 @@ generate_env_file() {
     default_libvirt_gid=999
   fi
 
-  # 4. Write the entire .env file
+  # 3. Write the entire .env file
   cat > .env <<EOF
 # --- Core Strategy Selection ---
 # "container" or "native"
@@ -102,6 +96,17 @@ switch_strategy() {
 }
 
 switch_environment_strategy_handler() {
+  echo
+  echo "INFO: Resetting Terraform state before switching strategy to prevent inconsistencies..."
+  (cd "${TERRAFORM_DIR}" && rm -rf .terraform .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup)
+  rm -rf "$HOME/.ssh/iac-kubeadm-deployment_config"
+  echo "#### Terraform state reset."
+  echo "INFO: Purge libvirt resources (VMs, networks, storage pools)"
+  purge_libvirt_resources
+  sudo virsh pool-destroy iac-kubeadm
+  sudo virsh pool-undefine iac-kubeadm 
+  echo "--------------------------------------------------"
+
   local new_strategy
   new_strategy=$([[ "$ENVIRONMENT_STRATEGY" == "container" ]] && echo "native" || echo "container")
   switch_strategy "ENVIRONMENT_STRATEGY" "$new_strategy"
