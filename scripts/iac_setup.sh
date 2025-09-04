@@ -1,34 +1,5 @@
 #!/bin/bash
 
-# Function: Check if Docker environment is ready on the host.
-check_docker_environment() {
-  echo ">>> STEP: Checking Host environment for Docker..."
-  local all_installed=true
-
-  if ! command -v docker >/dev/null 2>&1; then
-    echo "#### Docker: Not installed. Please install Docker Desktop or Docker Engine."
-    all_installed=false
-  else
-    echo "#### Docker: Installed ($(docker --version))"
-  fi
-
-  # Docker Compose is typically included with Docker Desktop but might be separate.
-  if ! docker compose version >/dev/null 2>&1; then
-    echo "#### Docker Compose: Not found. Please ensure it's installed and accessible."
-    all_installed=false
-  else
-    echo "#### Docker Compose: Installed ($(docker compose version))"
-  fi
-  
-  if ! $all_installed; then
-    echo "--------------------------------------------------"
-    echo "Error: Core dependencies are missing. Please install them to proceed."
-    exit 1
-  fi
-  echo "--------------------------------------------------"
-  return 0
-}
-
 # This script contains functions related to the setup of the
 #  Infrastructure as Code (IaC) environment.
 

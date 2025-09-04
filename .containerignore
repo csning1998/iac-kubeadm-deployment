@@ -2,10 +2,9 @@
 .git
 .gitignore
 
-# Docker specific files
-.dockerignore
-Dockerfile
-docker-compose.yml
+# Container specific files
+.containerignore
+compose.yml
 .env
 
 # Terraform state and cache
@@ -32,6 +31,7 @@ terraform/vms/
 
 # General development files
 .vscode/
+.ansible/
 .idea/
 *.bak
 

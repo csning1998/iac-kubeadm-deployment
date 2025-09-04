@@ -62,18 +62,14 @@ echo
 echo "======= IaC-Driven Virtualization Management ======="
 echo
 echo "Environment: ${ENVIRONMENT_STRATEGY^^}"
-echo
 if [[ "${ENVIRONMENT_STRATEGY}" == "container" ]]; then
-  echo "Engine: ${CONTAINER_ENGINE^^}"
+  echo "Engine: PODMAN"
 fi
 echo
 
 PS3=">>> Please select an action: "
 options=()
 options+=("Switch Environment Strategy")
-if [[ "${ENVIRONMENT_STRATEGY}" == "container" ]]; then
-  options+=("Switch Container Engine")
-fi
 options+=("Setup IaC Environment for Native")
 options+=("Generate SSH Key")
 options+=("Reset All")
@@ -93,9 +89,6 @@ select opt in "${options[@]}"; do
   case $opt in
     "Switch Environment Strategy")
       switch_environment_strategy_handler
-      ;;
-    "Switch Container Engine")
-      switch_container_engine_handler
       ;;
     "Setup IaC Environment for Native")
       echo "# Executing Setup IaC Environment workflow..."

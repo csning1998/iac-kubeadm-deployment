@@ -10,25 +10,14 @@ run_command() {
   if [[ "${ENVIRONMENT_STRATEGY}" == "container" ]]; then
 
     # --- Containerized Execution Path ---
-    local compose_cmd=""
-    local compose_file=""
-    local container_name=""
-    local engine_cmd=""  # For ps, exec..., etc.
-    local service_name="iac-controller" # The service name is consistent across all compose files
+    local compose_cmd="sudo podman compose"
+    local compose_file="compose.yml"
+    local container_name="iac-controller-qemu"
+    local engine_cmd="sudo podman"
 
-    # 1. Determine the container engine and compose file
-    if [[ "${CONTAINER_ENGINE}" == "docker" ]]; then
-      engine_cmd="docker"
-      compose_cmd="docker compose"
-      compose_file="docker-compose-qemu.yml"
-      container_name="iac-controller-qemu"
-    elif [[ "${CONTAINER_ENGINE}" == "podman" ]]; then
-      engine_cmd="sudo podman"
-      compose_cmd="sudo podman compose"
-      compose_file="compose.yml"
-      container_name="iac-controller-qemu"
-    else
-      echo "FATAL: Invalid CONTAINER_ENGINE: '${CONTAINER_ENGINE}'" >&2
+    # 1. Check if Podman is installed
+    if ! command -v podman >/dev/null 2>&1; then
+      echo "FATAL: Container engine command 'podman' not found. Please install it to proceed." >&2
       exit 1
     fi
 
@@ -38,19 +27,13 @@ run_command() {
       exit 1
     fi
 
-    # 3. Ensure the compose file exists
-    if [ ! -f "${SCRIPT_DIR}/${compose_file}" ]; then
-      echo "FATAL: Required compose file '${compose_file}' not found in project root." >&2
-      exit 1
-    fi
-
-    # 4. Ensure the controller service is running.
+    # 3. Ensure the controller service is running.
     if ! ${engine_cmd} ps -q --filter "name=${container_name}" | grep -q .; then
       echo ">>> Starting container service '${container_name}' using ${compose_file}..."
       (cd "${SCRIPT_DIR}" && ${compose_cmd} -f "${compose_file}" up -d)
     fi
 
-    # 5. Execute the command within the container.
+    # 4. Execute the command within the container.
     # The working directory inside the container is always /app.
     # Map the host path to the container's /app path.
     local container_work_dir="${host_work_dir/#$SCRIPT_DIR//app}"
