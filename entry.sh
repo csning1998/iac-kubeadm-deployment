@@ -62,6 +62,7 @@ echo
 echo "======= IaC-Driven Virtualization Management ======="
 echo
 echo "Environment: ${ENVIRONMENT_STRATEGY^^}"
+echo
 if [[ "${ENVIRONMENT_STRATEGY}" == "container" ]]; then
   echo "Engine: PODMAN"
 fi
@@ -70,7 +71,9 @@ echo
 PS3=">>> Please select an action: "
 options=()
 options+=("Switch Environment Strategy")
-options+=("Setup IaC Environment for Native")
+options+=("Verify IaC Environment for Native")
+options+=("Setup KVM / QEMU for Native")
+options+=("Setup Core IaC Tools for Native")
 options+=("Generate SSH Key")
 options+=("Reset All")
 options+=("Rebuild All")
@@ -90,12 +93,24 @@ select opt in "${options[@]}"; do
     "Switch Environment Strategy")
       switch_environment_strategy_handler
       ;;
-    "Setup IaC Environment for Native")
-      echo "# Executing Setup IaC Environment workflow..."
-      if check_iac_environment; then
-        setup_iac_environment
+    "Verify IaC Environment for Native")
+      verify_iac_environment
+      break
+      ;;
+    "Setup KVM / QEMU for Native")
+      echo "# Executing Setup KVM / QEMU workflow..."
+      if prompt_install_libvirt_tools; then
+        setup_libvirt_environment
       fi
-      echo "# Setup IaC Environment workflow completed successfully."
+      echo "# Setup KVM / QEMU workflow completed successfully."
+      break
+      ;;
+    "Setup Core IaC Tools for Native")
+      echo "# Executing Setup Core IaC Tools workflow..."
+      if prompt_install_iac_tools; then
+        setup_iac_tools
+      fi
+      echo "# Setup Core IaC Tools workflow completed successfully."
       break
       ;;
     "Generate SSH Key")
