@@ -139,8 +139,7 @@ EOF
     echo "####   2. Apply all file-based configurations for Libvirt and QEMU."
     echo "####      (Service mode, permissions, user settings, AppArmor, bridge, etc.)"
     echo "####   3. Restart the Libvirt service to apply new settings."
-    echo "####   4. Create and activate the 'iac-kubeadm' libvirt storage pool."
-    echo "####   5. Perform a final service restart to ensure stability."
+    echo "####   4. Perform a final service restart to ensure stability."
     echo
     read -p "#### Do you want to proceed with these automated changes? (y/n): " -n 1 -r
     echo
@@ -148,13 +147,13 @@ EOF
       echo "#### Proceeding with KVM configuration fixes..."
 
       # Stop all services first to ensure a clean state for configuration
-      echo "--> (1/5) Stopping services for reconfiguration..."
+      echo "--> (1/4) Stopping services for reconfiguration..."
       sudo /etc/init.d/vmware stop >/dev/null 2>&1 || true
       sudo systemctl stop libvirtd.service >/dev/null 2>&1 || true
       sudo systemctl stop libvirtd.socket libvirtd-ro.socket libvirtd-admin.socket >/dev/null 2>&1 || true
 
       # Apply all file-based configurations while services are stopped
-      echo "--> (2/5) Applying file-based configurations..."
+      echo "--> (2/4) Applying file-based configurations..."
       sudo systemctl disable libvirtd.socket libvirtd-ro.socket libvirtd-admin.socket >/dev/null 2>&1 || true
       
       # libvirtd.conf
@@ -180,21 +179,21 @@ EOF
       fi
 
       # Enable and restart the service with all new configurations applied
-      echo "--> (3/5) Enabling and restarting libvirtd service..."
+      echo "--> (3/4) Enabling and restarting libvirtd service..."
       sudo systemctl enable libvirtd.service >/dev/null 2>&1
       sudo systemctl restart libvirtd.service
       sleep 2 # Give the socket a moment to be created
 
       # Now that the service is running, perform virsh commands
-      echo "--> (4/5) Ensuring 'iac-kubeadm' storage pool is active..."
-      sudo virsh pool-info iac-kubeadm >/dev/null 2>&1 || ( \
-        sudo virsh pool-define-as iac-kubeadm dir --target /var/lib/libvirt/images >/dev/null && \
-        sudo virsh pool-build iac-kubeadm >/dev/null \
-      )
-      sudo virsh pool-start iac-kubeadm >/dev/null 2>&1 || true
-      sudo virsh pool-autostart iac-kubeadm >/dev/null
+      # echo "--> (4/5) Ensuring 'iac-kubeadm' storage pool is active..."
+      # sudo virsh pool-info iac-kubeadm >/dev/null 2>&1 || ( \
+      #   sudo virsh pool-define-as iac-kubeadm dir --target /var/lib/libvirt/images >/dev/null && \
+      #   sudo virsh pool-build iac-kubeadm >/dev/null \
+      # )
+      # sudo virsh pool-start iac-kubeadm >/dev/null 2>&1 || true
+      # sudo virsh pool-autostart iac-kubeadm >/dev/null
       
-      echo "--> (5/5) Final service restart to ensure all settings are loaded..."
+      echo "--> (4/4) Final service restart to ensure all settings are loaded..."
       sudo systemctl restart libvirtd.service
       echo
       echo "#### KVM fixes applied successfully."
