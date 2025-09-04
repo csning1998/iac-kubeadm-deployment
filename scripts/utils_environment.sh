@@ -46,11 +46,12 @@ generate_env_file() {
 
   # 3. Get the GID of the libvirt group on the host
   local default_libvirt_gid
-  if getent group libvirt >/dev/null 2>&1; then
-      default_libvirt_gid=$(getent group libvirt | cut -d: -f3)
+  if getent group libvirt > /dev/null 2>&1; then
+    default_libvirt_gid=$(getent group libvirt | cut -d: -f3)
   else
-      # Fallback if libvirt isn't installed yet when script first runs
-      default_libvirt_gid="999" 
+    # Fallback or error if libvirt group doesn't exist
+    echo "WARN: 'libvirt' group not found on host. Using default GID 999." >&2
+    default_libvirt_gid=999
   fi
 
   # 4. Write the entire .env file
