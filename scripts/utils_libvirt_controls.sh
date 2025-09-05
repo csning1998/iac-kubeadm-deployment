@@ -36,11 +36,16 @@ purge_libvirt_resources() {
     sudo virsh undefine "$vm" --remove-all-storage >/dev/null 2>&1 || true
   done
 
-  # Delete all associated storage volumes
-  for vol in $(sudo virsh vol-list iac-kubeadm | grep 'k8s-' | awk '{print $1}'); do
-    echo "#### Deleting volume: $vol"
-    sudo virsh vol-delete --pool iac-kubeadm "$vol" >/dev/null 2>&1 || true
-  done
+  # Check if the storage pool exists before listing volumes
+  if sudo virsh pool-info iac-kubeadm >/dev/null 2>&1; then
+    # Delete all associated storage volumes
+    for vol in $(sudo virsh vol-list iac-kubeadm | grep 'k8s-' | awk '{print $1}'); do
+      echo "#### Deleting volume: $vol"
+      sudo virsh vol-delete --pool iac-kubeadm "$vol" >/dev/null 2>&1 || true
+    done
+  else
+    echo "#### Storage pool iac-kubeadm does not exist, skipping volume deletion."
+  fi
 
   # Destroy and undefine the networks
   for net in iac-kubeadm-nat-net iac-kubeadm-hostonly-net; do

@@ -56,7 +56,7 @@ ENVIRONMENT_STRATEGY="${default_strategy}"
 
 # --- User and SSH Configuration ---
 # Username for SSH access to the provisioned VMs.
-VM_USERNAME=""
+VM_USERNAME=$(whoami)
 
 # Path to the SSH private key. This will be updated by the 'Generate SSH Key' utility.
 SSH_PRIVATE_KEY="${default_ssh_key}"
@@ -103,8 +103,15 @@ switch_environment_strategy_handler() {
   echo "#### Terraform state reset."
   echo "INFO: Purge libvirt resources (VMs, networks, storage pools)"
   purge_libvirt_resources
-  sudo virsh pool-destroy iac-kubeadm
-  sudo virsh pool-undefine iac-kubeadm 
+  
+  # Check if the storage pool exists before attempting to destroy or undefine
+  if sudo virsh pool-info iac-kubeadm >/dev/null 2>&1; then
+    echo "#### Destroying and undefining storage pool: iac-kubeadm"
+    sudo virsh pool-destroy iac-kubeadm >/dev/null 2>&1 || true
+    sudo virsh pool-undefine iac-kubeadm >/dev/null 2>&1 || true
+  else
+    echo "#### Storage pool iac-kubeadm does not exist, skipping destroy and undefine."
+  fi
   echo "--------------------------------------------------"
 
   local new_strategy
