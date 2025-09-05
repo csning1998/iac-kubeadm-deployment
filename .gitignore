@@ -11,9 +11,8 @@ ansible/packer-provisioner-ansible*
 backup
 vault_pass.txt
 
-### Ignore folder for output *.vdi
+### Ignore folder for output
 packer/output
-packer-playground/output
 
 
 ### Ignore Terraform state files
@@ -23,6 +22,10 @@ terraform.tfstate
 terraform.tfstate.backup
 # This is processed while executing `entry.sh`
 terraform/*.tf.bak
+
+
+### HashiCorp Vault
+unseal.key
 
 
 ### IDEs

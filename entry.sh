@@ -62,7 +62,6 @@ echo
 echo "======= IaC-Driven Virtualization Management ======="
 echo
 echo "Environment: ${ENVIRONMENT_STRATEGY^^}"
-echo
 if [[ "${ENVIRONMENT_STRATEGY}" == "container" ]]; then
   echo "Engine: PODMAN"
 fi
@@ -131,6 +130,7 @@ select opt in "${options[@]}"; do
       ;;
     "Rebuild All")
       echo "# Executing Rebuild All workflow..."
+      if ! check_vault_connection; then break; fi 
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
       cleanup_packer_output
@@ -143,6 +143,7 @@ select opt in "${options[@]}"; do
       ;;
     "Rebuild Packer")
       echo "# Executing Rebuild Packer workflow..."
+      if ! check_vault_connection; then break; fi 
       if ! check_ssh_key_exists; then break; fi
       ensure_libvirt_services_running
       cleanup_packer_output
@@ -152,6 +153,7 @@ select opt in "${options[@]}"; do
       ;;
     "Rebuild Terraform: All Stages")
       echo "# Executing Rebuild Terraform workflow..."
+      if ! check_vault_connection; then break; fi 
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
       ensure_libvirt_services_running
@@ -164,6 +166,7 @@ select opt in "${options[@]}"; do
       ;;
     "Rebuild Terraform Stage I: Configure Nodes")
       echo "# Executing Rebuild Terraform Stage I workflow..."
+      if ! check_vault_connection; then break; fi 
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
       ensure_libvirt_services_running
@@ -176,6 +179,7 @@ select opt in "${options[@]}"; do
       ;;
     "Rebuild Terraform Stage II: Ansible")
       echo "# Executing Rebuild Terraform Stage II workflow..."
+      if ! check_vault_connection; then break; fi 
       if ! check_ssh_key_exists; then break; fi
       ensure_libvirt_services_running
       apply_terraform_stage_II
@@ -185,6 +189,7 @@ select opt in "${options[@]}"; do
       ;;
     "[DEV] Rebuild Stage II via Ansible")
       echo "# Executing [DEV] Rebuild Stage II via Ansible..."
+      if ! check_vault_connection; then break; fi 
       if ! check_ssh_key_exists; then break; fi
       verify_ssh
       ensure_libvirt_services_running

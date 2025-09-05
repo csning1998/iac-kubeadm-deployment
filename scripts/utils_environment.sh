@@ -25,6 +25,31 @@ check_virtual_support() {
   fi
 }
 
+check_vault_connection() {
+  echo ">>> Verifying Vault connection..."
+
+  # Examine if VAULT_ADDR and VAULT_TOKEN has been set up
+  if [[ -z "${VAULT_ADDR:-}" ]] || [[ -z "${VAULT_TOKEN:-}" ]]; then
+    echo "#### ERROR: VAULT_ADDR or VAULT_TOKEN is not set in your .env file."
+    echo "#### Please configure them before proceeding."
+    return 1
+  fi
+
+  # Communicate with Vault Server
+  if ! vault status > /dev/null 2>&1; then
+    echo "#### ERROR: Cannot connect to Vault server at '${VAULT_ADDR}'."
+    echo "####"
+    echo "#### ACTION REQUIRED:"
+    echo "#### 1. Please ensure you have started the Vault dev server in another terminal:"
+    echo "####    $ vault server -dev"
+    echo "#### 2. Verify the VAULT_ADDR and VAULT_TOKEN in your .env file are correct."
+    return 1
+  else
+    echo "#### Vault connection successful."
+    return 0
+  fi
+}
+
 # Function to generate the .env file with intelligent defaults if it doesn't exist.
 generate_env_file() {
   cd ${SCRIPT_DIR}
@@ -52,6 +77,11 @@ generate_env_file() {
   cat > .env <<EOF
 # --- Core Strategy Selection ---
 # "container" or "native"
+
+# --- Vault Configuration ---
+VAULT_ADDR="http://127.0.0.1:8200"
+VAULT_TOKEN=""
+
 ENVIRONMENT_STRATEGY="${default_strategy}"
 
 # --- User and SSH Configuration ---
