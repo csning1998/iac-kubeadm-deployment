@@ -3,4 +3,4 @@
   hosts: all
   become: true
   roles:
-    - 01-base-kubernetes
+    - 02-base-kubernetes

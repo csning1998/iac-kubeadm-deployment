@@ -4,26 +4,22 @@
 
 variable "vm_name" {
   type        = string
-  default     = "ubuntu-server-24-k8s-template"
-  description = "Name of the VM in VMWare Workstation during the build."
+  description = "Base name for the virtual machine and its output files."
 }
 
-variable "guest_os_type" {
-  type        = string
-  description = "The guest OS type for VirtualBox."
-}
+# --- ISO Configuration ---
 
 variable "iso_url" {
   type        = string
-  default     = "https://old-releases.ubuntu.com/releases/noble/ubuntu-24.04.2-live-server-amd64.iso"
   description = "URL of the Ubuntu Server ISO."
 }
 
 variable "iso_checksum" {
   type        = string
-  default     = "sha256:d6dab0c3a657988501b4bd76f1297c053df710e06e0c3aece60dead24f270b4d"
-  description = "SHA256 checksum of the ISO file: \"ubuntu-24.04.2-live-server-amd64.iso\""
+  description = "SHA256 checksum of the ISO file."
 }
+
+# --- Hardware Configuration ---
 
 variable "cpus" {
   type    = number
@@ -39,6 +35,8 @@ variable "disk_size" {
   type    = number
   default = 40960 # in MB
 }
+
+# --- SSH User and Password Configuration ---
 
 variable "ssh_username" {
   type        = string

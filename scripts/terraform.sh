@@ -14,18 +14,22 @@ reset_terraform_state() {
 # Function: Destroy Terraform resources
 destroy_terraform_resources() {
   echo ">>> STEP: Destroying existing Terraform-managed VMs..."
-  local cmd='terraform init -upgrade && terraform destroy -parallelism=1 -auto-approve -lock=false'
+
+  local cmd="terraform init -upgrade && terraform destroy -auto-approve -lock=false -var-file=./terraform.tfvars"
   run_command "${cmd}" "${TERRAFORM_DIR}"
-  rm -rf "${VMS_BASE_PATH}/*"
+
   echo "#### Terraform destroy complete."
   echo "--------------------------------------------------"
 }
 
+### The three functions below needs further refactor.
+
 # Function: Deploy Terraform Stage 1
 apply_terraform_stage_I() {
   echo ">>> STEP: Initializing Terraform and applying VM configuration..."
-  echo ">>> Stage I: Applying VM creation and SSH configuration with 'parallelism = 1' ..."
-  local cmd='terraform init && terraform validate && terraform apply -parallelism=1 -auto-approve -var-file=terraform.tfvars -target=module.vm'
+  echo ">>> Stage I: Applying VM creation..."
+
+  local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=./terraform.tfvars -target=module.provisioner_kvm"
   run_command "${cmd}" "${TERRAFORM_DIR}"
   echo "#### VM creation and SSH configuration complete."
   echo "--------------------------------------------------"
@@ -36,17 +40,12 @@ apply_terraform_stage_II() {
   set -o pipefail
   echo ">>> Stage II: Applying Ansible configuration with default parallelism..."
 
-  local cmd='terraform init && terraform validate && terraform apply -auto-approve -var-file=terraform.tfvars -target=module.ansible'
+  local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=./terraform.tfvars -target=module.ansible"
   run_command "${cmd}" "${TERRAFORM_DIR}"
 
   echo "#### Saving Ansible playbook outputs to log files..."
   mkdir -p "${ANSIBLE_DIR}/logs"
   timestamp=$(date +%Y%m%d-%H%M%S)
-
-  if ! command -v jq >/dev/null 2>&1; then   # Ensure jq is installed
-    echo "######## Installing jq..."
-    sudo apt-get update && sudo apt-get install -y jq
-  fi
 
   {
     terraform output -json ansible_playbook_stdout | format_ansible_output
@@ -59,5 +58,17 @@ apply_terraform_stage_II() {
 
   echo "#### Ansible playbook logs saved to ${ANSIBLE_DIR}/logs/${timestamp}-ansible_stdout.log and ${ANSIBLE_DIR}/logs/${timestamp}-ansible_stderr.log"
   echo "#### Ansible configuration complete."
+  echo "--------------------------------------------------"
+}
+
+# Function: Deploy all Terraform stages without target
+apply_terraform_all_stages() {
+  echo ">>> STEP: Initializing Terraform and applying ALL configurations..."
+
+  # Command without -target to apply the entire configuration
+  local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=./terraform.tfvars"
+  run_command "${cmd}" "${TERRAFORM_DIR}"
+
+  echo "#### Full Terraform apply complete."
   echo "--------------------------------------------------"
 }

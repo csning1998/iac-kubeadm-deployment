@@ -5,22 +5,6 @@
 readonly SSH_CONFIG="$HOME/.ssh/config"
 readonly KNOWN_HOSTS_FILE="$HOME/.ssh/k8s_cluster_known_hosts"
 
-# Function: Check if VMWare Workstation is installed
-check_vmware_workstation() {
-  # Check VMware Workstation
-  if command -v vmware >/dev/null 2>&1; then
-    vmware_version=$(vmware --version 2>/dev/null || echo "Unknown")
-    echo "#### VMware Workstation: Installed (Version: $vmware_version)"
-  else
-    vmware_version="Not installed"
-    echo "#### VMware Workstation: Not installed"
-    echo "Prior to executing other options, registration is required on Broadcom.com to download and install VMWare Workstation Pro 17.5+."
-    echo "Link: https://support.broadcom.com/group/ecx/my-dashboard"
-    read -n 1 -s -r -p "Press any key to continue..."
-    exit 1
-  fi
-}
-
 # Function: Check if the required SSH private key exists
 check_ssh_key_exists() {
   if [ -z "$SSH_PRIVATE_KEY" ]; then
@@ -39,7 +23,7 @@ check_ssh_key_exists() {
 
 # Function: Generate an SSH key for IaC automation (unattended mode)
 generate_ssh_key() {
-  local default_key_name="id_ed25519_iac_automation"
+  local default_key_name="id_ed25519_iac-kubeadm-deployment"
   local key_name
 
   echo "#### This utility will generate an SSH key for IaC automation (unattended mode)."
@@ -65,6 +49,10 @@ generate_ssh_key() {
   echo "#### Key generated successfully:"
   ls -l "$private_key_path" "$public_key_path"
   echo "--------------------------------------------------"
+  echo ">>> Updating SSH_PRIVATE_KEY in .env file to: ${private_key_path}"
+  # Call the helper function to update the .env file
+  update_env_var "SSH_PRIVATE_KEY" "${private_key_path}"
+
   echo "#### IMPORTANT: Please update your configuration file"
   echo "####   e.g., in 'packer/secret.auto.pkrvars.hcl' or terraform/*.tfvars"
   echo "#### to use the following paths:"

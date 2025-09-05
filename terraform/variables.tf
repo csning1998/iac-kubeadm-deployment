@@ -12,6 +12,11 @@ variable "vm_password" {
   sensitive   = true
 }
 
+variable "ssh_public_key_path" {
+  type        = string
+  description = "Path to the SSH public key for connecting to the VMs."
+}
+
 variable "ssh_private_key_path" {
   type        = string
   description = "Path to the SSH private key for connecting to the VMs."
@@ -19,45 +24,25 @@ variable "ssh_private_key_path" {
 
 ### Variables to Configure IP Addresses for Master Node(s) and Worker Nodes. 
 
-variable "master_ip_list" {
-  description = "IP address list for the Kubernetes master node"
-  type        = list(string)
+variable "node_configs" {
+  description = "Define all nodes including virtual hardware resources"
+  type = object({
+    masters = list(object({
+      ip   = string
+      vcpu = number
+      ram  = number
+    }))
+    workers = list(object({
+      ip   = string
+      vcpu = number
+      ram  = number
+    }))
+  })
 
   validation {
-    condition     = length(var.master_ip_list) % 2 != 0
+    condition     = length(var.node_configs.masters) % 2 != 0
     error_message = "The number of master nodes must be an odd number (1, 3, 5, etc.) to ensure a stable etcd quorum."
   }
-}
-
-variable "worker_ip_list" {
-  description = "IP address list for the Kubernetes worker nodes"
-  type        = list(string)
-}
-
-### Configure Resources for the Infrastructure 
-
-variable "master_vcpu" {
-  description = "Number of vCPUs for the Kubernetes master node"
-  type        = number
-  default     = 4
-}
-
-variable "master_ram" {
-  description = "Amount of RAM (in MB) for the Kubernetes master node"
-  type        = number
-  default     = 4096
-}
-
-variable "worker_vcpu" {
-  description = "Number of vCPUs for each Kubernetes worker node"
-  type        = number
-  default     = 4
-}
-
-variable "worker_ram" {
-  description = "Amount of RAM (in MB) for each Kubernetes worker node"
-  type        = number
-  default     = 4096
 }
 
 # Automatically set the variable for Terraform VMs
@@ -80,4 +65,22 @@ variable "k8s_ha_virtual_ip" {
 variable "k8s_pod_subnet" {
   description = "The CIDR block for the Kubernetes pod network."
   type        = string
+}
+
+variable "qemu_base_image_path" {
+  description = "Path to the Packer-built qcow2 image for KVM"
+  type        = string
+  default     = "../packer/output/ubuntu-server-qemu/ubuntu-server-k8s-based-qemu.qcow2"
+}
+
+variable "hostonly_network_name" {
+  description = "Name for the Host-only libvirt network"
+  type        = string
+  default     = "iac-kubeadm-hostonly-net"
+}
+
+variable "kvm_hostonly_cidr" {
+  description = "CIDR for the KVM host-only network, should match the subnet of master/worker IPs"
+  type        = string
+  default     = "172.16.134.0/24"
 }
