@@ -68,7 +68,7 @@ resource "null_resource" "prepare_ssh_access" {
     command     = <<-EOT
       set -e
       echo ">>> Verifying VM liveness and preparing SSH access..."
-      . ${path.root}/..//scripts/utils_ssh.sh
+      . ${path.root}/../scripts/utils_ssh.sh
       bootstrap_ssh_known_hosts ${join(" ", [for node in var.all_nodes : node.ip])}
       echo ">>> Liveness check passed. SSH access is ready."
     EOT
