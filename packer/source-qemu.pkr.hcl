@@ -1,3 +1,12 @@
+/*
+ * Define the source of Vault data
+*/
+locals {
+  ssh_username        = vault("secret/data/iac-kubeadm/variables", "ssh_username")
+  ssh_password        = vault("secret/data/iac-kubeadm/variables", "ssh_password")
+  ssh_password_hash   = vault("secret/data/iac-kubeadm/variables", "ssh_password_hash")
+  ssh_public_key_path = vault("secret/data/iac-kubeadm/variables", "ssh_public_key_path")
+}
 
 source "qemu" "ubuntu-server" {
 
@@ -26,8 +35,8 @@ source "qemu" "ubuntu-server" {
   http_directory = "http"
   cd_content = {
     "/user-data" = templatefile("${path.root}/http/user-data", {
-      username      = var.ssh_username
-      password_hash = var.ssh_password_hash
+      username      = local.ssh_username
+      password_hash = local.ssh_password_hash
     })
     "/meta-data" = file("${path.root}/http/meta-data")
   }
@@ -47,8 +56,8 @@ source "qemu" "ubuntu-server" {
   vnc_port_max = "5999"
 
   # SSH Configuration for Provisioning
-  ssh_username = var.ssh_username
-  ssh_password = var.ssh_password
+  ssh_username = local.ssh_username
+  ssh_password = local.ssh_password
   ssh_timeout  = "10m"
 
   # Shutdown Command

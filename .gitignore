@@ -26,6 +26,7 @@ terraform/*.tf.bak
 
 ### HashiCorp Vault
 unseal.key
+vault/data/
 
 
 ### IDEs

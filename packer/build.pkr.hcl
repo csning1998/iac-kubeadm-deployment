@@ -1,6 +1,5 @@
 
 build {
-
   sources = ["source.qemu.ubuntu-server"]
 
   provisioner "shell" {
@@ -15,7 +14,7 @@ build {
   provisioner "ansible" {
     playbook_file       = "../ansible/playbooks/00-provision-base-image.yaml"
     inventory_directory = "../ansible/"
-    user                = var.ssh_username
+    user                = local.ssh_username
 
     ansible_env_vars = [
       "ANSIBLE_CONFIG=../ansible.cfg"
@@ -23,8 +22,8 @@ build {
 
     extra_arguments = [
       "--extra-vars", "expected_hostname=${var.vm_name}",
-      "--extra-vars", "public_key_file=${var.ssh_public_key_path}",
-      "--extra-vars", "ssh_user=${var.ssh_username}",
+      "--extra-vars", "public_key_file=${local.ssh_public_key_path}",
+      "--extra-vars", "ssh_user=${local.ssh_username}",
       "--extra-vars", "ansible_ssh_transfer_method=piped",
       "-v",
     ]
