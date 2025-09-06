@@ -99,12 +99,16 @@ resource "null_resource" "provision_cluster" {
 
     working_dir = abspath("${path.root}/../")
 
+    /*
+     * To avoid "(output suppressed due to sensitive value in config)" shown in terminal
+     * Use `nonsensitive()` function to decrypt the playbook log.
+    */
     command     = <<-EOT
       set -e
       ansible-playbook \
         -i ${var.ansible_path}/inventory.yaml \
-        --private-key ${var.ssh_private_key_path} \
-        --extra-vars "ansible_ssh_user=${var.vm_username}" \
+        --private-key ${nonsensitive(var.ssh_private_key_path)} \
+        --extra-vars "ansible_ssh_user=${nonsensitive(var.vm_username)}" \
         -v \
         ${var.ansible_path}/playbooks/10-provision-cluster.yaml
     EOT

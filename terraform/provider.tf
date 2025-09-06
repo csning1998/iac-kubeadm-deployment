@@ -18,3 +18,7 @@ terraform {
 provider "libvirt" {
   uri = "qemu:///system"
 }
+
+provider "vault" {
+  # Vault server address is read from the VAULT_ADDR environment variable
+}
