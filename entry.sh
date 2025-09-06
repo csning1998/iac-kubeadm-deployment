@@ -65,10 +65,15 @@ echo "Environment: ${ENVIRONMENT_STRATEGY^^}"
 if [[ "${ENVIRONMENT_STRATEGY}" == "container" ]]; then
   echo "Engine: PODMAN"
 fi
+if [[ "${ENVIRONMENT_STRATEGY}" == "native" ]]; then
+    display_vault_status
+fi
 echo
 
 PS3=">>> Please select an action: "
 options=()
+options+=("[ONCE-ONLY] Initialize Vault")
+options+=("Unseal Vault")
 options+=("Switch Environment Strategy")
 options+=("Verify IaC Environment for Native")
 options+=("Setup KVM / QEMU for Native")
@@ -89,6 +94,16 @@ select opt in "${options[@]}"; do
   readonly START_TIME=$(date +%s)
 
   case $opt in
+    "[ONCE-ONLY] Initialize Vault")
+      echo "# WARNING: This is a destructive operation for existing data."
+      initialize_vault
+      break
+      ;;
+    "Unseal Vault")
+      echo "# Executing standard Vault startup workflow..."
+      unseal_vault
+      break
+      ;;
     "Switch Environment Strategy")
       switch_environment_strategy_handler
       ;;
@@ -130,7 +145,6 @@ select opt in "${options[@]}"; do
       ;;
     "Rebuild All")
       echo "# Executing Rebuild All workflow..."
-      if ! check_vault_connection; then break; fi 
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
       cleanup_packer_output
@@ -143,7 +157,6 @@ select opt in "${options[@]}"; do
       ;;
     "Rebuild Packer")
       echo "# Executing Rebuild Packer workflow..."
-      if ! check_vault_connection; then break; fi 
       if ! check_ssh_key_exists; then break; fi
       ensure_libvirt_services_running
       cleanup_packer_output
@@ -153,7 +166,6 @@ select opt in "${options[@]}"; do
       ;;
     "Rebuild Terraform: All Stages")
       echo "# Executing Rebuild Terraform workflow..."
-      if ! check_vault_connection; then break; fi 
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
       ensure_libvirt_services_running
@@ -166,7 +178,6 @@ select opt in "${options[@]}"; do
       ;;
     "Rebuild Terraform Stage I: Configure Nodes")
       echo "# Executing Rebuild Terraform Stage I workflow..."
-      if ! check_vault_connection; then break; fi 
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
       ensure_libvirt_services_running
@@ -179,7 +190,6 @@ select opt in "${options[@]}"; do
       ;;
     "Rebuild Terraform Stage II: Ansible")
       echo "# Executing Rebuild Terraform Stage II workflow..."
-      if ! check_vault_connection; then break; fi 
       if ! check_ssh_key_exists; then break; fi
       ensure_libvirt_services_running
       apply_terraform_stage_II
@@ -189,7 +199,6 @@ select opt in "${options[@]}"; do
       ;;
     "[DEV] Rebuild Stage II via Ansible")
       echo "# Executing [DEV] Rebuild Stage II via Ansible..."
-      if ! check_vault_connection; then break; fi 
       if ! check_ssh_key_exists; then break; fi
       verify_ssh
       ensure_libvirt_services_running

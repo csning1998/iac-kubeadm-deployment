@@ -25,31 +25,6 @@ check_virtual_support() {
   fi
 }
 
-check_vault_connection() {
-  echo ">>> Verifying Vault connection..."
-
-  # Examine if VAULT_ADDR and VAULT_TOKEN has been set up
-  if [[ -z "${VAULT_ADDR:-}" ]] || [[ -z "${VAULT_TOKEN:-}" ]]; then
-    echo "#### ERROR: VAULT_ADDR or VAULT_TOKEN is not set in your .env file."
-    echo "#### Please configure them before proceeding."
-    return 1
-  fi
-
-  # Communicate with Vault Server
-  if ! vault status > /dev/null 2>&1; then
-    echo "#### ERROR: Cannot connect to Vault server at '${VAULT_ADDR}'."
-    echo "####"
-    echo "#### ACTION REQUIRED:"
-    echo "#### 1. Please ensure you have started the Vault dev server in another terminal:"
-    echo "####    $ vault server -dev"
-    echo "#### 2. Verify the VAULT_ADDR and VAULT_TOKEN in your .env file are correct."
-    return 1
-  else
-    echo "#### Vault connection successful."
-    return 0
-  fi
-}
-
 # Function to generate the .env file with intelligent defaults if it doesn't exist.
 generate_env_file() {
   cd ${SCRIPT_DIR}
@@ -60,7 +35,7 @@ generate_env_file() {
   echo ">>> .env file not found. Generating a new one with smart defaults..."
 
   # 1. Set defaults
-  local default_strategy="container"
+  local default_strategy="native"
   local default_ssh_key="$HOME/.ssh/id_ed25519_iac-kubeadm-deployment"
 
   # 2. Get the GID of the libvirt group on the host
@@ -79,14 +54,13 @@ generate_env_file() {
 # "container" or "native"
 
 # --- Vault Configuration ---
-VAULT_ADDR="http://127.0.0.1:8200"
+VAULT_ADDR="https://127.0.0.1:8200"
+VAULT_CACERT="${PWD}/vault/tls/ca.pem"
 VAULT_TOKEN=""
 
 ENVIRONMENT_STRATEGY="${default_strategy}"
 
 # --- User and SSH Configuration ---
-# Username for SSH access to the provisioned VMs.
-VM_USERNAME=$(whoami)
 
 # Path to the SSH private key. This will be updated by the 'Generate SSH Key' utility.
 SSH_PRIVATE_KEY="${default_ssh_key}"
