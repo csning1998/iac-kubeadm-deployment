@@ -1,21 +1,9 @@
 terraform {
   required_providers {
-    ansible = {
-      source  = "ansible/ansible"
-      version = ">= 1.3.0"
+    null = {
+      source  = "hashicorp/null"
+      version = "3.2.2"
     }
-  }
-}
-
-/*
-* Dynamically generate an inventory for Ansible to SSH to virtual machines and execute playbooks.
-*/
-resource "ansible_host" "nodes" {
-  for_each = { for node in var.all_nodes : node.key => node }
-  name     = each.value.key
-  groups   = startswith(each.value.key, "k8s-master") ? ["master"] : ["workers"]
-  variables = {
-    advertise_ip = each.value.ip
   }
 }
 
@@ -115,19 +103,3 @@ resource "null_resource" "provision_cluster" {
     interpreter = ["/bin/bash", "-c"]
   }
 }
-
-/*
-# * Execute Ansible playbook using ansible_playbook resource
-# */
-# resource "ansible_playbook" "provision_cluster" {
-#   depends_on = [
-#     null_resource.prepare_ssh_access,
-#     local_file.inventory,
-#     local_file.ansible_config
-#   ]
-#   name       = "provision-k8s-cluster"
-#   groups     = ["all"]
-#   playbook   = abspath("${path.root}/../ansible/playbooks/10-provision-cluster.yaml")
-#   replayable = true
-#   verbosity  = 4
-# }
