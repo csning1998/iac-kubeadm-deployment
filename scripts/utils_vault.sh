@@ -52,7 +52,7 @@ initialize_vault() {
   echo "### Proceeding will DESTROY ALL existing data and generate new keys.     ###"
   echo "############################################################################"
   echo 
-  read -p "### Type 'yes' to confirm and proceed with re-initialization: " confirmation
+  read -p "### Type 'yes' to confirm and proceed with initialization: " confirmation
   if [[ "$confirmation" != "yes" ]]; then
     echo "#### Re-initialization cancelled."
     return 1
@@ -102,4 +102,53 @@ unseal_vault() {
   else
     echo "#### Vault is already unsealed or unreachable.";
   fi
+}
+
+# Function: Automatically Set up CA Certs for TLS  
+generate_tls_files() {
+  echo ">>> Step: Generating CA Root files for TLS"
+
+  echo "#############################################################################"
+  echo "### Proceeding will DESTROY ALL existing files in vault/tls and           ###"
+  echo "###   generate new keys.                                                  ###"
+  echo "#############################################################################"
+  echo 
+  read -p "### Type 'yes' to confirm and proceed with initialization: " confirmation
+  if [[ "$confirmation" != "yes" ]]; then
+    echo "#### Re-initialization cancelled."
+    return 1
+  fi
+
+  # 1. 清除並重建 vault/tls 目錄
+  rm -rf vault/tls
+  mkdir -p vault/tls
+
+  # 2. 產生必要檔案
+  openssl genrsa -out vault/tls/ca-key.pem 2048
+
+  echo "#### You may leave all information blank, just press enter."
+  openssl req -new -x509 -days 365 \
+    -key vault/tls/ca-key.pem \
+    -sha256 -out vault/tls/ca.pem
+
+  openssl genrsa -out vault/tls/vault-key.pem 2048
+
+  openssl req -subj "/CN=localhost" -sha256 -new \
+    -key vault/tls/vault-key.pem \
+    -out vault/tls/vault.csr
+
+  # 3. 簽署 CSR
+  echo "subjectAltName = DNS:localhost,IP:127.0.0.1" > \
+    vault/tls/extfile.cnf && \
+    openssl x509 -req -days 365 -sha256 -in vault/tls/vault.csr \
+    -CA vault/tls/ca.pem -CAkey vault/tls/ca-key.pem \
+    -CAcreateserial -out vault/tls/vault.pem \
+    -extfile vault/tls/extfile.cnf
+
+  # 4. 清除不必要檔案
+  rm -f vault/tls/vault.csr vault/tls/extfile.cnf
+
+  # 5. 設定正確權限
+  chmod 600 vault/tls/ca-key.pem vault/tls/vault-key.pem
+  chmod 644 vault/tls/ca.pem vault/tls/vault.pem
 }

@@ -52,16 +52,14 @@ generate_env_file() {
   cat > .env <<EOF
 # --- Core Strategy Selection ---
 # "container" or "native"
+ENVIRONMENT_STRATEGY="${default_strategy}"
 
 # --- Vault Configuration ---
 VAULT_ADDR="https://127.0.0.1:8200"
 VAULT_CACERT="${PWD}/vault/tls/ca.pem"
 VAULT_TOKEN=""
 
-ENVIRONMENT_STRATEGY="${default_strategy}"
-
 # --- User and SSH Configuration ---
-
 # Path to the SSH private key. This will be updated by the 'Generate SSH Key' utility.
 SSH_PRIVATE_KEY="${default_ssh_key}"
 

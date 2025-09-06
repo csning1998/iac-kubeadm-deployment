@@ -72,6 +72,7 @@ echo
 
 PS3=">>> Please select an action: "
 options=()
+options+=("[ONCE-ONLY] Set up CA Certs for TLS")
 options+=("[ONCE-ONLY] Initialize Vault")
 options+=("Unseal Vault")
 options+=("Switch Environment Strategy")
@@ -94,6 +95,11 @@ select opt in "${options[@]}"; do
   readonly START_TIME=$(date +%s)
 
   case $opt in
+    "[ONCE-ONLY] Set up CA Certs for TLS")
+      echo "# INFO: Follow the instruction below"
+      generate_tls_files
+      break
+      ;;
     "[ONCE-ONLY] Initialize Vault")
       echo "# WARNING: This is a destructive operation for existing data."
       initialize_vault
