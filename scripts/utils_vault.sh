@@ -13,26 +13,29 @@ display_vault_status() {
   local status_color_yellow='\033[0;33m'
   local color_reset='\033[0m'
   local status_message
+  local vault_status_json
 
   if [ -z "${VAULT_ADDR:-}" ]; then
     status_message="${status_color_yellow}Cannot check - VAULT_ADDR not set${color_reset}"
-    # Core fix: explicitly use the -address and -ca-cert flags
-  elif vault_status_json=$(vault status -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" -format=json 2>/dev/null); then
-    if [[ $(echo "$vault_status_json" | jq .sealed) == "true" ]]; then
-      status_message="${status_color_yellow}Running (Sealed)${color_reset}"
+  elif vault_status_json=$(vault status -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" -format=json 2>/dev/null) || true; then
+    if [[ -n "$vault_status_json" ]]; then
+      sealed=$(echo "$vault_status_json" | jq .sealed)
+      if [[ "$sealed" == true ]]; then
+        status_message="${status_color_yellow}Running (Sealed)${color_reset}"
+      else
+        status_message="${status_color_green}Running (Unsealed)${color_reset}"
+      fi
     else
-      status_message="${status_color_green}Running (Unsealed)${color_reset}"
+      status_message="${status_color_red}Stopped or Unreachable${color_reset}"
     fi
-  else
-    status_message="${status_color_red}Stopped or Unreachable${color_reset}"
   fi
+
   echo -e "Vault Server Status: ${status_message}"
 }
 
 # Function: Idempotently ensure the KVv2 secrets engine is enabled at 'secret/'.
 ensure_kv_engine_enabled() {
   echo ">>> Ensuring KV secrets engine is enabled at 'secret/'..."
-  # Core fix: explicitly use the -address, -ca-cert, and -token flags
   if ! vault secrets list -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" -format=json | jq -e '."secret/"' > /dev/null; then
     echo "#### 'secret/' path not found, enabling kv-v2 secrets engine..."
     vault secrets enable -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" -path=secret kv-v2
@@ -56,7 +59,6 @@ initialize_vault() {
   fi
 
   echo "#### Initializing Vault..."
-  # Core fix: explicitly use the -address and -ca-cert flags
   vault operator init -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" -format=json > "$VAULT_INIT_OUTPUT_FILE"
 
   jq -r .unseal_keys_b64[] "$VAULT_INIT_OUTPUT_FILE" > "$VAULT_UNSEAL_KEYS_FILE"
@@ -89,11 +91,10 @@ unseal_vault() {
   if [ ! -f "$VAULT_UNSEAL_KEYS_FILE" ]; then
     echo "#### ERROR: Unseal keys not found. Run 'Initialize Vault' first." >&2; return 1;
   fi
-  # Core fix: explicitly use the -address and -ca-cert flags
+
   if [[ "$(vault status -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" -format=json 2>/dev/null | jq .sealed)" == "true" ]]; then
     echo "#### Vault is sealed. Unsealing with saved keys...";
     mapfile -t keys < "$VAULT_UNSEAL_KEYS_FILE";
-    # Core fix: explicitly use the -address and -ca-cert flags
     vault operator unseal -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" "${keys[0]}";
     vault operator unseal -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" "${keys[1]}";
     vault operator unseal -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" "${keys[2]}";
