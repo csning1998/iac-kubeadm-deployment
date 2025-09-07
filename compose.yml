@@ -1,4 +1,29 @@
 services:
+  iac-vault-server:
+    image: docker.io/hashicorp/vault:1.20.2
+    container_name: iac-vault-server
+    user: "${HOST_UID}:${HOST_GID}"
+    ports:
+      - "127.0.0.1:8200:8200"
+    volumes:
+      - ./vault/vault.hcl:/vault/vault.hcl:z
+      - ./vault/data:/vault/data:z
+      - ./vault/tls:/vault/tls:z
+    cap_add:
+      - IPC_LOCK
+      - SETFCAP
+    network_mode: "host"
+    command: server -config=/vault/vault.hcl
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "vault status -address=https://127.0.0.1:8200 -tls-skip-verify || if [ $$? -eq 2 ]; then exit 0; else exit 1; fi",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   iac-controller:
     build:
       context: .
@@ -21,6 +46,8 @@ services:
       - "${LIBVIRT_GID}" # Add container user to the host's libvirt group by GID
     env_file:
       - .env
+    environment:
+      - VAULT_CACERT=/app/vault/tls/ca.pem
     volumes:
       - .:/app:U,z
       - ${UHOME}/.cache/packer:/home/${UNAME}/.cache/packer:U,z
