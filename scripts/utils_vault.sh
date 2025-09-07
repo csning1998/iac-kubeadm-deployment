@@ -75,13 +75,13 @@ initialize_vault() {
   unseal_vault
 
   # Login into Vault
-  vault login -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" ${new_token}
+  vault login -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" "${new_token}"
 
   ensure_kv_engine_enabled
 
   echo "####"
   echo "#### Vault is initialized and ready."
-  echo "#### Next Step: Manually run 'vault kv put secret/iac-kubeadm/variables ...' with your secrets."
+  echo "#### Next Step: Manually run 'vault kv put secret/iac-kubeadm-deployment/variables ...' with your secrets."
   echo "####"
 }
 

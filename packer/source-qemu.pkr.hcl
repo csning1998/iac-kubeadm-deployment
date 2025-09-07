@@ -2,10 +2,10 @@
  * Define the source of Vault data
 */
 locals {
-  ssh_username        = vault("secret/data/iac-kubeadm/variables", "ssh_username")
-  ssh_password        = vault("secret/data/iac-kubeadm/variables", "ssh_password")
-  ssh_password_hash   = vault("secret/data/iac-kubeadm/variables", "ssh_password_hash")
-  ssh_public_key_path = vault("secret/data/iac-kubeadm/variables", "ssh_public_key_path")
+  ssh_username        = vault("secret/data/iac-kubeadm-deployment/variables", "ssh_username")
+  ssh_password        = vault("secret/data/iac-kubeadm-deployment/variables", "ssh_password")
+  ssh_password_hash   = vault("secret/data/iac-kubeadm-deployment/variables", "ssh_password_hash")
+  ssh_public_key_path = vault("secret/data/iac-kubeadm-deployment/variables", "ssh_public_key_path")
 }
 
 source "qemu" "ubuntu-server" {

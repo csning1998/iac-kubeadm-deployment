@@ -3,8 +3,6 @@ services:
     image: docker.io/hashicorp/vault:1.20.2
     container_name: iac-vault-server
     user: "${HOST_UID}:${HOST_GID}"
-    ports:
-      - "127.0.0.1:8200:8200"
     volumes:
       - ./vault/vault.hcl:/vault/vault.hcl:z
       - ./vault/data:/vault/data:z
@@ -18,7 +16,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "vault status -address=https://127.0.0.1:8200 -tls-skip-verify || if [ $$? -eq 2 ]; then exit 0; else exit 1; fi",
+          "vault status -address=https://127.0.0.1:8200 -tls-skip-verify || if [ $? -eq 2 ]; then exit 0; else exit 1; fi",
         ]
       interval: 5s
       timeout: 3s

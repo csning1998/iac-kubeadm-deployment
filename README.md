@@ -320,7 +320,7 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
 
       The current SSH identity variables are primarily used for Packer in a single-use scenario, while the VM identity variables are used by Terraform when cloning VMs. In principle, they can be set to the same value. However, if you need to set different names for different VMs, you can directly modify the objects and relevant code in HCL. Typically, you would modify the `node_config` variable and related variable passing, and then use a `for_each` loop for iteration. This increases complexity, so if there are no other requirements, it is recommanded to keep the SSH and VM identity variables the same.
 
-5. When starting the project, you only need to launch the Vault server in a single terminal (maybe in your IDE) window using `vault server -config=vault/vault.hcl`. Afterward, you can use option `3` in `entry.sh` to unseal the Vault database.
+5. When starting the project, you only need to launch the Vault server in a single terminal (maybe in your IDE) window using `vault server -config=vault/vault.hcl`. Afterward, you can use option `7` in `entry.sh` to unseal the Vault database; Alternatively, you may use container as described in B.1-2.
 
 #### **Step B.2. Create Variable File for Terraform:**
 
@@ -383,7 +383,7 @@ This project employs three tools - Packer, Terraform, and Ansible - using an Inf
 
 ### A. Deployment Workflow
 
-The entire automated deployment process is triggered by the sixth option _"Rebuild All"_ in the `./entry.sh` script, with detailed steps shown in the diagram below:
+The entire automated deployment process is triggered by option `10` _"Rebuild All"_ in the `./entry.sh` script, with detailed steps shown in the diagram below:
 
 ```mermaid
 sequenceDiagram
