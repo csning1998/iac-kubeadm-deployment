@@ -26,6 +26,10 @@ terraform/*.tf.bak
 
 ### HashiCorp Vault
 unseal.key
+vault/data/*
+!vault/data/README.md
+vault/keys/
+vault/tls/
 
 
 ### IDEs

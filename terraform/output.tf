@@ -1,26 +1,28 @@
-# Show the outputs of Cluster Nodes
+# Show the outputs of Cluster Nodes. This would be replaced by other information that is more useful for Kubernetes Cluster
 
+/*
 output "master_details" {
   description = "Connection details and IP address for the Kubernetes master node"
-  sensitive   = false
+  sensitive   = true
   value = {
     for node in local.provisioner_output.all_nodes : node.key => {
       ip_address  = node.ip
-      ssh_command = "ssh ${var.vm_username}@${node.ip}"
+      ssh_command = "ssh ${data.vault_generic_secret.iac_vars.data["vm_username"]}@${node.ip}"
     } if substr(node.key, 0, 10) == "k8s-master"
   }
 }
 
 output "workers_details" {
   description = "Connection details and IP addresses for the Kubernetes worker nodes"
-  sensitive   = false
+  sensitive   = true
   value = {
     for node in local.provisioner_output.all_nodes : node.key => {
       ip_address  = node.ip
-      ssh_command = "ssh ${var.vm_username}@${node.ip}"
+      ssh_command = "ssh ${data.vault_generic_secret.iac_vars.data["vm_username"]}@${node.ip}"
     } if substr(node.key, 0, 10) == "k8s-worker"
   }
 }
+*/
 
 output "ansible_log_path" {
   description = "Path to the latest Ansible execution log"

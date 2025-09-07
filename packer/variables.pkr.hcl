@@ -36,31 +36,6 @@ variable "disk_size" {
   default = 40960 # in MB
 }
 
-# --- SSH User and Password Configuration ---
-
-variable "ssh_username" {
-  type        = string
-  default     = "test-username"
-  description = "Specifying the username for ssh. Default username is 'test-username'"
-}
-
-variable "ssh_password" {
-  type        = string
-  description = "The hashed password for the default user."
-  sensitive   = true
-}
-
-variable "ssh_password_hash" {
-  type        = string
-  description = "The hashed password used for autoinstall (cloud-init)."
-  sensitive   = true
-}
-
-variable "ssh_public_key_path" {
-  type        = string
-  description = "Path to the SSH Public Key for the automation user."
-}
-
 variable "scripts" {
   type        = list(string)
   default     = null

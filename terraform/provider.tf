@@ -8,13 +8,13 @@ terraform {
       source  = "hashicorp/null"
       version = "3.2.2"
     }
-    ansible = {
-      source  = "ansible/ansible"
-      version = ">= 1.3.0"
-    }
   }
 }
 
 provider "libvirt" {
   uri = "qemu:///system"
+}
+
+provider "vault" {
+  # Vault server address is read from the VAULT_ADDR environment variable
 }

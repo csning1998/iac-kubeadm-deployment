@@ -1,26 +1,3 @@
-### Variables for SSH login
-
-variable "vm_username" {
-  description = "Username for SSH access to the VMs"
-  type        = string
-  sensitive   = false
-}
-
-variable "vm_password" {
-  description = "Password for SSH access to the VMs"
-  type        = string
-  sensitive   = true
-}
-
-variable "ssh_public_key_path" {
-  type        = string
-  description = "Path to the SSH public key for connecting to the VMs."
-}
-
-variable "ssh_private_key_path" {
-  type        = string
-  description = "Path to the SSH private key for connecting to the VMs."
-}
 
 ### Variables to Configure IP Addresses for Master Node(s) and Worker Nodes. 
 
