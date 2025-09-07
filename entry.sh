@@ -65,23 +65,21 @@ echo "Environment: ${ENVIRONMENT_STRATEGY^^}"
 if [[ "${ENVIRONMENT_STRATEGY}" == "container" ]]; then
   echo "Engine: PODMAN"
 fi
-if [[ "${ENVIRONMENT_STRATEGY}" == "native" ]]; then
-    display_vault_status
-fi
+display_vault_status
 echo
 
 PS3=">>> Please select an action: "
 options=()
 options+=("[ONCE-ONLY] Set up CA Certs for TLS")
 options+=("[ONCE-ONLY] Initialize Vault")
+options+=("[ONCE-ONLY] Generate SSH Key")
+options+=("[ONCE-ONLY] Setup KVM / QEMU for Native")
+options+=("[ONCE-ONLY] Setup Core IaC Tools for Native")
+options+=("[ONCE-ONLY] Verify IaC Environment for Native")
 options+=("Unseal Vault")
 options+=("Switch Environment Strategy")
-options+=("Verify IaC Environment for Native")
-options+=("Setup KVM / QEMU for Native")
-options+=("Setup Core IaC Tools for Native")
-options+=("Generate SSH Key")
-options+=("Reset All")
-options+=("Rebuild All")
+options+=("Reset Packer and Terraform")
+options+=("Rebuild Packer and Terraform")
 options+=("Rebuild Packer")
 options+=("Rebuild Terraform: All Stages")
 options+=("Rebuild Terraform Stage I: Configure Nodes")
@@ -105,6 +103,28 @@ select opt in "${options[@]}"; do
       initialize_vault
       break
       ;;
+    "[ONCE-ONLY] Generate SSH Key")
+      echo "# Generate SSH Key for this project..."
+      generate_ssh_key
+      echo "# SSH Key successfully generated in the path '~/.ssh'."
+      break
+      ;;
+    "[ONCE-ONLY] Setup KVM / QEMU for Native")
+      echo "# Executing Setup KVM / QEMU workflow..."
+      if prompt_install_libvirt_tools; then
+        setup_libvirt_environment
+      fi
+      echo "# Setup KVM / QEMU workflow completed successfully."
+      break
+      ;;
+    "[ONCE-ONLY] Setup Core IaC Tools for Native")
+      echo "# Executing Setup Core IaC Tools workflow..."
+      if prompt_install_iac_tools; then
+        setup_iac_tools
+      fi
+      echo "# Setup Core IaC Tools workflow completed successfully."
+      break
+      ;;
     "Unseal Vault")
       echo "# Executing standard Vault startup workflow..."
       unseal_vault
@@ -117,29 +137,7 @@ select opt in "${options[@]}"; do
       verify_iac_environment
       break
       ;;
-    "Setup KVM / QEMU for Native")
-      echo "# Executing Setup KVM / QEMU workflow..."
-      if prompt_install_libvirt_tools; then
-        setup_libvirt_environment
-      fi
-      echo "# Setup KVM / QEMU workflow completed successfully."
-      break
-      ;;
-    "Setup Core IaC Tools for Native")
-      echo "# Executing Setup Core IaC Tools workflow..."
-      if prompt_install_iac_tools; then
-        setup_iac_tools
-      fi
-      echo "# Setup Core IaC Tools workflow completed successfully."
-      break
-      ;;
-    "Generate SSH Key")
-      echo "# Generate SSH Key for this project..."
-      generate_ssh_key
-      echo "# SSH Key successfully generated in the path '~/.ssh'."
-      break
-      ;;
-    "Reset All")
+    "Reset Packer and Terraform")
       echo "# Executing Reset All workflow..."
       purge_libvirt_resources
       destroy_terraform_resources
@@ -149,7 +147,7 @@ select opt in "${options[@]}"; do
       echo "# Reset All workflow completed successfully."
       break
       ;;
-    "Rebuild All")
+    "Rebuild Packer and Terraform")
       echo "# Executing Rebuild All workflow..."
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources

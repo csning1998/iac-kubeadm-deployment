@@ -119,11 +119,11 @@ generate_tls_files() {
     return 1
   fi
 
-  # 1. 清除並重建 vault/tls 目錄
+ # 1. Clear and rebuild the vault/tls directory
   rm -rf vault/tls
   mkdir -p vault/tls
 
-  # 2. 產生必要檔案
+  # 2. Generate necessary files
   openssl genrsa -out vault/tls/ca-key.pem 2048
 
   echo "#### You may leave all information blank, just press enter."
@@ -137,7 +137,7 @@ generate_tls_files() {
     -key vault/tls/vault-key.pem \
     -out vault/tls/vault.csr
 
-  # 3. 簽署 CSR
+  # 3. Sign the CSR
   echo "subjectAltName = DNS:localhost,IP:127.0.0.1" > \
     vault/tls/extfile.cnf && \
     openssl x509 -req -days 365 -sha256 -in vault/tls/vault.csr \
@@ -145,10 +145,10 @@ generate_tls_files() {
     -CAcreateserial -out vault/tls/vault.pem \
     -extfile vault/tls/extfile.cnf
 
-  # 4. 清除不必要檔案
+  # 4. Clean up unnecessary files
   rm -f vault/tls/vault.csr vault/tls/extfile.cnf
 
-  # 5. 設定正確權限
+  # 5. Set correct permissions
   chmod 600 vault/tls/ca-key.pem vault/tls/vault-key.pem
   chmod 644 vault/tls/ca.pem vault/tls/vault.pem
 }
