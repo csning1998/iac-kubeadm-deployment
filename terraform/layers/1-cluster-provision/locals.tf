@@ -1,7 +1,7 @@
 locals {
 
   provisioner_output = module.provisioner_kvm
-  ansible_path       = abspath("${path.root}/../ansible")
+  ansible_path       = abspath("${path.root}/../../../ansible")
 
   masters_map = { for idx, config in var.node_configs.masters :
     "k8s-master-${format("%02d", idx)}" => config

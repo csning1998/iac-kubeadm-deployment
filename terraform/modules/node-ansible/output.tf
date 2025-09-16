@@ -16,3 +16,10 @@ output "ansible_log" {
   description = "Path to Ansible execution log"
   value       = "${var.ansible_path}/logs/ansible-latest.log"
 }
+
+# # The content of kubeconfig
+# output "kubeconfig_content" {
+#   description = "The content of the kubeconfig file."
+#   value       = data.local_file.kubeconfig.content
+#   sensitive   = true
+# }

@@ -12,7 +12,7 @@ terraform {
 * for passwordless SSH using the alias (e.g., ssh k8s-master-00).
 */
 resource "local_file" "ssh_config" {
-  content = templatefile("${path.root}/templates/ssh_config.tftpl", {
+  content = templatefile("${path.root}/../../templates/ssh_config.tftpl", {
     nodes                = var.all_nodes,
     ssh_user             = var.vm_username,
     ssh_private_key_path = var.ssh_private_key_path
@@ -34,13 +34,13 @@ resource "null_resource" "ssh_config_include" {
   }
 
   provisioner "local-exec" {
-    command     = ". ${path.root}/../scripts/utils_ssh.sh && integrate_ssh_config"
+    command     = ". ${path.root}/../../../scripts/utils_ssh.sh && integrate_ssh_config"
     interpreter = ["/bin/bash", "-c"]
   }
 
   provisioner "local-exec" {
     when        = destroy
-    command     = ". ${path.root}/../scripts/utils_ssh.sh && deintegrate_ssh_config"
+    command     = ". ${path.root}/../../../scripts/utils_ssh.sh && deintegrate_ssh_config"
     interpreter = ["/bin/bash", "-c"]
   }
 }
@@ -56,7 +56,7 @@ resource "null_resource" "prepare_ssh_access" {
     command     = <<-EOT
       set -e
       echo ">>> Verifying VM liveness and preparing SSH access..."
-      . ${path.root}/../scripts/utils_ssh.sh
+      . ${path.root}/../../../scripts/utils_ssh.sh
       bootstrap_ssh_known_hosts ${join(" ", [for node in var.all_nodes : node.ip])}
       echo ">>> Liveness check passed. SSH access is ready."
     EOT
@@ -68,7 +68,7 @@ resource "null_resource" "prepare_ssh_access" {
 * Generate the Ansible inventory file from template
 */
 resource "local_file" "inventory" {
-  content = templatefile("${path.root}/templates/inventory.yaml.tftpl", {
+  content = templatefile("${path.root}/../../templates/inventory.yaml.tftpl", {
     master_nodes      = [for node in var.all_nodes : node if startswith(node.key, "k8s-master")],
     worker_nodes      = [for node in var.all_nodes : node if startswith(node.key, "k8s-worker")],
     k8s_master_ips    = var.k8s_master_ips,
@@ -85,7 +85,7 @@ resource "null_resource" "provision_cluster" {
   depends_on = [null_resource.prepare_ssh_access, local_file.inventory]
   provisioner "local-exec" {
 
-    working_dir = abspath("${path.root}/../")
+    working_dir = abspath("${path.root}/../../../")
 
     /*
      * To avoid "(output suppressed due to sensitive value in config)" shown in terminal
@@ -103,3 +103,11 @@ resource "null_resource" "provision_cluster" {
     interpreter = ["/bin/bash", "-c"]
   }
 }
+
+# /*
+#  * Generate kubeconfig file after Ansible
+# */
+# data "local_file" "kubeconfig" {
+#   depends_on = [null_resource.provision_cluster]
+#   filename   = pathexpand("~/.kube/config")
+# }
