@@ -9,7 +9,16 @@ module "k8s_metric_server" {
   depends_on = [module.k8s_calico]
 }
 
-module "k8s_dashboard" {
-  source     = "../../modules/k8s-dashboard"
+module "k8s_ingress_nginx" {
+  source     = "../../modules/k8s-ingress-nginx"
   depends_on = [module.k8s_calico]
+}
+
+module "k8s_dashboard" {
+  source             = "../../modules/k8s-dashboard"
+  dashboard_hostname = "dashboard.k8s.local"
+  depends_on = [
+    module.k8s_calico,
+    module.k8s_ingress_nginx
+  ]
 }

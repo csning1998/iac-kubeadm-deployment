@@ -8,7 +8,7 @@ resource "helm_release" "kubernetes_dashboard" {
   chart            = "kubernetes-dashboard"
   namespace        = "kubernetes-dashboard"
   create_namespace = true
-  version          = "7.5.0"
+  version          = "7.12.0"
   cleanup_on_fail  = true
 }
 
@@ -46,6 +46,7 @@ resource "kubernetes_cluster_role_binding" "admin_user" {
 }
 
 # Create a Secret for ServiceAccount to store pernament Token
+### To-fix: `terraform output -raw dashboard_admin_token` mismatched with `kubectl -n kubernetes-dashboard create token admin-user` command from master node.
 resource "kubernetes_secret" "admin_user_token" {
   metadata {
     name      = "admin-user-token"
@@ -56,4 +57,40 @@ resource "kubernetes_secret" "admin_user_token" {
   }
   type       = "kubernetes.io/service-account-token"
   depends_on = [kubernetes_service_account.admin_user]
+}
+
+# The Ingress resources for kubernetes-dashboard
+resource "kubernetes_ingress_v1" "dashboard" {
+  metadata {
+    name      = "kubernetes-dashboard"
+    namespace = helm_release.kubernetes_dashboard.namespace
+    annotations = {
+      "nginx.ingress.kubernetes.io/backend-protocol" = "HTTPS"
+      "nginx.ingress.kubernetes.io/proxy-ssl-verify" = "off"
+    }
+  }
+
+  spec {
+    ingress_class_name = "nginx"
+    rule {
+      host = var.dashboard_hostname
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
+          backend {
+            service {
+              # The main traffic entry point is service/kubernetes-dashboard-kong-proxy, which listens on port 443/TCP
+              name = "${helm_release.kubernetes_dashboard.name}-kong-proxy"
+              port {
+                number = 443
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [helm_release.kubernetes_dashboard]
 }
