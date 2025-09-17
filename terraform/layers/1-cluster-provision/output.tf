@@ -3,11 +3,11 @@ output "ansible_log_path" {
   value       = module.ansible.ansible_log
 }
 
-# output "kubeconfig_content" {
-#   description = "The kubeconfig content for the cluster."
-#   value       = module.ansible.kubeconfig_content
-#   sensitive   = true
-# }
+output "kubeconfig_content" {
+  description = "The kubeconfig content for the cluster."
+  value       = module.ansible.kubeconfig_content
+  sensitive   = true
+}
 
 output "k8s_pod_subnet" {
   description = "The CIDR for the Pod network."

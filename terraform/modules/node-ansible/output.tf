@@ -17,9 +17,8 @@ output "ansible_log" {
   value       = "${var.ansible_path}/logs/ansible-latest.log"
 }
 
-# # The content of kubeconfig
-# output "kubeconfig_content" {
-#   description = "The content of the kubeconfig file."
-#   value       = data.local_file.kubeconfig.content
-#   sensitive   = true
-# }
+output "kubeconfig_content" {
+  description = "The content of the kubeconfig file."
+  value       = lookup(data.external.fetched_kubeconfig.result, "content", "kubeconfig-not-found")
+  sensitive   = true
+}
