@@ -19,10 +19,6 @@ locals {
   user    = one(local.kubeconfig.users)
 }
 
-resource "local_sensitive_file" "kubeconfig" {
-  content  = data.terraform_remote_state.cluster_provision.outputs.kubeconfig_content
-  filename = "${path.cwd}/.kubeconfig.yaml"
-}
 
 # Configure the Kubernetes provider using details from the remote state
 provider "kubernetes" {
@@ -35,7 +31,9 @@ provider "kubernetes" {
 # Configure the Helm provider to use the same Kubernetes provider settings
 provider "helm" {
   kubernetes = {
-    config_path = local_sensitive_file.kubeconfig.filename
+    host                   = local.cluster.cluster.server
+    cluster_ca_certificate = base64decode(local.cluster.cluster["certificate-authority-data"])
+    client_certificate     = base64decode(local.user.user["client-certificate-data"])
+    client_key             = base64decode(local.user.user["client-key-data"])
   }
 }
-
