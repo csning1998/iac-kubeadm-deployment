@@ -82,9 +82,10 @@ options+=("Reset Packer and Terraform")
 options+=("Rebuild Packer and Terraform")
 options+=("Rebuild Packer")
 options+=("Rebuild Terraform: All Stages")
-options+=("Rebuild Terraform Stage I: Configure Nodes")
-options+=("Rebuild Terraform Stage II: Ansible")
-options+=("[DEV] Rebuild Stage II via Ansible")
+options+=("Rebuild Terraform Stage I: KVM Provision")
+options+=("Rebuild Terraform Stage I: Ansible Bootstrapper")
+options+=("[DEV] Rebuild Stage I via Ansible Command")
+options+=("Rebuild Terraform Stage II: Kubernetes Addons")
 options+=("Verify SSH")
 options+=("Quit")
 
@@ -154,7 +155,7 @@ select opt in "${options[@]}"; do
       cleanup_packer_output
       build_packer
       reset_terraform_state
-      apply_terraform_all_stages
+      apply_terraform_10-cluster-provision
       report_execution_time
       echo "# Rebuild All workflow completed successfully."
       break
@@ -175,40 +176,50 @@ select opt in "${options[@]}"; do
       ensure_libvirt_services_running
       destroy_terraform_resources
       reset_terraform_state
-      apply_terraform_all_stages
+      apply_terraform_10-cluster-provision
+      apply_terraform_20-k8s-addons
       report_execution_time
       echo "# Rebuild Terraform workflow completed successfully."
       break
       ;;
-    "Rebuild Terraform Stage I: Configure Nodes")
-      echo "# Executing Rebuild Terraform Stage I workflow..."
+    "Rebuild Terraform Stage I: KVM Provision")
+      echo "# Executing Rebuild Terraform Stage I workflow on KVM Provisioner..."
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
       ensure_libvirt_services_running
       destroy_terraform_resources
       reset_terraform_state
-      apply_terraform_stage_I
+      apply_terraform_11-provisioner_kvm
       report_execution_time
-      echo "# Rebuild Terraform Stage I workflow completed successfully."
+      echo "# Rebuild Terraform Stage I KVM Provisioner workflow completed successfully."
       break
       ;;
-    "Rebuild Terraform Stage II: Ansible")
-      echo "# Executing Rebuild Terraform Stage II workflow..."
+    "Rebuild Terraform Stage I: Ansible Bootstrapper")
+      echo "# Executing Rebuild Terraform Stage I workflow on Ansible Bootstrapper..."
       if ! check_ssh_key_exists; then break; fi
       ensure_libvirt_services_running
-      apply_terraform_stage_II
+      apply_terraform_12-bootstrapper-ansible
       report_execution_time
-      echo "# Rebuild Terraform Stage II workflow completed successfully."
+      echo "# Rebuild Terraform Stage I Ansible Bootstrapper workflow completed successfully."
       break
       ;;
-    "[DEV] Rebuild Stage II via Ansible")
+    "[DEV] Rebuild Stage I via Ansible Command")
       echo "# Executing [DEV] Rebuild Stage II via Ansible..."
       if ! check_ssh_key_exists; then break; fi
       verify_ssh
       ensure_libvirt_services_running
       apply_ansible_stage_II
       report_execution_time
-      echo "# [DEV] Rebuild Stage II via Ansible completed successfully."
+      echo "# [DEV] Rebuild Stage I Ansible Bootstrapper via Ansible completed successfully."
+      break
+      ;;
+    "Rebuild Terraform Stage II: Kubernetes Addons")
+      echo "# Executing Rebuild Terraform Stage II workflow on Kubernetes Addons..."
+      verify_ssh
+      ensure_libvirt_services_running
+      apply_terraform_20-k8s-addons
+      report_execution_time
+      echo "#Rebuild Terraform Stage II Kubernetes Addons workflow completed successfully."
       break
       ;;
     "Verify SSH")
