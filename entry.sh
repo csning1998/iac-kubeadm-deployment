@@ -219,7 +219,7 @@ select opt in "${options[@]}"; do
       ensure_libvirt_services_running
       apply_terraform_20-k8s-addons
       report_execution_time
-      echo "#Rebuild Terraform Stage II Kubernetes Addons workflow completed successfully."
+      echo "# Rebuild Terraform Stage II Kubernetes Addons workflow completed successfully."
       break
       ;;
     "Verify SSH")
