@@ -1,10 +1,9 @@
 ---
 - name: "Play 1: Setup HA Load Balancer on all master nodes"
-  hosts: master
+  hosts: "{{ 'master' if (groups['master'] | length) > 1 else 'none' }}"
   become: true
   roles:
-    - role: 11-ha-loadbalancer
-      when: (groups['master'] | length) > 1
+    - 11-ha-loadbalancer
 
 - name: "Play 2: Initialize the primary master node"
   hosts: "{{ groups['master'][0] | default([]) }}"

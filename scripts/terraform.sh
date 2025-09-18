@@ -2,10 +2,13 @@
 
 # This script contains functions for managing Terraform resources.
 
+readonly layer_10="layers/10-cluster-provision"
+readonly layer_20="layers/20-k8s-addons"
+
 # Function: Reset Terraform state
 reset_terraform_state() {
   echo ">>> STEP: Resetting Terraform state..."
-  (cd "${TERRAFORM_DIR}" && rm -rf .terraform .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup)
+  (cd "${TERRAFORM_DIR}/${layer_10}" && rm -rf .terraform .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup)
   rm -rf "$HOME/.ssh/iac-kubeadm-deployment_config"
   echo "#### Terraform state reset."
   echo "--------------------------------------------------"
@@ -16,7 +19,7 @@ destroy_terraform_resources() {
   echo ">>> STEP: Destroying existing Terraform-managed VMs..."
 
   local cmd="terraform init -upgrade && terraform destroy -auto-approve -lock=false -var-file=./terraform.tfvars"
-  run_command "${cmd}" "${TERRAFORM_DIR}"
+  run_command "${cmd}" "${TERRAFORM_DIR}/${layer_10}"
 
   echo "#### Terraform destroy complete."
   echo "--------------------------------------------------"
@@ -24,24 +27,24 @@ destroy_terraform_resources() {
 
 ### The three functions below needs further refactor.
 
-# Function: Deploy Terraform Stage 1
-apply_terraform_stage_I() {
-  echo ">>> STEP: Initializing Terraform and applying VM configuration..."
+# Function: Provision guest VMs using KVM
+apply_terraform_11-provisioner_kvm() {
+  echo ">>> STEP: Initializing Terraform and provision guest VMs using KVM..."
   echo ">>> Stage I: Applying VM creation..."
 
   local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=./terraform.tfvars -target=module.provisioner_kvm"
-  run_command "${cmd}" "${TERRAFORM_DIR}"
+  run_command "${cmd}" "${TERRAFORM_DIR}/${layer_10}"
   echo "#### VM creation and SSH configuration complete."
   echo "--------------------------------------------------"
 }
 
-# Function: Deploy Terraform Stage 2
-apply_terraform_stage_II() {
+# Function: Bootstrapping a Kubernetes cluster
+apply_terraform_12-bootstrapper-ansible() {
   set -o pipefail
-  echo ">>> Stage II: Applying Ansible configuration with default parallelism..."
+  echo ">>> Stage II: Applying Ansible Bootstrapper on cluster..."
 
   local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=./terraform.tfvars -target=module.ansible"
-  run_command "${cmd}" "${TERRAFORM_DIR}"
+  run_command "${cmd}" "${TERRAFORM_DIR}/${layer_10}"
 
   echo "#### Saving Ansible playbook outputs to log files..."
   mkdir -p "${ANSIBLE_DIR}/logs"
@@ -61,13 +64,26 @@ apply_terraform_stage_II() {
   echo "--------------------------------------------------"
 }
 
-# Function: Deploy all Terraform stages without target
-apply_terraform_all_stages() {
-  echo ">>> STEP: Initializing Terraform and applying ALL configurations..."
+# Function: Perform Kubernetes cluster provision
+apply_terraform_10-cluster-provision() {
+  echo ">>> STEP: Initializing Terraform and perform Kubernetes cluster provision..."
 
   # Command without -target to apply the entire configuration
   local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=./terraform.tfvars"
-  run_command "${cmd}" "${TERRAFORM_DIR}"
+  (cd "${TERRAFORM_DIR}" && rm -rf .terraform .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup)
+  run_command "${cmd}" "${TERRAFORM_DIR}/${layer_10}"
+
+  echo "#### Full Terraform apply complete."
+  echo "--------------------------------------------------"
+}
+
+# Function: Provision Add-ons for Kubernetes cluster
+apply_terraform_20-k8s-addons() {
+  echo ">>> STEP: Initializing Terraform and applying ALL configurations..."
+
+  # Command without -target to apply the entire configuration
+  local cmd="terraform init -upgrade && terraform destroy -auto-approve && terraform init -upgrade && terraform apply -auto-approve"
+  run_command "${cmd}" "${TERRAFORM_DIR}/${layer_20}"
 
   echo "#### Full Terraform apply complete."
   echo "--------------------------------------------------"

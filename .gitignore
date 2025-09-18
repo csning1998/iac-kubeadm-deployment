@@ -1,13 +1,15 @@
 ### Ignore Packer and Terraform secret variable files
 packer/secret.auto.pkrvars.hcl
 *.tfvars
+.env
 
-
-### Ansible inventory
-ansible/group_vars/vault.yaml
+### Ansible
+.ansible
+ansible/group_vars/all.yaml
 ansible/logs
 ansible/inventory.yaml
 ansible/packer-provisioner-ansible*
+ansible/fetched/
 backup
 vault_pass.txt
 
@@ -50,6 +52,4 @@ vault/tls/
 
 # Only for recording by commit messages personally.
 commit-message.md
-ansible/group_vars/all.yaml
-.env
 *.bak

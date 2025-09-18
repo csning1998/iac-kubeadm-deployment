@@ -96,9 +96,17 @@
         owner: "{{ ansible_ssh_user }}"
         group: "{{ ansible_ssh_user }}"
         mode: "0644"
+
+- name: "Section D: Register kubeconfig content as a fact"
+  block:
+    - name: "Step 1. Fetch admin.conf to a predictable local path"
+      ansible.builtin.fetch:
+        src: /etc/kubernetes/admin.conf
+        dest: "{{ playbook_dir }}/../fetched/kubeconfig"
+        flat: yes # This removes the remote host directory structure
 ### For the purpose of testing cluster only.
 
-# - name: "Section D: Install Container Network Interface (CNI)"
+# - name: "Section E: Install Container Network Interface (CNI)"
 #   block:
 #     - name: "Step 1. Install the Tigera Calico operator"
 #       ansible.builtin.command: >-
