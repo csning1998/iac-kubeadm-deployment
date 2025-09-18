@@ -204,7 +204,7 @@ select opt in "${options[@]}"; do
       break
       ;;
     "[DEV] Rebuild Stage I via Ansible Command")
-      echo "# Executing [DEV] Rebuild Stage II via Ansible..."
+      echo "# Executing [DEV] Rebuild Stage I via Ansible Command..."
       if ! check_ssh_key_exists; then break; fi
       verify_ssh
       ensure_libvirt_services_running
