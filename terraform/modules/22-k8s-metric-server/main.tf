@@ -14,6 +14,7 @@ resource "helm_release" "metrics_server" {
   values = [
     # Allow the chart metrics-server to connect to the kubelet's metrics endpoint
     yamlencode({
+      # Will be fixed in the next PRs
       args = ["--kubelet-insecure-tls"]
     })
   ]

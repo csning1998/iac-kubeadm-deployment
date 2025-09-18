@@ -53,6 +53,7 @@ resource "kubernetes_ingress_v1" "dashboard" {
     namespace = helm_release.kubernetes_dashboard.namespace
     annotations = {
       "nginx.ingress.kubernetes.io/backend-protocol" = "HTTPS"
+      # Will be fixed in the next PRs
       "nginx.ingress.kubernetes.io/proxy-ssl-verify" = "off"
     }
   }
