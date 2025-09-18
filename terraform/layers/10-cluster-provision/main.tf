@@ -1,5 +1,5 @@
 module "provisioner_kvm" {
-  source = "../../modules/provisioner-kvm"
+  source = "../../modules/11-provisioner-kvm"
 
   all_nodes_map = local.all_nodes_map
 
@@ -14,7 +14,7 @@ module "provisioner_kvm" {
 }
 
 module "ansible" {
-  source = "../../modules/node-ansible"
+  source = "../../modules/12-bootstrapper-ansible"
 
   ansible_path = local.ansible_path
   vm_status    = module.provisioner_kvm.vm_status
