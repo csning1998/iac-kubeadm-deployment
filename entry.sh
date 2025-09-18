@@ -81,7 +81,7 @@ options+=("Switch Environment Strategy")
 options+=("Reset Packer and Terraform")
 options+=("Rebuild Packer and Terraform")
 options+=("Rebuild Packer")
-options+=("Rebuild Terraform: All Stages")
+options+=("Rebuild Terraform: Stages I All")
 options+=("Rebuild Terraform Stage I: KVM Provision")
 options+=("Rebuild Terraform Stage I: Ansible Bootstrapper")
 options+=("[DEV] Rebuild Stage I via Ansible Command")
@@ -169,15 +169,14 @@ select opt in "${options[@]}"; do
       report_execution_time
       break
       ;;
-    "Rebuild Terraform: All Stages")
-      echo "# Executing Rebuild Terraform workflow..."
+    "Rebuild Terraform: Stages I All")
+      echo "# Executing Rebuild Terraform Stage I workflow..."
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
       ensure_libvirt_services_running
       destroy_terraform_resources
       reset_terraform_state
       apply_terraform_10-cluster-provision
-      apply_terraform_20-k8s-addons
       report_execution_time
       echo "# Rebuild Terraform workflow completed successfully."
       break
