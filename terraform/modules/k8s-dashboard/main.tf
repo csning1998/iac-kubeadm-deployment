@@ -42,22 +42,7 @@ resource "kubernetes_cluster_role_binding" "admin_user" {
     namespace = kubernetes_service_account.admin_user.metadata[0].namespace
   }
 
-  depends_on = [kubernetes_service_account.admin_user]
-}
 
-# Create a Secret for ServiceAccount to store pernament Token
-### To-fix: `terraform output -raw dashboard_admin_token` mismatched with `kubectl -n kubernetes-dashboard create token admin-user` command from master node.
-resource "kubernetes_secret" "admin_user_token" {
-  metadata {
-    name      = "admin-user-token"
-    namespace = helm_release.kubernetes_dashboard.namespace
-    annotations = {
-      "kubernetes.io/service-account.name" = kubernetes_cluster_role_binding.admin_user.metadata[0].name
-    }
-  }
-  type       = "kubernetes.io/service-account-token"
-  depends_on = [kubernetes_service_account.admin_user]
-}
 
 # The Ingress resources for kubernetes-dashboard
 resource "kubernetes_ingress_v1" "dashboard" {
