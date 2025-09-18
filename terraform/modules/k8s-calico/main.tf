@@ -1,6 +1,6 @@
 
 # Create the tigera-operator namespace
-resource "kubernetes_namespace" "tigera_operator" {
+resource "kubernetes_namespace_v1" "tigera_operator" {
   metadata {
     name = "tigera-operator"
   }
@@ -11,7 +11,7 @@ resource "helm_release" "tigera_operator" {
   name             = "calico"
   repository       = "https://docs.tigera.io/calico/charts"
   chart            = "tigera-operator"
-  namespace        = kubernetes_namespace.tigera_operator.metadata[0].name
+  namespace        = kubernetes_namespace_v1.tigera_operator.metadata[0].name
   version          = "v3.28.0"
   create_namespace = false # The namespace is created explicitly above
   cleanup_on_fail  = true
@@ -38,6 +38,6 @@ resource "helm_release" "tigera_operator" {
   ]
 
   depends_on = [
-    kubernetes_namespace.tigera_operator
+    kubernetes_namespace_v1.tigera_operator
   ]
 }

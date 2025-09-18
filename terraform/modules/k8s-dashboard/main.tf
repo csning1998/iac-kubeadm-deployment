@@ -13,7 +13,7 @@ resource "helm_release" "kubernetes_dashboard" {
 }
 
 # Create a ServiceAccount for "admin-user"
-resource "kubernetes_service_account" "admin_user" {
+resource "kubernetes_service_account_v1" "admin_user" {
   metadata {
     name      = "admin-user"
     namespace = helm_release.kubernetes_dashboard.namespace
@@ -25,7 +25,7 @@ resource "kubernetes_service_account" "admin_user" {
 }
 
 # Create ClusterRoleBinding to bind "admin-user" as "cluster-admin"
-resource "kubernetes_cluster_role_binding" "admin_user" {
+resource "kubernetes_cluster_role_binding_v1" "admin_user" {
   metadata {
     name = "admin-user"
   }
@@ -38,10 +38,12 @@ resource "kubernetes_cluster_role_binding" "admin_user" {
 
   subject {
     kind      = "ServiceAccount"
-    name      = kubernetes_service_account.admin_user.metadata[0].name
-    namespace = kubernetes_service_account.admin_user.metadata[0].namespace
+    name      = kubernetes_service_account_v1.admin_user.metadata[0].name
+    namespace = kubernetes_service_account_v1.admin_user.metadata[0].namespace
   }
 
+  depends_on = [kubernetes_service_account_v1.admin_user]
+}
 
 
 # The Ingress resources for kubernetes-dashboard

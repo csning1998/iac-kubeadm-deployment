@@ -23,7 +23,7 @@ resource "helm_release" "ingress_nginx" {
 }
 
 # Search for Ingress NGINX Controller Service created by Helm Chart
-data "kubernetes_service" "ingress_nginx_controller" {
+data "kubernetes_service_v1" "ingress_nginx_controller" {
   metadata {
     name      = "${helm_release.ingress_nginx.name}-controller"
     namespace = helm_release.ingress_nginx.namespace
