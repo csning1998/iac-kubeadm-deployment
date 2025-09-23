@@ -9,8 +9,8 @@ cleanup_packer_output() {
   # --- Provider-Specific Cleanup ---
   # With keep_registered = false, Packer handles unregistering the VM.
   # We only need to delete the output directory from the filesystem.
-  rm -rf "${PACKER_DIR}/output/10-k8s-base"
-  rm -rf "${PACKER_DIR}/output/20-registry-base"
+  rm -rf "${PACKER_DIR}/output/10-registry-base"
+  rm -rf "${PACKER_DIR}/output/20-k8s-base"
 
   # --- Generic Packer Cache Cleanup ---
   if [ -d ~/.cache/packer ]; then

@@ -80,9 +80,9 @@ options+=("Unseal Vault")
 options+=("Switch Environment Strategy")
 options+=("Reset Packer and Terraform")
 options+=("Rebuild Packer and Terraform")
-options+=("Rebuild All (K8s Base Image + TF)")
-options+=("Rebuild Packer: K8s Base Image")
 options+=("Rebuild Packer: Registry Base Image")
+options+=("Rebuild Packer: K8s Base Image")
+options+=("Rebuild All (K8s Base Image + TF)")
 options+=("Rebuild Terraform: Stages I All")
 options+=("Rebuild Terraform Stage I: KVM Provision")
 options+=("Rebuild Terraform Stage I: Ansible Bootstrapper")
@@ -150,6 +150,24 @@ select opt in "${options[@]}"; do
       echo "# Reset All workflow completed successfully."
       break
       ;;
+    "Rebuild Packer: Registry Base Image")
+      echo "# Executing Rebuild Packer workflow for Registry Base Image..."
+      if ! check_ssh_key_exists; then break; fi
+      ensure_libvirt_services_running
+      cleanup_packer_output
+      build_packer "10-registry-base"
+      report_execution_time
+      break
+      ;;
+    "Rebuild Packer: K8s Base Image")
+      echo "# Executing Rebuild Packer workflow..."
+      if ! check_ssh_key_exists; then break; fi
+      ensure_libvirt_services_running
+      cleanup_packer_output
+      build_packer "20-k8s-base"
+      report_execution_time
+      break
+      ;;
     "Rebuild All (K8s Base Image + TF)")
       echo "# Executing Rebuild All workflow for Kubernetes..."
       if ! check_ssh_key_exists; then break; fi
@@ -160,18 +178,6 @@ select opt in "${options[@]}"; do
       apply_terraform_10-cluster-provision
       report_execution_time
       echo "# Rebuild All workflow completed successfully."
-      break
-      ;;
-    "Rebuild Packer: K8s Base Image")
-      echo "# Executing Rebuild Packer workflow..."
-      if ! check_ssh_key_exists; then break; fi
-      ensure_libvirt_services_running
-      cleanup_packer_output
-      build_packer "10-k8s-base"
-      report_execution_time
-      break
-      ;;
-      report_execution_time
       break
       ;;
     "Rebuild Terraform: Stages I All")

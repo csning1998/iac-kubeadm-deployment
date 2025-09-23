@@ -16,6 +16,10 @@ build {
     inventory_directory = "../../../ansible/"
     user                = local.ssh_username
 
+    groups = [
+      "20-k8s-base"
+    ]
+
     ansible_env_vars = [
       "ANSIBLE_CONFIG=../../../ansible.cfg"
     ]

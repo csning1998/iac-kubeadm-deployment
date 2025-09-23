@@ -1,18 +1,15 @@
 /*
  * Define the source of Vault data
 */
-/*
- * Define the source of Vault data
-*/
 locals {
   ssh_username        = vault("secret/data/iac-kubeadm-deployment/variables", "ssh_username")
   ssh_password        = vault("secret/data/iac-kubeadm-deployment/variables", "ssh_password")
   ssh_password_hash   = vault("secret/data/iac-kubeadm-deployment/variables", "ssh_password_hash")
   ssh_public_key_path = vault("secret/data/iac-kubeadm-deployment/variables", "ssh_public_key_path")
-  vm_hostname         = "${var.vm_name}-20-registry-base"
+  vm_hostname         = "${var.vm_name}-20-k8s-base"
 }
 
-source "qemu" "ubuntu-server-registry" {
+source "qemu" "ubuntu-server" {
 
   # Guest OS & VM Naming
   vm_name = "${local.vm_hostname}.qcow2"
@@ -57,8 +54,8 @@ source "qemu" "ubuntu-server-registry" {
     "<f10>"
   ]
 
-  vnc_port_min = "5998"
-  vnc_port_max = "5998"
+  vnc_port_min = "5999"
+  vnc_port_max = "5999"
 
   # SSH Configuration for Provisioning
   ssh_username = local.ssh_username
@@ -67,6 +64,6 @@ source "qemu" "ubuntu-server-registry" {
 
   # Shutdown Command
   shutdown_command = "sudo shutdown -P now"
-  output_directory = "../../output/20-registry-base"
+  output_directory = "../../output/20-k8s-base"
   format           = "qcow2"
 }
