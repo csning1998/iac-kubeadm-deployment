@@ -6,12 +6,13 @@ locals {
   ssh_password        = vault("secret/data/iac-kubeadm-deployment/variables", "ssh_password")
   ssh_password_hash   = vault("secret/data/iac-kubeadm-deployment/variables", "ssh_password_hash")
   ssh_public_key_path = vault("secret/data/iac-kubeadm-deployment/variables", "ssh_public_key_path")
+  vm_hostname         = "${var.vm_name}-10-k8s-base"
 }
 
 source "qemu" "ubuntu-server" {
 
   # Guest OS & VM Naming
-  vm_name = "${var.vm_name}-qemu.qcow2"
+  vm_name = "${local.vm_hostname}.qcow2"
 
   # ISO Configuration
   iso_url      = var.iso_url
@@ -35,6 +36,7 @@ source "qemu" "ubuntu-server" {
   http_directory = "../../http"
   cd_content = {
     "/user-data" = templatefile("${path.root}/../../http/user-data", {
+      hostname      = local.vm_hostname
       username      = local.ssh_username
       password_hash = local.ssh_password_hash
     })

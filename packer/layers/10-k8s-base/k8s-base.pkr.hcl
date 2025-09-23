@@ -21,7 +21,7 @@ build {
     ]
 
     extra_arguments = [
-      "--extra-vars", "expected_hostname=${var.vm_name}",
+      "--extra-vars", "expected_hostname=${local.vm_hostname}",
       "--extra-vars", "public_key_file=${local.ssh_public_key_path}",
       "--extra-vars", "ssh_user=${local.ssh_username}",
       "--extra-vars", "ansible_ssh_transfer_method=piped",

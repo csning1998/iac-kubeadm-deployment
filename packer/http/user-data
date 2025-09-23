@@ -21,7 +21,7 @@ autoinstall:
 
   # User and Hostname Configuration
   identity:
-    hostname: ubuntu-server-k8s-based
+    hostname: ${hostname}
     username: ${username}
     password: ${password_hash}
 
