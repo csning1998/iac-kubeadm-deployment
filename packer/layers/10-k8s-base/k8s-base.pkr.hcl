@@ -12,12 +12,12 @@ build {
 
   # The Ansible provisioner block is used by all builders.
   provisioner "ansible" {
-    playbook_file       = "../ansible/playbooks/00-provision-base-image.yaml"
-    inventory_directory = "../ansible/"
+    playbook_file       = "../../../ansible/playbooks/00-provision-base-image.yaml"
+    inventory_directory = "../../../ansible/"
     user                = local.ssh_username
 
     ansible_env_vars = [
-      "ANSIBLE_CONFIG=../ansible.cfg"
+      "ANSIBLE_CONFIG=../../../ansible.cfg"
     ]
 
     extra_arguments = [

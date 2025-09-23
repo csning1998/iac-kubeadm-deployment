@@ -9,7 +9,7 @@ cleanup_packer_output() {
   # --- Provider-Specific Cleanup ---
   # With keep_registered = false, Packer handles unregistering the VM.
   # We only need to delete the output directory from the filesystem.
-  rm -rf "${PACKER_DIR}/output/ubuntu-server-qemu"
+  rm -rf "${PACKER_DIR}/layers/10-k8s-base/output"
 
   # --- Generic Packer Cache Cleanup ---
   if [ -d ~/.cache/packer ]; then
@@ -25,15 +25,27 @@ cleanup_packer_output() {
 
 # Function: Execute Packer build
 build_packer() {
-  echo ">>> STEP: Starting new Packer build..."
+  
+  local layer_name="$1"
+  if [ -z "$layer_name" ]; then
+    echo "FATAL: No Packer layer specified for build_packer function." >&2
+    return 1
+  fi
+
+  local layer_dir="${PACKER_DIR}/layers/${layer_name}"
+  if [ ! -d "$layer_dir" ]; then
+    echo "FATAL: Packer layer directory not found: ${layer_dir}" >&2
+    return 1
+  fi
+
+  echo ">>> STEP: Starting new Packer build for layer [${layer_name}]..."
 
   local cmd="packer init . && packer build \
-    -var-file=common.pkrvars.hcl \
-    ."
+    -var-file=../../values.pkrvars.hcl ."
   # Add this to abort and debug if packer build failed.
   # -on-error=abort \ 
 
-  run_command "${cmd}" "${PACKER_DIR}"
+  run_command "${cmd}" "${layer_dir}"
 
   echo "#### Packer build complete. New base image is ready."
   echo "--------------------------------------------------"

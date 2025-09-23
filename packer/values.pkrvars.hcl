@@ -1,5 +1,4 @@
-
-vm_name = "ubuntu-server-k8s-based"
+# This file provides default values for common variables.
 
 /*
 The latest version is available at https://cdimage.ubuntu.com/ubuntu/releases/24.04/release/ , 

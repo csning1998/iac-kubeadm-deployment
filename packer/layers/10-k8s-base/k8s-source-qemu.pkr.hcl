@@ -32,13 +32,13 @@ source "qemu" "ubuntu-server" {
 
   headless = true
 
-  http_directory = "http"
+  http_directory = "../../http"
   cd_content = {
-    "/user-data" = templatefile("${path.root}/http/user-data", {
+    "/user-data" = templatefile("${path.root}/../../http/user-data", {
       username      = local.ssh_username
       password_hash = local.ssh_password_hash
     })
-    "/meta-data" = file("${path.root}/http/meta-data")
+    "/meta-data" = file("${path.root}/../../http/meta-data")
   }
   cd_label = "cidata"
 
@@ -62,6 +62,6 @@ source "qemu" "ubuntu-server" {
 
   # Shutdown Command
   shutdown_command = "sudo shutdown -P now"
-  output_directory = "output/ubuntu-server-qemu"
+  output_directory = "../../output/10-k8s-base"
   format           = "qcow2"
 }
