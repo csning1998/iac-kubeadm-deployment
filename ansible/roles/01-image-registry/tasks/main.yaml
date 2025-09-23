@@ -1,51 +1,6 @@
 ---
-- name: "Step 1. Install prerequisites for Docker repository"
-  ansible.builtin.apt:
-    name:
-      - apt-transport-https
-      - ca-certificates
-      - curl
-      - gnupg-agent
-      - software-properties-common
-    state: present
-    update_cache: true
+- name: Section A. Set up Docker Environment
+  ansible.builtin.include_tasks: A-docker-environment.yaml
 
-- name: "Step 2. Create directory for Docker GPG key"
-  ansible.builtin.file:
-    path: /etc/apt/keyrings
-    state: directory
-    mode: "0755"
-
-- name: "Step 3. Add Docker's official GPG key"
-  ansible.builtin.get_url:
-    url: https://download.docker.com/linux/ubuntu/gpg
-    dest: /etc/apt/keyrings/docker.asc
-    mode: "a+r"
-
-- name: "Step 4. Add Docker's APT repository"
-  ansible.builtin.apt_repository:
-    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
-    state: present
-
-- name: "Step 5. Install Docker Engine and related packages"
-  ansible.builtin.apt:
-    name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      - docker-buildx-plugin
-      - docker-compose-plugin
-    state: present
-    update_cache: true
-
-- name: "Step 6. Add user to the 'docker' group"
-  ansible.builtin.user:
-    name: "{{ ansible_user }}"
-    groups: docker
-    append: true
-
-- name: "Step 7. Verify Docker installation"
-  ansible.builtin.command:
-    cmd: "docker run hello-world"
-  become: true
-  changed_when: false
+- name: Section B. Sey up Docker Registry Image
+  ansible.builtin.include_tasks: B-registry-image.yaml
