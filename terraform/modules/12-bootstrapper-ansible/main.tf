@@ -69,13 +69,13 @@ resource "null_resource" "prepare_ssh_access" {
 */
 resource "local_file" "inventory" {
   content = templatefile("${path.root}/../../templates/inventory.yaml.tftpl", {
-    master_nodes      = [for node in var.all_nodes : node if startswith(node.key, "k8s-master")],
-    worker_nodes      = [for node in var.all_nodes : node if startswith(node.key, "k8s-worker")],
-    k8s_master_ips    = var.k8s_master_ips,
-    k8s_ha_virtual_ip = var.k8s_ha_virtual_ip,
-    k8s_pod_subnet    = var.k8s_pod_subnet,
-    ansible_ssh_user  = var.vm_username,
-    nat_subnet_prefix = var.nat_subnet_prefix
+    master_nodes          = [for node in var.all_nodes : node if startswith(node.key, "k8s-master")],
+    worker_nodes          = [for node in var.all_nodes : node if startswith(node.key, "k8s-worker")],
+    k8s_master_ips        = var.k8s_master_ips,
+    k8s_ha_virtual_ip     = var.k8s_ha_virtual_ip,
+    k8s_pod_subnet        = var.k8s_pod_subnet,
+    ansible_ssh_user      = var.vm_username,
+    k8s_pod_subnet_prefix = var.k8s_pod_subnet_prefix
   })
   filename        = "${var.ansible_path}/inventory.yaml"
   file_permission = "0644"

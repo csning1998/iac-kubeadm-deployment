@@ -20,10 +20,10 @@ data "local_file" "ssh_public_key" {
 }
 
 resource "libvirt_network" "nat_net" {
-  name      = var.nat_network_name
+  name      = var.libvirt_nat_network_name
   mode      = "nat"
   bridge    = "virbr_nat" # Avoid conflict with default virbr0 on the Host
-  addresses = [var.nat_network_cidr]
+  addresses = [var.libvirt_nat_network_cidr]
   dhcp {
     enabled = true
   }
@@ -33,10 +33,10 @@ resource "libvirt_network" "nat_net" {
 }
 
 resource "libvirt_network" "hostonly_net" {
-  name      = var.hostonly_network_name
+  name      = var.libvirt_hostonly_network_name
   mode      = "nat" # Use NAT to enable DHCP and DNS
   bridge    = "virbr_hostonly"
-  addresses = [var.hostonly_network_cidr]
+  addresses = [var.libvirt_hostonly_network_cidr]
   dhcp {
     enabled = true
   }
@@ -46,7 +46,7 @@ resource "libvirt_network" "hostonly_net" {
 }
 
 resource "libvirt_pool" "kube_pool" {
-  name = "iac-kubeadm"
+  name = var.libvirt_storage_pool_name
   type = "dir"
   target {
     path = abspath("/var/lib/libvirt/images")
@@ -60,7 +60,7 @@ resource "libvirt_volume" "os_disk" {
   for_each = var.all_nodes_map
   name     = "${each.key}-os.qcow2"
   pool     = libvirt_pool.kube_pool.name
-  source   = var.qemu_base_image_path
+  source   = var.libvirt_vm_base_image_path
   format   = "qcow2"
 }
 
@@ -85,6 +85,8 @@ resource "libvirt_domain" "nodes" {
 
   for_each = var.all_nodes_map
 
+  autostart = false # Set to true to start the domain on host boot up. If not specified false is assumed.
+
   name   = each.key
   memory = each.value.ram
   vcpu   = each.value.vcpu
@@ -93,7 +95,7 @@ resource "libvirt_domain" "nodes" {
 
   network_interface {
     network_name = libvirt_network.nat_net.name
-    addresses    = ["${var.nat_subnet_prefix}.${split(".", each.value.ip)[3]}"]
+    addresses    = ["${var.libvirt_nat_network_subnet_prefix}.${split(".", each.value.ip)[3]}"]
   }
 
   network_interface {

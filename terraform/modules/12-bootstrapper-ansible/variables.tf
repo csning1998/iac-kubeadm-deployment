@@ -47,7 +47,7 @@ variable "k8s_pod_subnet" {
   type        = string
 }
 
-variable "nat_subnet_prefix" {
+variable "k8s_pod_subnet_prefix" {
   description = "The subnet prefix for the NAT network, used for interface discovery."
   type        = string
 }
