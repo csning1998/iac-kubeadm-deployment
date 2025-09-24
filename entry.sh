@@ -144,7 +144,8 @@ select opt in "${options[@]}"; do
       echo "# Executing Reset All workflow..."
       purge_libvirt_resources
       destroy_terraform_resources
-      cleanup_packer_output
+      cleanup_packer_output "10-registry-base"
+      cleanup_packer_output "20-k8s-base"
       reset_terraform_state
       report_execution_time
       echo "# Reset All workflow completed successfully."
@@ -154,7 +155,7 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild Packer workflow for Registry Base Image..."
       if ! check_ssh_key_exists; then break; fi
       ensure_libvirt_services_running
-      cleanup_packer_output
+      cleanup_packer_output "10-registry-base"
       build_packer "10-registry-base"
       report_execution_time
       break
@@ -163,7 +164,7 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild Packer workflow..."
       if ! check_ssh_key_exists; then break; fi
       ensure_libvirt_services_running
-      cleanup_packer_output
+      cleanup_packer_output "20-k8s-base"
       build_packer "20-k8s-base"
       report_execution_time
       break
@@ -172,8 +173,8 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild All workflow for Kubernetes..."
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
-      cleanup_packer_output
-      build_packer "10-k8s-base"
+      cleanup_packer_output "20-k8s-base"
+      build_packer "20-k8s-base"
       reset_terraform_state
       apply_terraform_10-cluster-provision
       report_execution_time
