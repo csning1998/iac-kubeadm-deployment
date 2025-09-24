@@ -1,10 +1,10 @@
 ---
 all:
   vars:
-    k8s_master_ips: ${jsonencode(k8s_master_ips)}  # List of Master nodes for process 12 and 13 in ansible/roles/ 
-    k8s_ha_virtual_ip: "${k8s_ha_virtual_ip}"  # The virtual IP address for the Kubernetes API server load balancer. 
-    k8s_pod_subnet: "${k8s_pod_subnet}"  # The CIDR block for the Kubernetes pod network.
-    k8s_nat_subnet_prefix: "${k8s_pod_subnet_prefix}"  # The first three octets of the NAT subnet.
+    k8s_master_ips: ${jsonencode(extra_vars.k8s_master_ips)}  # List of Master nodes for process 12 and 13 in ansible/roles/ 
+    k8s_ha_virtual_ip: "${extra_vars.k8s_ha_virtual_ip}"  # The virtual IP address for the Kubernetes API server load balancer. 
+    k8s_pod_subnet: "${extra_vars.k8s_pod_subnet}"  # The CIDR block for the Kubernetes pod network.
+    k8s_nat_subnet_prefix: "${extra_vars.k8s_pod_subnet_prefix}"  # The first three octets of the NAT subnet.
     ansible_ssh_user: "${ansible_ssh_user}"  # Username for SSH access to the VMs
 
   children:

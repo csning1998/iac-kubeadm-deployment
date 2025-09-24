@@ -13,9 +13,9 @@ terraform {
 */
 resource "local_file" "ssh_config" {
   content = templatefile("${path.root}/../../templates/ssh_config.tftpl", {
-    nodes                = var.all_nodes,
-    ssh_user             = var.vm_username,
-    ssh_private_key_path = var.ssh_private_key_path
+    nodes                = var.inventory.nodes,
+    ssh_user             = var.vm_credentials.username,
+    ssh_private_key_path = var.vm_credentials.ssh_private_key_path
   })
   filename        = pathexpand("~/.ssh/iac-kubeadm-deployment_config")
   file_permission = "0600"
@@ -50,14 +50,14 @@ resource "null_resource" "ssh_config_include" {
 * in "configure_nodes" has completed for all nodes.
 */
 resource "null_resource" "prepare_ssh_access" {
-  depends_on = [var.vm_status, null_resource.ssh_config_include]
+  depends_on = [null_resource.ssh_config_include]
 
   provisioner "local-exec" {
     command     = <<-EOT
       set -e
       echo ">>> Verifying VM liveness and preparing SSH access..."
       . ${path.root}/../../../scripts/utils_ssh.sh
-      bootstrap_ssh_known_hosts ${join(" ", [for node in var.all_nodes : node.ip])}
+      bootstrap_ssh_known_hosts ${join(" ", [for node in var.inventory.nodes : node.ip])}
       echo ">>> Liveness check passed. SSH access is ready."
     EOT
     interpreter = ["/bin/bash", "-c"]
@@ -69,15 +69,12 @@ resource "null_resource" "prepare_ssh_access" {
 */
 resource "local_file" "inventory" {
   content = templatefile("${path.root}/../../templates/inventory.yaml.tftpl", {
-    master_nodes          = [for node in var.all_nodes : node if startswith(node.key, "k8s-master")],
-    worker_nodes          = [for node in var.all_nodes : node if startswith(node.key, "k8s-worker")],
-    k8s_master_ips        = var.k8s_master_ips,
-    k8s_ha_virtual_ip     = var.k8s_ha_virtual_ip,
-    k8s_pod_subnet        = var.k8s_pod_subnet,
-    ansible_ssh_user      = var.vm_username,
-    k8s_pod_subnet_prefix = var.k8s_pod_subnet_prefix
+    master_nodes     = [for node in var.inventory.nodes : node if startswith(node.key, "k8s-master")],
+    worker_nodes     = [for node in var.inventory.nodes : node if startswith(node.key, "k8s-worker")],
+    ansible_ssh_user = var.vm_credentials.username,
+    extra_vars       = var.ansible_config.extra_vars
   })
-  filename        = "${var.ansible_path}/inventory.yaml"
+  filename        = "${var.ansible_config.root_path}/inventory.yaml"
   file_permission = "0644"
 }
 
@@ -96,15 +93,15 @@ resource "null_resource" "provision_cluster" {
     */
     command = <<-EOT
       set -e
-      rm -f ${var.ansible_path}/fetched/kubeconfig
-      mkdir -p ${var.ansible_path}/fetched
+      rm -f ${var.ansible_config.root_path}/fetched/kubeconfig
+      mkdir -p ${var.ansible_config.root_path}/fetched
 
       ansible-playbook \
-        -i ${var.ansible_path}/inventory.yaml \
-        --private-key ${nonsensitive(var.ssh_private_key_path)} \
-        --extra-vars "ansible_ssh_user=${nonsensitive(var.vm_username)}" \
+        -i ${var.ansible_config.root_path}/inventory.yaml \
+        --private-key ${nonsensitive(var.vm_credentials.ssh_private_key_path)} \
+        --extra-vars "ansible_ssh_user=${nonsensitive(var.vm_credentials.username)}" \
         -v \
-        ${var.ansible_path}/playbooks/10-provision-cluster.yaml
+        ${var.ansible_config.root_path}/playbooks/10-provision-cluster.yaml
     EOT
 
     interpreter = ["/bin/bash", "-c"]
@@ -119,7 +116,7 @@ data "external" "fetched_kubeconfig" {
   depends_on = [null_resource.provision_cluster]
   program = ["/bin/bash", "-c", <<-EOT
     set -e
-    KUBECONFIG_PATH="${var.ansible_path}/fetched/kubeconfig"
+    KUBECONFIG_PATH="${var.ansible_config.root_path}/fetched/kubeconfig"
     if [ ! -f "$KUBECONFIG_PATH" ]; then
       echo '{}'
       exit 0

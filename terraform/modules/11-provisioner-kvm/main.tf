@@ -16,14 +16,15 @@ provider "libvirt" {
 }
 
 data "local_file" "ssh_public_key" {
-  filename = pathexpand(var.ssh_public_key_path)
+  filename = pathexpand(var.credentials.ssh_public_key_path)
 }
 
 resource "libvirt_network" "nat_net" {
-  name      = var.libvirt_nat_network_name
+  # name      = var.libvirt_nat_network_name
+  name      = var.libvirt_infrastructure.network.nat.name
   mode      = "nat"
   bridge    = "virbr_nat" # Avoid conflict with default virbr0 on the Host
-  addresses = [var.libvirt_nat_network_cidr]
+  addresses = [var.libvirt_infrastructure.network.nat.cidr]
   dhcp {
     enabled = true
   }
@@ -33,10 +34,10 @@ resource "libvirt_network" "nat_net" {
 }
 
 resource "libvirt_network" "hostonly_net" {
-  name      = var.libvirt_hostonly_network_name
+  name      = var.libvirt_infrastructure.network.hostonly.name
   mode      = "nat" # Use NAT to enable DHCP and DNS
   bridge    = "virbr_hostonly"
-  addresses = [var.libvirt_hostonly_network_cidr]
+  addresses = [var.libvirt_infrastructure.network.hostonly.cidr]
   dhcp {
     enabled = true
   }
@@ -46,7 +47,7 @@ resource "libvirt_network" "hostonly_net" {
 }
 
 resource "libvirt_pool" "kube_pool" {
-  name = var.libvirt_storage_pool_name
+  name = var.libvirt_infrastructure.storage_pool_name
   type = "dir"
   target {
     path = abspath("/var/lib/libvirt/images")
@@ -57,10 +58,10 @@ resource "libvirt_volume" "os_disk" {
 
   depends_on = [libvirt_pool.kube_pool]
 
-  for_each = var.all_nodes_map
+  for_each = var.vm_config.all_nodes_map
   name     = "${each.key}-os.qcow2"
   pool     = libvirt_pool.kube_pool.name
-  source   = var.libvirt_vm_base_image_path
+  source   = var.vm_config.base_image_path
   format   = "qcow2"
 }
 
@@ -68,13 +69,13 @@ resource "libvirt_cloudinit_disk" "cloud_init" {
 
   depends_on = [libvirt_pool.kube_pool]
 
-  for_each = var.all_nodes_map
+  for_each = var.vm_config.all_nodes_map
   name     = "${each.key}-cloud-init.iso"
   pool     = libvirt_pool.kube_pool.name
   user_data = templatefile("${path.root}/../../templates/user_data.tftpl", {
     hostname       = each.key
-    vm_username    = var.vm_username
-    vm_password    = var.vm_password
+    vm_username    = var.credentials.username
+    vm_password    = var.credentials.password
     ssh_public_key = data.local_file.ssh_public_key.content
   })
 
@@ -83,7 +84,7 @@ resource "libvirt_cloudinit_disk" "cloud_init" {
 
 resource "libvirt_domain" "nodes" {
 
-  for_each = var.all_nodes_map
+  for_each = var.vm_config.all_nodes_map
 
   autostart = false # Set to true to start the domain on host boot up. If not specified false is assumed.
 
@@ -95,7 +96,7 @@ resource "libvirt_domain" "nodes" {
 
   network_interface {
     network_name = libvirt_network.nat_net.name
-    addresses    = ["${var.libvirt_nat_network_subnet_prefix}.${split(".", each.value.ip)[3]}"]
+    addresses    = ["${var.libvirt_infrastructure.network.nat.subnet_prefix}.${split(".", each.value.ip)[3]}"]
   }
 
   network_interface {
