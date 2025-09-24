@@ -68,42 +68,17 @@ resource "libvirt_cloudinit_disk" "cloud_init" {
 
   depends_on = [libvirt_pool.kube_pool]
 
-  for_each       = var.all_nodes_map
-  name           = "${each.key}-cloud-init.iso"
-  pool           = libvirt_pool.kube_pool.name
-  user_data      = data.template_file.user_data[each.key].rendered
-  network_config = data.template_file.network_config[each.key].rendered
-}
-
-data "template_file" "user_data" {
   for_each = var.all_nodes_map
+  name     = "${each.key}-cloud-init.iso"
+  pool     = libvirt_pool.kube_pool.name
+  user_data = templatefile("${path.root}/../../templates/user_data.tftpl", {
+    hostname       = each.key
+    vm_username    = var.vm_username
+    vm_password    = var.vm_password
+    ssh_public_key = data.local_file.ssh_public_key.content
+  })
 
-  template = <<-EOT
-    #cloud-config
-    hostname: ${each.key}
-    manage_etc_hosts: true
-    users:
-      - name: ${var.vm_username}
-        passwd: "${var.vm_password}"
-        lock_passwd: false
-        sudo: ['ALL=(ALL) NOPASSWD:ALL']
-        ssh_authorized_keys:
-          - ${data.local_file.ssh_public_key.content}
-  EOT
-}
-
-data "template_file" "network_config" {
-  for_each = var.all_nodes_map
-  template = <<-EOT
-    #cloud-config
-    version: 2
-    renderer: networkd
-    ethernets:
-      all_interfaces:
-        match:
-          name: en*
-        dhcp4: true
-  EOT
+  network_config = templatefile("${path.root}/../../templates/network_config.tftpl", {})
 }
 
 resource "libvirt_domain" "nodes" {
