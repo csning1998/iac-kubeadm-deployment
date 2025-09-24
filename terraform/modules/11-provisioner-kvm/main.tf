@@ -105,10 +105,19 @@ resource "libvirt_domain" "nodes" {
     volume_id = libvirt_volume.os_disk[each.key].id
   }
 
+  # Serial console (ttyS0), often used for basic interaction and debugging.
   console {
     type        = "pty"
     target_port = "0"
     target_type = "serial"
+  }
+
+  # Virtio console (hvc0), expected by modern cloud-init versions to avoid startup hangs.
+  # This is the critical fix: https://bugs.launchpad.net/cloud-images/+bug/1573095
+  console {
+    type        = "pty"
+    target_type = "virtio"
+    target_port = "1"
   }
 
   graphics {
