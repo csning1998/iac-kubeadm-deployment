@@ -7,22 +7,22 @@ locals {
   ssh_public_key_path = vault("secret/data/iac-kubeadm-deployment/variables", "ssh_public_key_path")
 
   # The final hostname is dynamically composed from variables.
-  final_vm_name = "${var.vm_name}-${var.build_name_suffix}"
+  final_vm_name = "${var.common_spec.vm_name}-${var.build_spec.suffix}"
 }
 
 source "qemu" "ubuntu" {
   # --- Dynamic Settings from Variables ---
   vm_name          = local.final_vm_name
-  output_directory = "./output/${var.build_name_suffix}"
-  vnc_port_min     = var.vnc_port
-  vnc_port_max     = var.vnc_port
+  output_directory = "./output/${var.build_spec.suffix}"
+  vnc_port_min     = var.build_spec.vnc_port
+  vnc_port_max     = var.build_spec.vnc_port
 
   # --- Common Settings from Variables ---
-  iso_url      = var.iso_url
-  iso_checksum = var.iso_checksum
-  cpus         = var.cpus
-  memory       = var.memory
-  disk_size    = var.disk_size
+  iso_url      = var.common_spec.iso_url
+  iso_checksum = var.common_spec.iso_checksum
+  cpus         = var.common_spec.cpus
+  memory       = var.common_spec.memory
+  disk_size    = var.common_spec.disk_size
 
   # --- Common Hardcoded Settings ---
   disk_interface = "virtio"

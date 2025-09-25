@@ -1,9 +1,10 @@
 
 # This file defines the variables for building the 'k8s-base' (cluster) image.
 
-build_name_suffix = "20-k8s-base"
-
-vnc_port = 5999
+build_spec = {
+  suffix   = "20-k8s-base"
+  vnc_port = 5999
+}
 
 # The following common variables are inherited from the main 'values.pkrvars.hcl'
 # but could be overridden here if needed for a specific build.

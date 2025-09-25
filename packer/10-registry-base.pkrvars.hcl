@@ -1,9 +1,10 @@
 
 # This file defines the variables for building the 'registry-base' image.
 
-build_name_suffix = "10-registry-base"
-
-vnc_port = 5998
+build_spec = {
+  suffix   = "10-registry-base"
+  vnc_port = 5998
+}
 
 # The following common variables are inherited from the main 'values.pkrvars.hcl'
 # but could be overridden here if needed for a specific build.

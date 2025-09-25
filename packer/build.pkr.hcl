@@ -20,7 +20,7 @@ build {
 
     # Ansible group is dynamically set by a variable.
     groups = [
-      var.build_name_suffix
+      var.build_spec.suffix
     ]
     ansible_env_vars = [
       "ANSIBLE_CONFIG=../ansible.cfg"
