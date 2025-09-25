@@ -1,63 +1,50 @@
 
-### Variables to Configure IP Addresses for Master Node(s) and Worker Nodes. 
+# Kubernetes Cluster Topology & Configuration
 
-variable "node_configs" {
+variable "k8s_cluster_config" {
   description = "Define all nodes including virtual hardware resources"
   type = object({
-    masters = list(object({
-      ip   = string
-      vcpu = number
-      ram  = number
-    }))
-    workers = list(object({
-      ip   = string
-      vcpu = number
-      ram  = number
-    }))
+    nodes = object({
+      masters = list(object({
+        ip   = string
+        vcpu = number
+        ram  = number
+      }))
+      workers = list(object({
+        ip   = string
+        vcpu = number
+        ram  = number
+      }))
+    })
+    base_image_path = optional(string, "../../../packer/output/20-k8s-base/ubuntu-server-24-20-k8s-base.qcow2")
+    ha_virtual_ip   = string
+    pod_subnet      = optional(string, "10.244.0.0/16")
   })
 
   validation {
-    condition     = length(var.node_configs.masters) % 2 != 0
+    condition     = length(var.k8s_cluster_config.nodes.masters) % 2 != 0
     error_message = "The number of master nodes must be an odd number (1, 3, 5, etc.) to ensure a stable etcd quorum."
   }
 }
 
-# Automatically set the variable for Terraform VMs
+# Kubernetes Cluster Infrastructure Network Configuration
 
-variable "nat_gateway" {
-  description = "The gateway IP address for the NAT network (vmnet8)."
-  type        = string
-}
+variable "cluster_infrastructure" {
+  description = "All Libvirt-level infrastructure configurations for the Kuberentes Cluster."
+  type = object({
+    network = object({
+      nat = object({
+        name        = string
+        cidr        = string
+        bridge_name = string
 
-variable "nat_subnet_prefix" {
-  description = "The first three octets of the NAT subnet (e.g., '172.16.86')."
-  type        = string
-}
-
-variable "k8s_ha_virtual_ip" {
-  description = "The virtual IP address for the Kubernetes API server load balancer."
-  type        = string
-}
-
-variable "k8s_pod_subnet" {
-  description = "The CIDR block for the Kubernetes pod network."
-  type        = string
-}
-
-variable "qemu_base_image_path" {
-  description = "Path to the Packer-built qcow2 image for KVM"
-  type        = string
-  default     = "../../../packer/output/ubuntu-server-qemu/ubuntu-server-k8s-based-qemu.qcow2"
-}
-
-variable "hostonly_network_name" {
-  description = "Name for the Host-only libvirt network"
-  type        = string
-  default     = "iac-kubeadm-hostonly-net"
-}
-
-variable "kvm_hostonly_cidr" {
-  description = "CIDR for the KVM host-only network, should match the subnet of master/worker IPs"
-  type        = string
-  default     = "172.16.134.0/24"
+      })
+      hostonly = object({
+        name        = string
+        cidr        = string
+        bridge_name = string
+      })
+    })
+    storage_pool_name = optional(string, "iac-kubeadm")
+  })
 }

@@ -1,62 +1,49 @@
-variable "all_nodes_map" {
-  description = "Definitions of all nodes passed in from the root module"
-  type = map(object({
-    ip   = string
-    vcpu = number
-    ram  = number
-  }))
+
+/** 
+ * Virtual Machine Configuration
+ * Variables defining the specifications and credentials for the VMs.
+*/
+
+# Module-level variable definitions
+
+variable "vm_config" {
+  description = "All configurations related to the virtual machines being provisioned."
+  type = object({
+    all_nodes_map = map(object({
+      ip   = string
+      vcpu = number
+      ram  = number
+    }))
+    base_image_path = string
+  })
 }
 
-variable "vm_username" {
-  description = "Username for SSH access to the VMs"
-  type        = string
-  sensitive   = false
+variable "credentials" {
+  description = "Access credentials for the virtual machines."
+  type = object({
+    username            = string
+    password            = string
+    ssh_public_key_path = string
+  })
 }
 
-variable "vm_password" {
-  description = "Password for SSH access to the VMs"
-  type        = string
-  sensitive   = true
-}
-
-variable "ssh_public_key_path" {
-  description = "Path to the SSH public key for the automation user"
-  type        = string
-}
-
-variable "qemu_base_image_path" {
-  description = "Path to the Packer-built qcow2 base image"
-  type        = string
-}
-
-variable "nat_gateway" {
-  description = "Gateway for the NAT network"
-  type        = string
-}
-
-variable "nat_subnet_prefix" {
-  description = "The first three octets of the NAT subnet (e.g., '172.16.86')."
-  type        = string
-}
-
-variable "nat_network_name" {
-  description = "Name for the NAT libvirt network"
-  type        = string
-  default     = "iac-kubeadm-nat-net"
-}
-
-variable "nat_network_cidr" {
-  description = "CIDR for the NAT network"
-  type        = string
-}
-
-variable "hostonly_network_name" {
-  description = "Name for the Host-only libvirt network"
-  type        = string
-  default     = "iac-kubeadm-hostonly-net"
-}
-
-variable "hostonly_network_cidr" {
-  description = "CIDR for the Host-only network"
-  type        = string
+variable "libvirt_infrastructure" {
+  description = "All configurations for Libvirt-managed networks and storage."
+  type = object({
+    network = object({
+      nat = object({
+        name          = string
+        cidr          = string
+        gateway       = string
+        subnet_prefix = string
+        bridge_name   = string
+      })
+      hostonly = object({
+        name        = string
+        cidr        = string
+        bridge_name = string
+      })
+    })
+    storage_pool_name = string
+  })
 }

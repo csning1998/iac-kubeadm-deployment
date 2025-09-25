@@ -79,13 +79,15 @@ options+=("[ONCE-ONLY] Verify IaC Environment for Native")
 options+=("Unseal Vault")
 options+=("Switch Environment Strategy")
 options+=("Reset Packer and Terraform")
-options+=("Rebuild Packer and Terraform")
-options+=("Rebuild Packer")
-options+=("Rebuild Terraform: Stages I All")
-options+=("Rebuild Terraform Stage I: KVM Provision")
-options+=("Rebuild Terraform Stage I: Ansible Bootstrapper")
-options+=("[DEV] Rebuild Stage I via Ansible Command")
-options+=("Rebuild Terraform Stage II: Kubernetes Addons")
+options+=("Rebuild Packer: Registry Base Image")
+options+=("Rebuild Packer: K8s Base Image")
+options+=("Rebuild K8s Cluster (Packer + TF)")
+options+=("Rebuild Terraform: Full Cluster (Layer 10)")
+options+=("Rebuild Terraform Layer 10: KVM Provision Only")
+options+=("Rebuild Terraform Layer 10: Ansible Bootstrapper Only")
+options+=("[DEV] Rebuild Layer 10 via Ansible Command")
+options+=("Rebuild Terraform Layer 20: Kubernetes Addons")
+options+=("Rebuild Terraform Layer 30: Registry Server")
 options+=("Verify SSH")
 options+=("Quit")
 
@@ -126,6 +128,10 @@ select opt in "${options[@]}"; do
       echo "# Setup Core IaC Tools workflow completed successfully."
       break
       ;;
+    "[ONCE-ONLY] Verify IaC Environment for Native")
+      verify_iac_environment
+      break
+      ;;
     "Unseal Vault")
       echo "# Executing standard Vault startup workflow..."
       unseal_vault
@@ -134,91 +140,105 @@ select opt in "${options[@]}"; do
     "Switch Environment Strategy")
       switch_environment_strategy_handler
       ;;
-    "Verify IaC Environment for Native")
-      verify_iac_environment
-      break
-      ;;
     "Reset Packer and Terraform")
       echo "# Executing Reset All workflow..."
       purge_libvirt_resources
-      destroy_terraform_resources
-      cleanup_packer_output
-      reset_terraform_state
+      destroy_terraform_layer "10-cluster-provision"
+      cleanup_packer_output "10-registry-base"
+      cleanup_packer_output "20-k8s-base"
+      cleanup_terraform_layer "10-cluster-provision"
       report_execution_time
       echo "# Reset All workflow completed successfully."
       break
       ;;
-    "Rebuild Packer and Terraform")
-      echo "# Executing Rebuild All workflow..."
+    "Rebuild Packer: Registry Base Image")
+      echo "# Executing Rebuild Packer workflow for Registry Base Image..."
+      if ! check_ssh_key_exists; then break; fi
+      ensure_libvirt_services_running
+      cleanup_packer_output "10-registry-base"
+      build_packer "10-registry-base"
+      report_execution_time
+      break
+      ;;
+    "Rebuild Packer: K8s Base Image")
+      echo "# Executing Rebuild Packer workflow..."
+      if ! check_ssh_key_exists; then break; fi
+      ensure_libvirt_services_running
+      cleanup_packer_output "20-k8s-base"
+      build_packer "20-k8s-base"
+      report_execution_time
+      break
+      ;;
+    "Rebuild K8s Cluster (Packer + TF)")
+      echo "# Executing Rebuild All workflow for Kubernetes..."
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
-      cleanup_packer_output
-      build_packer
-      reset_terraform_state
-      apply_terraform_10-cluster-provision
+      cleanup_packer_output "20-k8s-base"
+      build_packer "20-k8s-base"
+      cleanup_terraform_layer "10-cluster-provision"
+      apply_terraform_layer "10-cluster-provision"
       report_execution_time
       echo "# Rebuild All workflow completed successfully."
       break
       ;;
-    "Rebuild Packer")
-      echo "# Executing Rebuild Packer workflow..."
-      if ! check_ssh_key_exists; then break; fi
-      ensure_libvirt_services_running
-      cleanup_packer_output
-      build_packer
-      report_execution_time
-      break
-      ;;
-    "Rebuild Terraform: Stages I All")
-      echo "# Executing Rebuild Terraform Stage I workflow..."
+    "Rebuild Terraform: Full Cluster (Layer 10)")
+      echo "# Executing Rebuild Terraform workflow for the full cluster..."
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
       ensure_libvirt_services_running
-      destroy_terraform_resources
-      reset_terraform_state
-      apply_terraform_10-cluster-provision
+      destroy_terraform_layer "10-cluster-provision"
+      cleanup_terraform_layer "10-cluster-provision"
+      apply_terraform_layer "10-cluster-provision"
       report_execution_time
       echo "# Rebuild Terraform workflow completed successfully."
       break
       ;;
-    "Rebuild Terraform Stage I: KVM Provision")
-      echo "# Executing Rebuild Terraform Stage I workflow on KVM Provisioner..."
+    "Rebuild Terraform Layer 10: KVM Provision Only")
+      echo "# Executing Rebuild Terraform workflow for KVM Provisioner only..."
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
       ensure_libvirt_services_running
-      destroy_terraform_resources
-      reset_terraform_state
-      apply_terraform_11-provisioner_kvm
+      destroy_terraform_layer "10-cluster-provision"
+      cleanup_terraform_layer "10-cluster-provision"
+      apply_terraform_layer "10-cluster-provision" "module.provisioner_kvm"
       report_execution_time
-      echo "# Rebuild Terraform Stage I KVM Provisioner workflow completed successfully."
+      echo "# Rebuild Terraform KVM Provisioner workflow completed successfully."
       break
       ;;
-    "Rebuild Terraform Stage I: Ansible Bootstrapper")
-      echo "# Executing Rebuild Terraform Stage I workflow on Ansible Bootstrapper..."
+    "Rebuild Terraform Layer 10: Ansible Bootstrapper Only")
+      echo "# Executing Rebuild Terraform workflow for Ansible Bootstrapper only..."
       if ! check_ssh_key_exists; then break; fi
       ensure_libvirt_services_running
-      apply_terraform_12-bootstrapper-ansible
+      bootstrap_kubernetes_cluster
       report_execution_time
-      echo "# Rebuild Terraform Stage I Ansible Bootstrapper workflow completed successfully."
+      echo "# Rebuild Terraform Ansible Bootstrapper workflow completed successfully."
       break
       ;;
-    "[DEV] Rebuild Stage I via Ansible Command")
-      echo "# Executing [DEV] Rebuild Stage I via Ansible Command..."
+    "[DEV] Rebuild Layer 10 via Ansible Command")
+      echo "# Executing [DEV] Rebuild via direct Ansible command..."
       if ! check_ssh_key_exists; then break; fi
+      ensure_libvirt_services_running
       verify_ssh
-      ensure_libvirt_services_running
       apply_ansible_stage_II
       report_execution_time
-      echo "# [DEV] Rebuild Stage I Ansible Bootstrapper via Ansible completed successfully."
+      echo "# [DEV] Rebuild via direct Ansible command completed successfully."
       break
       ;;
-    "Rebuild Terraform Stage II: Kubernetes Addons")
-      echo "# Executing Rebuild Terraform Stage II workflow on Kubernetes Addons..."
-      verify_ssh
+    "Rebuild Terraform Layer 20: Kubernetes Addons")
+      echo "# Executing Rebuild Terraform workflow for Kubernetes Addons..."
       ensure_libvirt_services_running
-      apply_terraform_20-k8s-addons
+      verify_ssh
+      reapply_terraform_layer "20-k8s-addons"
       report_execution_time
-      echo "# Rebuild Terraform Stage II Kubernetes Addons workflow completed successfully."
+      echo "# Rebuild Terraform Kubernetes Addons workflow completed successfully."
+      break
+      ;;
+    "Rebuild Terraform Layer 30: Registry Server")
+      echo "# Executing Rebuild Terraform workflow for Registry Server..."
+      ensure_libvirt_services_running
+      reapply_terraform_layer "30-registry-provision"
+      report_execution_time
+      echo "# Rebuild Terraform Registry Server workflow completed successfully."
       break
       ;;
     "Verify SSH")

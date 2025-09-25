@@ -14,7 +14,7 @@
 
 output "ansible_log" {
   description = "Path to Ansible execution log"
-  value       = "${var.ansible_path}/logs/ansible-latest.log"
+  value       = "${var.ansible_config.root_path}/logs/ansible-latest.log"
 }
 
 output "kubeconfig_content" {

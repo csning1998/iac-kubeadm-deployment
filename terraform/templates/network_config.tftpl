@@ -1,0 +1,9 @@
+#cloud-config
+
+version: 2
+renderer: networkd
+ethernets:
+  all_interfaces:
+    match:
+      name: en*
+    dhcp4: true

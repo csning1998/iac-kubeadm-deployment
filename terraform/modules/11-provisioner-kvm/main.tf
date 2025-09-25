@@ -16,14 +16,14 @@ provider "libvirt" {
 }
 
 data "local_file" "ssh_public_key" {
-  filename = pathexpand(var.ssh_public_key_path)
+  filename = pathexpand(var.credentials.ssh_public_key_path)
 }
 
 resource "libvirt_network" "nat_net" {
-  name      = var.nat_network_name
+  name      = var.libvirt_infrastructure.network.nat.name
   mode      = "nat"
-  bridge    = "virbr_nat" # Avoid conflict with default virbr0 on the Host
-  addresses = [var.nat_network_cidr]
+  bridge    = var.libvirt_infrastructure.network.nat.bridge_name
+  addresses = [var.libvirt_infrastructure.network.nat.cidr]
   dhcp {
     enabled = true
   }
@@ -33,10 +33,10 @@ resource "libvirt_network" "nat_net" {
 }
 
 resource "libvirt_network" "hostonly_net" {
-  name      = var.hostonly_network_name
+  name      = var.libvirt_infrastructure.network.hostonly.name
   mode      = "nat" # Use NAT to enable DHCP and DNS
-  bridge    = "virbr_hostonly"
-  addresses = [var.hostonly_network_cidr]
+  bridge    = var.libvirt_infrastructure.network.hostonly.bridge_name
+  addresses = [var.libvirt_infrastructure.network.hostonly.cidr]
   dhcp {
     enabled = true
   }
@@ -45,70 +45,47 @@ resource "libvirt_network" "hostonly_net" {
   }
 }
 
-resource "libvirt_pool" "kube_pool" {
-  name = "iac-kubeadm"
+resource "libvirt_pool" "storage_pool" {
+  name = var.libvirt_infrastructure.storage_pool_name
   type = "dir"
   target {
-    path = abspath("/var/lib/libvirt/images")
+    path = abspath("/var/lib/libvirt/images/${var.libvirt_infrastructure.storage_pool_name}")
   }
 }
 
 resource "libvirt_volume" "os_disk" {
 
-  depends_on = [libvirt_pool.kube_pool]
+  depends_on = [libvirt_pool.storage_pool]
 
-  for_each = var.all_nodes_map
+  for_each = var.vm_config.all_nodes_map
   name     = "${each.key}-os.qcow2"
-  pool     = libvirt_pool.kube_pool.name
-  source   = var.qemu_base_image_path
+  pool     = libvirt_pool.storage_pool.name
+  source   = var.vm_config.base_image_path
   format   = "qcow2"
 }
 
 resource "libvirt_cloudinit_disk" "cloud_init" {
 
-  depends_on = [libvirt_pool.kube_pool]
+  depends_on = [libvirt_pool.storage_pool]
 
-  for_each       = var.all_nodes_map
-  name           = "${each.key}-cloud-init.iso"
-  pool           = libvirt_pool.kube_pool.name
-  user_data      = data.template_file.user_data[each.key].rendered
-  network_config = data.template_file.network_config[each.key].rendered
-}
+  for_each = var.vm_config.all_nodes_map
+  name     = "${each.key}-cloud-init.iso"
+  pool     = libvirt_pool.storage_pool.name
+  user_data = templatefile("${path.root}/../../templates/user_data.tftpl", {
+    hostname       = each.key
+    vm_username    = var.credentials.username
+    vm_password    = var.credentials.password
+    ssh_public_key = data.local_file.ssh_public_key.content
+  })
 
-data "template_file" "user_data" {
-  for_each = var.all_nodes_map
-
-  template = <<-EOT
-    #cloud-config
-    hostname: ${each.key}
-    manage_etc_hosts: true
-    users:
-      - name: ${var.vm_username}
-        passwd: "${var.vm_password}"
-        lock_passwd: false
-        sudo: ['ALL=(ALL) NOPASSWD:ALL']
-        ssh_authorized_keys:
-          - ${data.local_file.ssh_public_key.content}
-  EOT
-}
-
-data "template_file" "network_config" {
-  for_each = var.all_nodes_map
-  template = <<-EOT
-    #cloud-config
-    version: 2
-    renderer: networkd
-    ethernets:
-      all_interfaces:
-        match:
-          name: en*
-        dhcp4: true
-  EOT
+  network_config = templatefile("${path.root}/../../templates/network_config.tftpl", {})
 }
 
 resource "libvirt_domain" "nodes" {
 
-  for_each = var.all_nodes_map
+  for_each = var.vm_config.all_nodes_map
+
+  autostart = false # Set to true to start the domain on host boot up. If not specified false is assumed.
 
   name   = each.key
   memory = each.value.ram
@@ -118,7 +95,7 @@ resource "libvirt_domain" "nodes" {
 
   network_interface {
     network_name = libvirt_network.nat_net.name
-    addresses    = ["${var.nat_subnet_prefix}.${split(".", each.value.ip)[3]}"]
+    addresses    = ["${var.libvirt_infrastructure.network.nat.subnet_prefix}.${split(".", each.value.ip)[3]}"]
   }
 
   network_interface {
@@ -130,10 +107,19 @@ resource "libvirt_domain" "nodes" {
     volume_id = libvirt_volume.os_disk[each.key].id
   }
 
+  # Serial console (ttyS0), often used for basic interaction and debugging.
   console {
     type        = "pty"
     target_port = "0"
     target_type = "serial"
+  }
+
+  # Virtio console (hvc0), expected by modern cloud-init versions to avoid startup hangs.
+  # This is the critical fix: https://bugs.launchpad.net/cloud-images/+bug/1573095
+  console {
+    type        = "pty"
+    target_type = "virtio"
+    target_port = "1"
   }
 
   graphics {
@@ -147,3 +133,4 @@ resource "libvirt_domain" "nodes" {
     type = "vga"
   }
 }
+

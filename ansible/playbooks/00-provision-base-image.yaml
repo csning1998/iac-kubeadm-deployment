@@ -1,6 +1,12 @@
 ---
-- name: "Play 1: Apply common prerequisites to all Kubernetes nodes"
-  hosts: all
+- name: "Play 1: Provision Registry base image"
+  hosts: "10-registry-base"
+  become: true
+  roles:
+    - 01-image-registry
+
+- name: "Play 2: Provision Kubernetes base image"
+  hosts: "20-k8s-base"
   become: true
   roles:
     - 02-base-kubernetes

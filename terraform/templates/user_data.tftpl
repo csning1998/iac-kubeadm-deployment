@@ -1,0 +1,15 @@
+#cloud-config
+
+preserve_hostname: false
+hostname: ${hostname}
+create_hostname_file: true
+fqdn: ${hostname}
+
+manage_etc_hosts: true
+users:
+  - name: ${vm_username}
+    passwd: "${vm_password}"
+    lock_passwd: false
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh_authorized_keys:
+      - ${ssh_public_key}

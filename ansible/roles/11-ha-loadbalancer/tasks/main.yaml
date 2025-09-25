@@ -5,7 +5,7 @@
       ansible.builtin.shell:
         cmd: |
           set -o pipefail
-          ip -o -4 addr show | grep 'inet {{ nat_subnet_prefix }}.' | awk '{print $2}'
+          ip -o -4 addr show | grep 'inet {{ k8s_nat_subnet_prefix }}.' | awk '{print $2}'
         executable: /bin/bash
       register: nat_iface_result
       changed_when: false
@@ -59,12 +59,12 @@
 
     - name: "Step 2. Configure Keepalived from template"
       ansible.builtin.template:
-        src: keepalived.conf.j2  # This template uses k8s_ha_virtual_ip etc.
+        src: keepalived.conf.j2 # This template uses k8s_ha_virtual_ip etc.
         dest: /etc/keepalived/keepalived.conf
         owner: root
         group: root
         mode: "0644"
-      notify: Restart keepalived  # Notify handler to restart the service on change
+      notify: Restart keepalived # Notify handler to restart the service on change
 
     - name: "Step 3. Verify Keepalived configuration syntax"
       ansible.builtin.command: keepalived --config-test
@@ -74,12 +74,12 @@
   block:
     - name: "Step 1. Configure HAProxy from template"
       ansible.builtin.template:
-        src: haproxy.cfg.j2  # This template loops through groups['master']
+        src: haproxy.cfg.j2 # This template loops through groups['master']
         dest: /etc/haproxy/haproxy.cfg
         owner: root
         group: root
         mode: "0644"
-      notify: Restart haproxy  # Notify handler to restart the service on change
+      notify: Restart haproxy # Notify handler to restart the service on change
 
     - name: "Step 2. Verify HAProxy configuration syntax"
       ansible.builtin.command: haproxy -c -f /etc/haproxy/haproxy.cfg
@@ -109,7 +109,7 @@
         name: "{{ item }}"
         state: started
         enabled: true
-        daemon_reload: true  # Reload systemd if config has changed
+        daemon_reload: true # Reload systemd if config has changed
       loop:
         - keepalived
         - haproxy

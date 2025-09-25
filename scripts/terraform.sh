@@ -2,89 +2,145 @@
 
 # This script contains functions for managing Terraform resources.
 
-readonly layer_10="layers/10-cluster-provision"
-readonly layer_20="layers/20-k8s-addons"
+# Function: Clean up a specific Terraform layer's state files.
+# Parameter 1: The short name of the layer (e.g., "10-cluster-provision").
+cleanup_terraform_layer() {
+  local layer_name="$1"
+  if [ -z "$layer_name" ]; then
+    echo "FATAL: No Terraform layer specified for cleanup_terraform_layer function." >&2
+    return 1
+  fi
 
-# Function: Reset Terraform state
-reset_terraform_state() {
-  echo ">>> STEP: Resetting Terraform state..."
-  (cd "${TERRAFORM_DIR}/${layer_10}" && rm -rf .terraform .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup)
-  rm -rf "$HOME/.ssh/iac-kubeadm-deployment_config"
-  echo "#### Terraform state reset."
+  local layer_dir="${TERRAFORM_DIR}/layers/${layer_name}"
+  if [ ! -d "$layer_dir" ]; then
+    echo "FATAL: Terraform layer directory not found: ${layer_dir}" >&2
+    return 1
+  fi
+
+  echo ">>> STEP: Cleaning Terraform artifacts for layer [${layer_name}]..."
+  rm -rf "${layer_dir}/.terraform" \
+    "${layer_dir}/.terraform.lock.hcl" \
+    "${layer_dir}/terraform.tfstate" \
+    "${layer_dir}/terraform.tfstate.backup"
+
+  # Clean up global state associated with the cluster if cleaning the main cluster layer.
+  # This check now uses a hardcoded string, matching the requested pattern.
+  if [[ "${layer_name}" == "10-cluster-provision" ]]; then
+      rm -rf "${USER_HOME_DIR}/.ssh/iac-kubeadm-deployment_config"
+      echo "#### Removed global SSH configuration for cluster."
+  fi
+
+  echo "#### Terraform artifact cleanup for [${layer_name}] completed."
   echo "--------------------------------------------------"
 }
 
-# Function: Destroy Terraform resources
-destroy_terraform_resources() {
-  echo ">>> STEP: Destroying existing Terraform-managed VMs..."
+# Function: Destroy all resources in a specific Terraform layer.
+# Parameter 1: The short name of the layer.
+destroy_terraform_layer() {
+  local layer_name="$1"
+  if [ -z "$layer_name" ]; then
+    echo "FATAL: No Terraform layer specified for destroy_terraform_layer function." >&2
+    return 1
+  fi
 
+  local layer_dir="${TERRAFORM_DIR}/layers/${layer_name}"
+  if [ ! -d "$layer_dir" ]; then
+    echo "FATAL: Terraform layer directory not found: ${layer_dir}" >&2
+    return 1
+  fi
+
+  echo ">>> STEP: Destroying resources for layer [${layer_name}]..."
   local cmd="terraform init -upgrade && terraform destroy -auto-approve -lock=false -var-file=./terraform.tfvars"
-  run_command "${cmd}" "${TERRAFORM_DIR}/${layer_10}"
+  run_command "${cmd}" "${layer_dir}"
 
-  echo "#### Terraform destroy complete."
+  echo "#### Terraform destroy for [${layer_name}] complete."
   echo "--------------------------------------------------"
 }
 
-### The three functions below needs further refactor.
+# Function: Apply a Terraform configuration for a specific layer.
+# Parameter 1: The short name of the layer.
+# Parameter 2 (Optional): A specific resource target.
+apply_terraform_layer() {
+  local layer_name="$1"
+  local target_resource="${2:-}" # Optional
 
-# Function: Provision guest VMs using KVM
-apply_terraform_11-provisioner_kvm() {
-  echo ">>> STEP: Initializing Terraform and provision guest VMs using KVM..."
-  echo ">>> Stage I: Applying VM creation..."
+  if [ -z "$layer_name" ]; then
+    echo "FATAL: No Terraform layer specified for apply_terraform_layer function." >&2
+    return 1
+  fi
 
-  local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=./terraform.tfvars -target=module.provisioner_kvm"
-  run_command "${cmd}" "${TERRAFORM_DIR}/${layer_10}"
-  echo "#### VM creation and SSH configuration complete."
+  local layer_dir="${TERRAFORM_DIR}/layers/${layer_name}"
+  if [ ! -d "$layer_dir" ]; then
+    echo "FATAL: Terraform layer directory not found: ${layer_dir}" >&2
+    return 1
+  fi
+
+  echo ">>> STEP: Applying Terraform configuration for layer [${layer_name}]..."
+
+  local cmd="terraform init -upgrade && terraform validate && terraform apply -auto-approve -var-file=./terraform.tfvars"
+  if [ -n "$target_resource" ]; then
+    echo "#### Targeting resource: ${target_resource}"
+    cmd+=" -target=${target_resource}"
+  fi
+
+  run_command "${cmd}" "${layer_dir}"
+
+  echo "#### Terraform apply for [${layer_name}] complete."
   echo "--------------------------------------------------"
 }
 
-# Function: Bootstrapping a Kubernetes cluster
-apply_terraform_12-bootstrapper-ansible() {
-  set -o pipefail
-  echo ">>> Stage II: Applying Ansible Bootstrapper on cluster..."
+# Function: Force re-apply a layer by destroying it first.
+# Parameter 1: The short name of the layer.
+reapply_terraform_layer() {
+  local layer_name="$1"
+  if [ -z "$layer_name" ]; then
+    echo "FATAL: No Terraform layer specified for reapply_terraform_layer function." >&2
+    return 1
+  fi
 
-  local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=./terraform.tfvars -target=module.ansible"
-  run_command "${cmd}" "${TERRAFORM_DIR}/${layer_10}"
+  local layer_dir="${TERRAFORM_DIR}/layers/${layer_name}"
+  if [ ! -d "$layer_dir" ]; then
+    echo "FATAL: Terraform layer directory not found: ${layer_dir}" >&2
+    return 1
+  fi
 
+  echo ">>> STEP: Re-applying Terraform configuration for layer [${layer_name}]..."
+
+  local cmd="terraform init -upgrade && terraform destroy -auto-approve -var-file=./terraform.tfvars \
+    terraform init -upgrade && terraform validate \
+    terraform apply -auto-approve -var-file=./terraform.tfvars"
+  
+  run_command "${cmd}" "${layer_dir}"
+
+  echo "#### Terraform re-apply for [${layer_name}] complete."
+  echo "--------------------------------------------------"
+}
+
+# Function: A specific workflow to bootstrap the Kubernetes cluster.
+bootstrap_kubernetes_cluster() {
+  echo ">>> WORKFLOW: Bootstrapping Kubernetes Cluster..."
+
+  # The specific layer name is defined locally for this workflow.
+  local cluster_layer_name="10-cluster-provision"
+
+  # Layer I: Provision VMs.
+  apply_terraform_layer "${cluster_layer_name}" "module.provisioner_kvm"
+
+  # Layer II: Apply Ansible Bootstrapper.
+  apply_terraform_layer "${cluster_layer_name}" "module.bootstrapper_ansible"
+
+  # Post-apply logic specific to this workflow.
   echo "#### Saving Ansible playbook outputs to log files..."
+  set -o pipefail
   mkdir -p "${ANSIBLE_DIR}/logs"
+  local timestamp
   timestamp=$(date +%Y%m%d-%H%M%S)
+  local layer_dir="${TERRAFORM_DIR}/layers/${cluster_layer_name}"
 
-  {
-    terraform output -json ansible_playbook_stdout | format_ansible_output
-  } > "${ANSIBLE_DIR}/logs/${timestamp}-ansible_stdout.log" 2>/dev/null || echo "######## Warning: Failed to save ansible_stdout.log"
+  (cd "${layer_dir}" && terraform output -json ansible_playbook_stdout | format_ansible_output) > "${ANSIBLE_DIR}/logs/${timestamp}-ansible_stdout.log" 2>/dev/null || echo "######## Warning: Failed to save ansible_stdout.log"
+  (cd "${layer_dir}" && terraform output -json ansible_playbook_stderr | jq -r '.') > "${ANSIBLE_DIR}/logs/${timestamp}-ansible_stderr.log" 2>/dev/null || echo "######## Warning: Failed to save ansible_stderr.log"
 
-  {
-    terraform output -json ansible_playbook_stderr | jq -r '.'
-  } > "${ANSIBLE_DIR}/logs/${timestamp}-ansible_stderr.log" 2>/dev/null || echo "######## Warning: Failed to save ansible_stderr.log"
   set +o pipefail
-
-  echo "#### Ansible playbook logs saved to ${ANSIBLE_DIR}/logs/${timestamp}-ansible_stdout.log and ${ANSIBLE_DIR}/logs/${timestamp}-ansible_stderr.log"
-  echo "#### Ansible configuration complete."
-  echo "--------------------------------------------------"
-}
-
-# Function: Perform Kubernetes cluster provision
-apply_terraform_10-cluster-provision() {
-  echo ">>> STEP: Initializing Terraform and perform Kubernetes cluster provision..."
-
-  # Command without -target to apply the entire configuration
-  local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=./terraform.tfvars"
-  (cd "${TERRAFORM_DIR}" && rm -rf .terraform .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup)
-  run_command "${cmd}" "${TERRAFORM_DIR}/${layer_10}"
-
-  echo "#### Full Terraform apply complete."
-  echo "--------------------------------------------------"
-}
-
-# Function: Provision Add-ons for Kubernetes cluster
-apply_terraform_20-k8s-addons() {
-  echo ">>> STEP: Initializing Terraform and applying ALL configurations..."
-
-  # Command without -target to apply the entire configuration
-  local cmd="terraform init -upgrade && terraform destroy -auto-approve && terraform init -upgrade && terraform apply -auto-approve"
-  run_command "${cmd}" "${TERRAFORM_DIR}/${layer_20}"
-
-  echo "#### Full Terraform apply complete."
+  echo "#### Ansible playbook logs saved."
   echo "--------------------------------------------------"
 }
