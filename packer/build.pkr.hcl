@@ -1,7 +1,10 @@
 
-build {
-  sources = ["source.qemu.ubuntu-server-registry"]
+# This file defines the single, data-driven build block.
 
+build {
+  sources = ["source.qemu.ubuntu"]
+
+  # --- Common Provisioners ---
   provisioner "shell" {
     inline = [
       "sudo apt-get update",
@@ -10,22 +13,20 @@ build {
     ]
   }
 
-  # The Ansible provisioner block is used by all builders.
   provisioner "ansible" {
-    playbook_file       = "../../../ansible/playbooks/00-provision-base-image.yaml"
-    inventory_directory = "../../../ansible/"
+    playbook_file       = "../ansible/playbooks/00-provision-base-image.yaml"
+    inventory_directory = "../ansible/"
     user                = local.ssh_username
 
+    # Ansible group is dynamically set by a variable.
     groups = [
-      "10-registry-base"
+      var.build_name_suffix
     ]
-
     ansible_env_vars = [
-      "ANSIBLE_CONFIG=../../../ansible.cfg"
+      "ANSIBLE_CONFIG=../ansible.cfg"
     ]
-
     extra_arguments = [
-      "--extra-vars", "expected_hostname=${local.vm_hostname}",
+      "--extra-vars", "expected_hostname=${local.final_vm_name}",
       "--extra-vars", "public_key_file=${local.ssh_public_key_path}",
       "--extra-vars", "ssh_user=${local.ssh_username}",
       "--extra-vars", "ansible_ssh_transfer_method=piped",

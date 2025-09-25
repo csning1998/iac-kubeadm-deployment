@@ -31,29 +31,36 @@ cleanup_packer_output() {
 }
 
 # Function: Execute Packer build
+# The layer_name now corresponds to the *.pkrvars.hcl file to use.
 build_packer() {
-  
   local layer_name="$1"
   if [ -z "$layer_name" ]; then
-    echo "FATAL: No Packer layer specified for build_packer function." >&2
+    echo "FATAL: No Packer build type specified for build_packer function." >&2
     return 1
   fi
 
-  local layer_dir="${PACKER_DIR}/layers/${layer_name}"
-  if [ ! -d "$layer_dir" ]; then
-    echo "FATAL: Packer layer directory not found: ${layer_dir}" >&2
+  # Construct the path to the specific var file.
+  local build_var_file="${PACKER_DIR}/${layer_name}.pkrvars.hcl"
+
+  if [ ! -f "$build_var_file" ]; then
+    echo "FATAL: Packer var file not found: ${build_var_file}" >&2
     return 1
   fi
 
-  echo ">>> STEP: Starting new Packer build for layer [${layer_name}]..."
+  echo ">>> STEP: Starting new Packer build for [${layer_name}]..."
 
+  # The command now loads the common values file first, then the specific
+  # build var file, and runs from the root Packer directory.
   local cmd="packer init . && packer build \
-    -var-file=../../values.pkrvars.hcl ."
+    -var-file=values.pkrvars.hcl \
+    -var-file=${layer_name}.pkrvars.hcl \
+    ."
+
   # Add this to abort and debug if packer build failed.
-  # -on-error=abort \ 
+  # -on-error=abort \
 
-  run_command "${cmd}" "${layer_dir}"
+  run_command "${cmd}" "${PACKER_DIR}"
 
-  echo "#### Packer build complete. New base image is ready."
+  echo "#### Packer build complete. New base image for [${layer_name}] is ready."
   echo "--------------------------------------------------"
 }
