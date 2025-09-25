@@ -19,7 +19,7 @@ git clone https://github.com/csning1998/iac-kubeadm-deployment.git
 
 ### A. Disclaimer
 
--  This project currently only works on Linux devices with CPU virtualization support, and has not yet been tested on other distros such as Fedora 41, Arch, CentOS, and WSL2.
+-  This project currently only works on Linux devices with CPU virtualization support, and has **not yet** been tested on other distros such as Fedora 41, Arch, CentOS, and WSL2.
 -  Currently, these features have only been tested on my personal computer through several system reinstallations, so there may inevitably be some functionality issues. I've tried my best to prevent and address these.
 
 ### B. Note
@@ -43,20 +43,22 @@ The content in Section 1 and Section 2 serves as prerequisite setup before forma
 ```text
 ➜  iac-kubeadm-deployment git:(main) ✗ ./entry.sh
 ... (Some preflight check)
+
 ======= IaC-Driven Virtualization Management =======
 
 Environment: NATIVE
-Vault Server Status: Stopped or Unreachable
+Vault Server Status: Running (Unsealed)
 
-1) [ONCE-ONLY] Set up CA Certs for TLS             10) Rebuild Packer and Terraform
-2) [ONCE-ONLY] Initialize Vault                    11) Rebuild Packer
-3) [ONCE-ONLY] Generate SSH Key                    12) Rebuild Terraform: All Stages
-4) [ONCE-ONLY] Setup KVM / QEMU for Native         13) Rebuild Terraform Stage I: Configure Nodes
-5) [ONCE-ONLY] Setup Core IaC Tools for Native     14) Rebuild Terraform Stage II: Ansible
-6) [ONCE-ONLY] Verify IaC Environment for Native   15) [DEV] Rebuild Stage II via Ansible
-7) Unseal Vault                                    16) Verify SSH
-8) Switch Environment Strategy                     17) Quit
-9) Reset Packer and Terraform
+ 1) [ONCE-ONLY] Set up CA Certs for TLS                    11) Rebuild Packer: K8s Base Image
+ 2) [ONCE-ONLY] Initialize Vault                           12) Rebuild K8s Cluster (Packer + TF)
+ 3) [ONCE-ONLY] Generate SSH Key                           13) Rebuild Terraform: Full Cluster (Layer 10)
+ 4) [ONCE-ONLY] Setup KVM / QEMU for Native                14) Rebuild Terraform Layer 10: KVM Provision Only
+ 5) [ONCE-ONLY] Setup Core IaC Tools for Native            15) Rebuild Terraform Layer 10: Ansible Bootstrapper Only
+ 6) [ONCE-ONLY] Verify IaC Environment for Native          16) [DEV] Rebuild Layer 10 via Ansible Command
+ 7) Unseal Vault                                           17) Rebuild Terraform Layer 20: Kubernetes Addons
+ 8) Switch Environment Strategy                            18) Rebuild Terraform Layer 30: Registry Server
+ 9) Reset Packer and Terraform                             19) Verify SSH
+10) Rebuild Packer: Registry Base Image                    20) Quit
 
 >>> Please select an action:
 ```
@@ -105,6 +107,8 @@ The user's CPU must support virtualization technology to enable QEMU-KVM functio
    ```
 
 ### Option 2. Run IaC tools inside Container: Podman
+
+0. _I am still looking for a method that does not require `sudo`._
 
 1. Please ensure Podman is installed correctly. You can refer to the following URL and choose the installation method corresponding to your platform
 
@@ -158,6 +162,26 @@ The user's CPU must support virtualization technology to enable QEMU-KVM functio
       ```shell
       code --install-extension szTheory.vscode-packer-powertools
       ```
+
+-  **Clean up Libvirt resources**: You can use the following command to remove all Libvirt resources related to this project:
+
+   ```shell
+   sudo virsh list --all --name | grep '^\(k8s\|registry\)-' | while read -r domain; do \
+      sudo virsh destroy "${domain}" --graceful >/dev/null 2>&1; \
+      sudo virsh undefine "${domain}" --nvram; \
+   done
+   for pool in iac-kubeadm iac-registry; do \
+      sudo virsh vol-list --pool "${pool}" --details | awk 'NR>2 {print $1}' | while read -r vol; do \
+         sudo virsh vol-delete "${vol}" --pool "${pool}"; \
+      done; \
+   done
+   for net in iac-kubeadm-hostonly-net iac-kubeadm-nat-net iac-registry-hostonly-net iac-registry-nat-net; do \
+      sudo virsh net-destroy "${net}" && sudo virsh net-undefine "${net}"; \
+   done
+   for pool in iac-kubeadm iac-registry; do \
+      sudo virsh pool-destroy "${pool}" && sudo virsh pool-undefine "${pool}"; \
+   done
+   ```
 
 ## Section 2. Configuration
 
@@ -324,34 +348,79 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
 
 #### **Step B.2. Create Variable File for Terraform:**
 
-You can create the `terraform/terraform.tfvars` file using the following command:
+1. You can create the `terraform/layers/10-cluster-provision/terraform.tfvars` file using the following command:
 
-```shell
-cat << EOF > terraform/terraform.tfvars
-node_configs = {
-   masters = [
-      { ip = "172.16.134.200", vcpu = 4, ram = 4096 },
-      # Uncomment the following object for HA Cluster
-      # { ip = "172.16.134.201", vcpu = 4, ram = 4096 },
-      # { ip = "172.16.134.202", vcpu = 4, ram = 4096 }
-   ]
-   workers = [
-      { ip = "172.16.134.210", vcpu = 4, ram = 4096 },
-      { ip = "172.16.134.211", vcpu = 4, ram = 4096 },
-      { ip = "172.16.134.212", vcpu = 4, ram = 4096 }
-      # You may add more nodes as you wish if as long as the resource is sufficient.
-   ]
-}
+   ```shell
+   cat << EOF > terraform/layers/10-cluster-provision/terraform.tfvars
+   # Defines the hardware and IP addresses for each virtual machine in the cluster.
+   k8s_cluster_config = {
+      nodes = {
+         masters = [
+            { ip = "172.16.134.200", vcpu = 4, ram = 4096 },
+            { ip = "172.16.134.201", vcpu = 4, ram = 4096 },
+            { ip = "172.16.134.202", vcpu = 4, ram = 4096 }
+         ]
+         workers = [
+            { ip = "172.16.134.210", vcpu = 4, ram = 4096 },
+            { ip = "172.16.134.211", vcpu = 4, ram = 4096 },
+            { ip = "172.16.134.212", vcpu = 4, ram = 4096 }
+         ]
+      }
+      ha_virtual_ip = "172.16.134.250"
+   }
 
-# Kubernetes network configuration
-k8s_ha_virtual_ip = "172.16.134.250"
-k8s_pod_subnet    = "10.244.0.0/16"
-nat_gateway       = "172.16.86.2"
-nat_subnet_prefix = "172.16.86"
-EOF
-```
+   cluster_infrastructure = {
+      network = {
+         nat = {
+            name        = "iac-kubeadm-nat-net"
+            cidr        = "172.16.86.0/24"
+            bridge_name = "k8s-nat-br" # IFNAMSIZ is 15 user-visible characters with the null terminator included.
+         }
+         hostonly = {
+            name        = "iac-kubeadm-hostonly-net"
+            cidr        = "172.16.134.0/24"
+            bridge_name = "k8s-host-br"
+         }
+      }
+   }
+   EOF
+   ```
 
-For users setting up an (HA) Cluster, the number of elements in `node_configs.masters` and `node_configs.workers` determines the number of nodes generated. Ensure the quantity of nodes in `node_configs.masters` is an odd number to prevent the etcd Split-Brain risk in Kubernetes. Meanwhile, `node_configs.workers` can be configured based on the number of IPs. The IPs provided by the user must correspond to the host-only network segment.
+   For users setting up an (HA) Cluster, the number of elements in `k8s_cluster_config.nodes.masters` and `k8s_cluster_config.nodes.workers` determines the number of nodes generated. Ensure the quantity of nodes in `k8s_cluster_config.nodes.masters` is an odd number to prevent the etcd Split-Brain risk in Kubernetes. Meanwhile, `k8s_cluster_config.nodes.workers` can be configured based on the number of IPs. The IPs provided by the user must correspond to the host-only network segment.
+
+2. The variable file for the Registry in `terraform/layers/30-registry-provision/terraform.tfvars` is relatively simple and can be created using the following command:
+
+   ```bash
+   cat << EOF > terraform/layers/10-cluster-provision/terraform.tfvars
+   # Defines the hardware and IP addresses for each virtual machine in the cluster.
+   registry_config = {
+      nodes = {
+         registry = [
+            { ip = "172.16.135.200", vcpu = 2, ram = 4096 },
+         ]
+      }
+   }
+
+   registry_infrastructure = {
+      network = {
+         nat = {
+            name        = "iac-registry-nat-net"
+            cidr        = "172.16.87.0/24"
+            bridge_name = "reg-nat-br" # IFNAMSIZ is 15 user-visible characters with the null terminator included.
+         }
+         hostonly = {
+            name        = "iac-registry-hostonly-net"
+            cidr        = "172.16.135.0/24"
+            bridge_name = "reg-host-br"
+         }
+      }
+   }
+   EOF
+   ```
+
+   This architecture was designed primarily to conform to the structural specifications of the variables in the `terraform/modules/11-provisioner-kvm/variables.tf` module.
+
+**Note:** The `bridge_name` in `terraform.tfvars` must not exceed 15 characters due to the `IFNAMSIZ(15)` limitation.
 
 ### Step C. Build / Rebuild / Reset
 
@@ -365,13 +434,20 @@ For users setting up an (HA) Cluster, the number of elements in `node_configs.ma
 
    Deploying other Linux distro would be supported if I have time. I'm still a full-time university student.
 
-2. After completing all the above setup steps, you can use `entry.sh`, enter `10` to access _"Rebuild All"_ to perform automated deployment of the Kubernetes cluster. Based on testing, the current complete deployment of a HA Kubernetes Cluster takes approximately 7 minutes from Packer to finished.
+2. After completing all the above setup steps, you can use `entry.sh`, enter `12` to access _"Rebuild K8s Cluster (Packer + TF)"_ to perform automated deployment of the Kubernetes cluster. Based on testing, the current complete deployment of a HA Kubernetes Cluster takes approximately 7 minutes from Packer to finished.
 
-3. For isolated testing of Packer or Terraform, you can select options `11` through `14` in `entry.sh`. The Terraform tests can be run on Stage I's `provision-kvm` module, Stage II's `ansible` module, or both modules together.
+3. For isolated testing of Packer or Terraform, you can select options `10` through `18` in `entry.sh`. The Terraform tests can be run on Layer 10's `11-provisioner-kvm` module with option `14`, Layer 10's `12-bootstrapper-ansible` module with option `15`, or both modules together with option `13`.
 
-4. To test the cluster configuration by itself, you can use option `15`. This option will completely reset and clear the installer on every node in the K8s Cluster, restoring them to a clean state. It is recommended to use this option if you need to perform isolated tests within the Ansible Playbook.
+4. Option `16` is specifically designed for the following two scenarios:
 
-5. Option `16` primarily uses polling to test if the virtual machine is connectable and generally serves as a preliminary step for option `15`. Alternatively, you can use the following command to check the virtual machine's operational status.
+   1. To simply test the Layer 10 Ansible Playbook rather than through Terraform
+   2. To clean up all Kubernetes components in the Cluster. This is typically followed by executing option `17` _"Rebuild Terraform Layer 20: Kubernetes Addons"_ after completing option `16`
+
+5. To test the cluster configuration by itself, you can use option `9`. This option will completely reset and clear the installer on every node in the K8s Cluster and Registry Server, restoring them to a clean state. It is recommended to use this option if you need to perform isolated tests within the Ansible Playbook.
+
+6. Option `18`'s Registry Server is still under testing . . .
+
+7. Option `19` primarily uses polling to test if the virtual machine is connectable and generally serves as a preliminary step for option `15`, `16`, and `17`. Alternatively, you can use the following command to check the virtual machine's operational status.
 
    ```shell
    sudo virsh list --all
@@ -383,7 +459,8 @@ This project employs three tools - Packer, Terraform, and Ansible - using an Inf
 
 ### A. Deployment Workflow
 
-The entire automated deployment process is triggered by option `10` _"Rebuild All"_ in the `./entry.sh` script, with detailed steps shown in the diagram below:
+The entire automated deployment process is triggered by option `12` _"Rebuild K8s Cluster (Packer + TF)
+"_ in the `./entry.sh` script, with detailed steps shown in the diagram below:
 
 ```mermaid
 sequenceDiagram
@@ -404,7 +481,7 @@ sequenceDiagram
    Libvirt-->>-Packer: 1c. Output Golden Image (.qcow2)
    Packer-->>-Entrypoint: Image creation complete
 
-   Entrypoint->>+Terraform: 2. Execute 'apply_terraform_all_stages'
+   Entrypoint->>+Terraform: 2. Execute 'apply_terraform_10-cluster-provision'
    note right of Terraform: Reads .tf definitions
    Terraform->>+Libvirt: 2a. Create Network, Pool, Volumes (from .qcow2), Cloud-init ISOs
    Terraform->>+Libvirt: 2b. Create and Start VMs (Domains)
@@ -425,18 +502,18 @@ sequenceDiagram
 
 1. **Packer + Ansible: Provisioning base Kubernetes Golden Image**
 
-   Packer plays the role of an "image factory" in this project, with its core task being to automate the creation of a standardized virtual machine template (Golden Image) pre-configured with all Kubernetes dependencies. The project uses `packer/source-qemu.pkr.hcl` as its definition file, with a workflow that includes: automatically downloading the `Ubuntu Server 24.04 ISO` file and completing unattended installation using cloud-init; starting SSH connection and invoking the Ansible Provisioner after installation; executing `ansible/playbooks/00-provision-base-image.yaml` to install necessary components such as `kubelet`, `kubeadm`, `kubectl`, and `CRI-O` (also configure it to use `cgroup` driver); finally shutting down the virtual machine and producing a `*.qcow2` format template for Terraform to use. The goal of this phase is to "bake" all infrequently changing software and configurations into the image to reduce the time required for subsequent deployments.
+   Packer plays the role of an "image factory" in this project, with its core task being to automate the creation of a standardized virtual machine template (Golden Image) pre-configured with all Kubernetes dependencies. The project uses `packer/source.pkr.hcl` as its definition file and it's driven by `packer/20-k8s-base.pkrvars.hcl`, with a workflow that includes: automatically downloading the `Ubuntu Server 24.04 ISO` file and completing unattended installation using cloud-init; starting SSH connection and invoking the Ansible Provisioner after installation; executing `ansible/playbooks/00-provision-base-image.yaml` to install necessary components such as `kubelet`, `kubeadm`, `kubectl`, and `CRI-O` (also configure it to use `cgroup` driver); finally shutting down the virtual machine and producing a `*.qcow2` format template for Terraform to use. The goal of this phase is to "bake" all infrequently changing software and configurations into the image to reduce the time required for subsequent deployments.
 
 2. **Terraform: The Infrastructure Orchestrator**
 
    Terraform is responsible for managing the infrastructure lifecycle and serves as the core orchestration component of the entire architecture. Terraform reads the image template produced by Packer and deploys the actual virtual machine cluster in Libvirt/QEMU. The definition files are the `.tf` files in the `terraform/` directory, with the **workflow as follows:**
 
-   -  **Node Deployment (Stage I)**:
+   -  **Node Deployment (Layer 10)**:
 
-      -  Based on `node_configs` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
+      -  Based on `k8s_cluster_config` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
       -  Next, Terraform's libvirt provider will quickly clone virtual machines based on the `.qcow2` file. Under the hardware resources listed in Section 0, cloning 6 virtual machines can be completed in approximately 15 seconds.
 
-   -  **Cluster Configuration (Stage II)**:
+   -  **Cluster Configuration (Layer 20)**:
       -  Once all nodes are ready, Terraform dynamically generates `ansible/inventory.yaml` list file.
       -  Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-cluster.yaml` Playbook to complete the initialization of the Kubernetes cluster.
 
@@ -460,3 +537,7 @@ sequenceDiagram
    -  **Packer:** During the image-building phase, Packer authenticates with the Vault server and uses the `vault()` function within its HCL files to dynamically fetch the necessary secrets (e.g., `ssh_username`, `ssh_password_hash`) required for the unattended OS installation.
 
    -  **Terraform:** Similarly, Terraform utilizes the Vault Provider to read infrastructure-related secrets, such as `vm_username` and `ssh_private_key_path`, directly from Vault at runtime. This allows Terraform to provision VMs and configure SSH access without exposing any sensitive credentials in its configuration files.
+
+### C. Infrastructures
+
+_**(To be continued...)**_
