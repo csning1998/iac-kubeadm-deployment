@@ -24,10 +24,12 @@ module "provisioner_kvm" {
         cidr          = var.cluster_infrastructure.network.nat.cidr
         gateway       = local.k8s_cluster_nat_network_gateway
         subnet_prefix = local.k8s_cluster_nat_network_subnet_prefix
+        bridge_name   = var.cluster_infrastructure.network.nat.bridge_name
       }
       hostonly = {
-        name = var.cluster_infrastructure.network.hostonly.name
-        cidr = var.cluster_infrastructure.network.hostonly.cidr
+        name        = var.cluster_infrastructure.network.hostonly.name
+        cidr        = var.cluster_infrastructure.network.hostonly.cidr
+        bridge_name = var.cluster_infrastructure.network.hostonly.bridge_name
       }
     }
     storage_pool_name = var.cluster_infrastructure.storage_pool_name

@@ -36,10 +36,12 @@ variable "libvirt_infrastructure" {
         cidr          = string
         gateway       = string
         subnet_prefix = string
+        bridge_name   = string
       })
       hostonly = object({
-        name = string
-        cidr = string
+        name        = string
+        cidr        = string
+        bridge_name = string
       })
     })
     storage_pool_name = string

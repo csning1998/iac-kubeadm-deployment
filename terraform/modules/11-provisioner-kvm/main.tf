@@ -23,7 +23,7 @@ resource "libvirt_network" "nat_net" {
   # name      = var.libvirt_nat_network_name
   name      = var.libvirt_infrastructure.network.nat.name
   mode      = "nat"
-  bridge    = "virbr_nat" # Avoid conflict with default virbr0 on the Host
+  bridge    = var.libvirt_infrastructure.network.nat.bridge_name
   addresses = [var.libvirt_infrastructure.network.nat.cidr]
   dhcp {
     enabled = true
@@ -36,7 +36,7 @@ resource "libvirt_network" "nat_net" {
 resource "libvirt_network" "hostonly_net" {
   name      = var.libvirt_infrastructure.network.hostonly.name
   mode      = "nat" # Use NAT to enable DHCP and DNS
-  bridge    = "virbr_hostonly"
+  bridge    = var.libvirt_infrastructure.network.hostonly.bridge_name
   addresses = [var.libvirt_infrastructure.network.hostonly.cidr]
   dhcp {
     enabled = true
@@ -46,32 +46,32 @@ resource "libvirt_network" "hostonly_net" {
   }
 }
 
-resource "libvirt_pool" "kube_pool" {
+resource "libvirt_pool" "storage_pool" {
   name = var.libvirt_infrastructure.storage_pool_name
   type = "dir"
   target {
-    path = abspath("/var/lib/libvirt/images")
+    path = abspath("/var/lib/libvirt/images/${var.libvirt_infrastructure.storage_pool_name}")
   }
 }
 
 resource "libvirt_volume" "os_disk" {
 
-  depends_on = [libvirt_pool.kube_pool]
+  depends_on = [libvirt_pool.storage_pool]
 
   for_each = var.vm_config.all_nodes_map
   name     = "${each.key}-os.qcow2"
-  pool     = libvirt_pool.kube_pool.name
+  pool     = libvirt_pool.storage_pool.name
   source   = var.vm_config.base_image_path
   format   = "qcow2"
 }
 
 resource "libvirt_cloudinit_disk" "cloud_init" {
 
-  depends_on = [libvirt_pool.kube_pool]
+  depends_on = [libvirt_pool.storage_pool]
 
   for_each = var.vm_config.all_nodes_map
   name     = "${each.key}-cloud-init.iso"
-  pool     = libvirt_pool.kube_pool.name
+  pool     = libvirt_pool.storage_pool.name
   user_data = templatefile("${path.root}/../../templates/user_data.tftpl", {
     hostname       = each.key
     vm_username    = var.credentials.username
@@ -134,3 +134,4 @@ resource "libvirt_domain" "nodes" {
     type = "vga"
   }
 }
+
