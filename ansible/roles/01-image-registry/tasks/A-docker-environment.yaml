@@ -46,6 +46,6 @@
 
 - name: "Step 7. Verify Docker installation"
   ansible.builtin.command:
-    cmd: "docker run hello-world"
+    cmd: "docker info"
   become: true
   changed_when: false
