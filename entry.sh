@@ -82,7 +82,7 @@ options+=("Reset Packer and Terraform")
 options+=("Rebuild Packer and Terraform")
 options+=("Rebuild Packer: Registry Base Image")
 options+=("Rebuild Packer: K8s Base Image")
-options+=("Rebuild All (K8s Base Image + TF)")
+options+=("Rebuild K8s Cluster (Packer + TF)")
 options+=("Rebuild Terraform: Stages I All")
 options+=("Rebuild Terraform Stage I: KVM Provision")
 options+=("Rebuild Terraform Stage I: Ansible Bootstrapper")
@@ -170,7 +170,7 @@ select opt in "${options[@]}"; do
       report_execution_time
       break
       ;;
-    "Rebuild All (K8s Base Image + TF)")
+    "Rebuild K8s Cluster (Packer + TF)")
       echo "# Executing Rebuild All workflow for Kubernetes..."
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
@@ -235,7 +235,7 @@ select opt in "${options[@]}"; do
       break
       ;;
     "Rebuild Terraform Stage III: Registry Server")
-      echo "# Executing Rebuild Terraform Stage ITI workflow on Registry Server..."
+      echo "# Executing Rebuild Terraform Stage III workflow on Registry Server..."
       ensure_libvirt_services_running
       # verify_ssh
       apply_terraform_30-registry-provision

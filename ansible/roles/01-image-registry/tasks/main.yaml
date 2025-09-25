@@ -2,5 +2,5 @@
 - name: Section A. Set up Docker Environment
   ansible.builtin.include_tasks: A-docker-environment.yaml
 
-- name: Section B. Sey up Docker Registry Image
+- name: Section B. Set up Docker Registry Image
   ansible.builtin.include_tasks: B-registry-image.yaml

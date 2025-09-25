@@ -20,7 +20,6 @@ data "local_file" "ssh_public_key" {
 }
 
 resource "libvirt_network" "nat_net" {
-  # name      = var.libvirt_nat_network_name
   name      = var.libvirt_infrastructure.network.nat.name
   mode      = "nat"
   bridge    = var.libvirt_infrastructure.network.nat.bridge_name
