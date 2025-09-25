@@ -4,6 +4,7 @@
 
 readonly layer_10="layers/10-cluster-provision"
 readonly layer_20="layers/20-k8s-addons"
+readonly layer_30="layers/30-registry-provision"
 
 # Function: Reset Terraform state
 reset_terraform_state() {
@@ -43,7 +44,7 @@ apply_terraform_12-bootstrapper-ansible() {
   set -o pipefail
   echo ">>> Stage II: Applying Ansible Bootstrapper on cluster..."
 
-  local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=./terraform.tfvars -target=module.ansible"
+  local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=./terraform.tfvars -target=module.bootstrapper_ansible"
   run_command "${cmd}" "${TERRAFORM_DIR}/${layer_10}"
 
   echo "#### Saving Ansible playbook outputs to log files..."
@@ -68,7 +69,6 @@ apply_terraform_12-bootstrapper-ansible() {
 apply_terraform_10-cluster-provision() {
   echo ">>> STEP: Initializing Terraform and perform Kubernetes cluster provision..."
 
-  # Command without -target to apply the entire configuration
   local cmd="terraform init && terraform validate && terraform apply -auto-approve -var-file=./terraform.tfvars"
   (cd "${TERRAFORM_DIR}" && rm -rf .terraform .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup)
   run_command "${cmd}" "${TERRAFORM_DIR}/${layer_10}"
@@ -79,11 +79,20 @@ apply_terraform_10-cluster-provision() {
 
 # Function: Provision Add-ons for Kubernetes cluster
 apply_terraform_20-k8s-addons() {
-  echo ">>> STEP: Initializing Terraform and applying ALL configurations..."
+  echo ">>> STEP: Initializing Terraform and applying Kubernetes Cluster Add-ons..."
 
-  # Command without -target to apply the entire configuration
   local cmd="terraform init -upgrade && terraform destroy -auto-approve && terraform init -upgrade && terraform apply -auto-approve"
   run_command "${cmd}" "${TERRAFORM_DIR}/${layer_20}"
+
+  echo "#### Full Terraform apply complete."
+  echo "--------------------------------------------------"
+}
+
+apply_terraform_30-registry-provision(){
+  echo ">>> STEP: Initializing Terraform and applying registry provision..."
+
+  local cmd="terraform init -upgrade && terraform destroy -auto-approve && terraform init -upgrade && terraform apply -auto-approve"
+  run_command "${cmd}" "${TERRAFORM_DIR}/${layer_30}"
 
   echo "#### Full Terraform apply complete."
   echo "--------------------------------------------------"

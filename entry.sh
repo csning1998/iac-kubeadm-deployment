@@ -88,6 +88,7 @@ options+=("Rebuild Terraform Stage I: KVM Provision")
 options+=("Rebuild Terraform Stage I: Ansible Bootstrapper")
 options+=("[DEV] Rebuild Stage I via Ansible Command")
 options+=("Rebuild Terraform Stage II: Kubernetes Addons")
+options+=("Rebuild Terraform Stage III: Registry Server")
 options+=("Verify SSH")
 options+=("Quit")
 
@@ -217,8 +218,8 @@ select opt in "${options[@]}"; do
     "[DEV] Rebuild Stage I via Ansible Command")
       echo "# Executing [DEV] Rebuild Stage I via Ansible Command..."
       if ! check_ssh_key_exists; then break; fi
-      verify_ssh
       ensure_libvirt_services_running
+      verify_ssh
       apply_ansible_stage_II
       report_execution_time
       echo "# [DEV] Rebuild Stage I Ansible Bootstrapper via Ansible completed successfully."
@@ -226,11 +227,20 @@ select opt in "${options[@]}"; do
       ;;
     "Rebuild Terraform Stage II: Kubernetes Addons")
       echo "# Executing Rebuild Terraform Stage II workflow on Kubernetes Addons..."
-      verify_ssh
       ensure_libvirt_services_running
+      verify_ssh
       apply_terraform_20-k8s-addons
       report_execution_time
       echo "# Rebuild Terraform Stage II Kubernetes Addons workflow completed successfully."
+      break
+      ;;
+    "Rebuild Terraform Stage III: Registry Server")
+      echo "# Executing Rebuild Terraform Stage ITI workflow on Registry Server..."
+      ensure_libvirt_services_running
+      # verify_ssh
+      apply_terraform_30-registry-provision
+      report_execution_time
+      echo "# Rebuild Terraform Stage III workflow on Registry Server workflow completed successfully."
       break
       ;;
     "Verify SSH")
