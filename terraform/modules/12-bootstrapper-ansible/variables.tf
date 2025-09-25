@@ -10,6 +10,7 @@ variable "inventory" {
       ram  = number
       path = string
     }))
+    status_trigger = any
   })
 }
 

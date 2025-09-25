@@ -52,6 +52,12 @@ resource "null_resource" "ssh_config_include" {
 resource "null_resource" "prepare_ssh_access" {
   depends_on = [null_resource.ssh_config_include]
 
+  triggers = {
+    # The ID of the VMs change when they are (re)established. 
+    # This modifies jsonencode and thus trigger this resource。
+    vm_provisioning_complete = jsonencode(var.inventory.status_trigger)
+  }
+
   provisioner "local-exec" {
     command     = <<-EOT
       set -e
