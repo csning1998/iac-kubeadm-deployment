@@ -106,7 +106,10 @@ reapply_terraform_layer() {
 
   echo ">>> STEP: Re-applying Terraform configuration for layer [${layer_name}]..."
 
-  local cmd="terraform init -upgrade && terraform destroy -auto-approve -var-file=./terraform.tfvars && terraform apply -auto-approve -var-file=./terraform.tfvars"
+  local cmd="terraform init -upgrade && terraform destroy -auto-approve -var-file=./terraform.tfvars \
+    terraform init -upgrade && terraform validate \
+    terraform apply -auto-approve -var-file=./terraform.tfvars"
+  
   run_command "${cmd}" "${layer_dir}"
 
   echo "#### Terraform re-apply for [${layer_name}] complete."

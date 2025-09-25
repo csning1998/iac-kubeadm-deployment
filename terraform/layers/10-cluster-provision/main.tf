@@ -45,7 +45,7 @@ module "bootstrapper_ansible" {
       k8s_master_ips        = local.k8s_master_ips
       k8s_ha_virtual_ip     = var.k8s_cluster_config.ha_virtual_ip
       k8s_pod_subnet        = var.k8s_cluster_config.pod_subnet
-      k8s_pod_subnet_prefix = local.k8s_cluster_nat_network_subnet_prefix
+      k8s_nat_subnet_prefix = local.k8s_cluster_nat_network_subnet_prefix
     }
   }
 

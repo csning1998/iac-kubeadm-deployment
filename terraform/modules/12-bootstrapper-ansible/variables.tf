@@ -34,7 +34,7 @@ variable "ansible_config" {
       k8s_master_ips        = list(string)
       k8s_ha_virtual_ip     = string
       k8s_pod_subnet        = string
-      k8s_pod_subnet_prefix = string
+      k8s_nat_subnet_prefix = string
     })
   })
 }
