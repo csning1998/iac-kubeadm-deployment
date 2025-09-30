@@ -3,6 +3,7 @@
 variable "registry_config" {
   description = "Define the registry server including virtual hardware resources."
   type = object({
+    registry_name = string
     nodes = object({
       registry = list(object({
         ip   = string

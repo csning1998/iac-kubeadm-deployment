@@ -36,3 +36,15 @@ module "provisioner_kvm" {
     storage_pool_name = var.registry_infrastructure.storage_pool_name
   }
 }
+
+module "ssh_config_manager_registry" {
+  source = "../../modules/81-ssh-config-manager"
+
+  config_name = var.registry_config.registry_name
+  nodes       = module.provisioner_kvm.all_nodes_map
+  vm_credentials = {
+    username             = data.vault_generic_secret.iac_vars.data["vm_username"]
+    ssh_private_key_path = data.vault_generic_secret.iac_vars.data["ssh_private_key_path"]
+  }
+  status_trigger = module.provisioner_kvm.vm_status_trigger
+}
