@@ -11,7 +11,7 @@ func ExecuteCommand(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 
 	// Connect the command's stdout and stderr to the current process's streams.
-	cmd.Stdout = os.Stdout 
+	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	fmt.Printf(">>> Executing: %s %v\n", name, args)

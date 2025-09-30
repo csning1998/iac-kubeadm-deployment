@@ -14,7 +14,7 @@ var rootCmd = &cobra.Command{
 	Long: `This application is the Go replacement for the original entry.sh script,
 providing a more robust and maintainable way to manage the IaC lifecycle.`,
 
-// Uncomment the following line if BARE app has an action associated with it
+	// Uncomment the following line if BARE app has an action associated with it
 	// Run: func(cmd *cobra.Command, args []string) { },
 }
 
