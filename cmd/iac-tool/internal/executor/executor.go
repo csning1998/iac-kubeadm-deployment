@@ -17,8 +17,7 @@ func ExecuteCommand(name string, args ...string) error {
 	fmt.Printf(">>> Executing: %s %v\n", name, args)
 
 	if err := cmd.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error running command: %v\n", err)
-		return err
+		return fmt.Errorf("failed to execute command: %w", err)
 	}
 
 	return nil

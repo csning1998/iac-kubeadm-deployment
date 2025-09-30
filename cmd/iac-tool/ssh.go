@@ -19,13 +19,12 @@ var verifyCmd = &cobra.Command{
 	Short: "Verifies SSH connectivity to all VM nodes.",
 	Long:  `Executes 'utils_ssh.sh' to perform SSH access verification (strict) against all hosts defined in the SSH config file.`,
 
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Println("# Executing Verify SSH workflow via Go CLI...")
 		scriptPath := "./scripts/utils_ssh.sh"
 
 		if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "Error: Script not found at %s\n", scriptPath)
-			os.Exit(1)
+			return fmt.Errorf("script not found at %s", scriptPath)
 		}
 
 		// Execute the specific function within the shell script.
@@ -34,11 +33,11 @@ var verifyCmd = &cobra.Command{
 		err := executor.ExecuteCommand("bash", "-c", commandString)
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "SSH verification script failed with error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("SSH verification script failed: %w", err)
 		}
 
 		fmt.Println("# Verify SSH workflow completed successfully.")
+		return nil
 	},
 }
 
