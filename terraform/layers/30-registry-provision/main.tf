@@ -25,7 +25,6 @@ module "provisioner_kvm" {
         gateway       = local.registry_nat_network_gateway
         subnet_prefix = local.registry_nat_network_subnet_prefix
         bridge_name   = var.registry_infrastructure.network.nat.bridge_name
-
       }
       hostonly = {
         name        = var.registry_infrastructure.network.hostonly.name
@@ -35,4 +34,16 @@ module "provisioner_kvm" {
     }
     storage_pool_name = var.registry_infrastructure.storage_pool_name
   }
+}
+
+module "ssh_config_manager_registry" {
+  source = "../../modules/81-ssh-config-manager"
+
+  config_name = var.registry_config.registry_name
+  nodes       = module.provisioner_kvm.all_nodes_map
+  vm_credentials = {
+    username             = data.vault_generic_secret.iac_vars.data["vm_username"]
+    ssh_private_key_path = data.vault_generic_secret.iac_vars.data["ssh_private_key_path"]
+  }
+  status_trigger = module.provisioner_kvm.vm_status_trigger
 }

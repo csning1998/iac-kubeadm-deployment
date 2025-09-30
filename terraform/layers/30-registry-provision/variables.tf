@@ -1,8 +1,10 @@
+
 # Registry Server Topology & Configuration
 
 variable "registry_config" {
   description = "Define the registry server including virtual hardware resources."
   type = object({
+    registry_name = string
     nodes = object({
       registry = list(object({
         ip   = string
@@ -29,7 +31,6 @@ variable "registry_infrastructure" {
         name        = string
         cidr        = string
         bridge_name = string
-
       })
     })
     storage_pool_name = optional(string, "iac-registry")

@@ -1,13 +1,13 @@
 ---
 - name: Section E. Finalize image and clean up
   block:
-    - name: "Step 1a. Verify hostname"
+    - name: "Step 1. Verify hostname"
       ansible.builtin.command: hostname
       register: hostname_result
       changed_when: false
       failed_when: hostname_result.stdout != expected_hostname
 
-    - name: "Step 1b. Ensure .ssh directory exists with correct permissions"
+    - name: "Step 12. Ensure .ssh directory exists with correct permissions"
       ansible.builtin.file:
         path: "/home/{{ ssh_user }}/.ssh"
         state: directory
@@ -15,20 +15,12 @@
         owner: "{{ ssh_user }}"
         group: "{{ ssh_user }}"
 
-    - name: "Step 2. Install the automated SSH public key for automation"
+    - name: "Step 3. Install the automated SSH public key for automation"
       ansible.posix.authorized_key:
         user: "{{ ssh_user }}"
         key: "{{ lookup('file', public_key_file) }}"
         path: "/home/{{ ssh_user }}/.ssh/authorized_keys"
         state: present
-
-    - name: "Step 3. Clean up temporary files"
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: absent
-      loop:
-        - /tmp/crio.key
-        - /tmp/kubernetes-apt-keyring.asc
 
     - name: "Step 4. Clean cloud-init state to prepare image for cloning"
       ansible.builtin.command: cloud-init clean --logs --seed

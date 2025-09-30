@@ -36,6 +36,18 @@ module "provisioner_kvm" {
   }
 }
 
+module "ssh_config_manager" {
+  source = "../../modules/81-ssh-config-manager"
+
+  config_name = var.k8s_cluster_config.cluster_name
+  nodes       = module.provisioner_kvm.all_nodes_map
+  vm_credentials = {
+    username             = data.vault_generic_secret.iac_vars.data["vm_username"]
+    ssh_private_key_path = data.vault_generic_secret.iac_vars.data["ssh_private_key_path"]
+  }
+  status_trigger = module.provisioner_kvm.vm_status_trigger
+}
+
 module "bootstrapper_ansible" {
   source = "../../modules/12-bootstrapper-ansible"
 
@@ -56,6 +68,6 @@ module "bootstrapper_ansible" {
 
   inventory = {
     nodes          = module.provisioner_kvm.all_nodes_map
-    status_trigger = module.provisioner_kvm.vm_status_trigger
+    status_trigger = module.ssh_config_manager.ssh_access_ready_trigger
   }
 }
