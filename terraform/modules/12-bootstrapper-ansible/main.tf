@@ -8,69 +8,6 @@ terraform {
 }
 
 /*
-* Generate a ~/.ssh/iac-kubeadm-deployment_config file in the user's home directory with an alias and a specified public key
-* for passwordless SSH using the alias (e.g., ssh k8s-master-00).
-*/
-resource "local_file" "ssh_config" {
-  content = templatefile("${path.root}/../../templates/ssh_config.tftpl", {
-    nodes                = var.inventory.nodes,
-    ssh_user             = var.vm_credentials.username,
-    ssh_private_key_path = var.vm_credentials.ssh_private_key_path
-  })
-  filename        = pathexpand("~/.ssh/iac-kubeadm-deployment_config")
-  file_permission = "0600"
-}
-
-/*
-* NOTE: Call functions in `utils_ssh.sh` via local-exec to manage the ~/.ssh/config file. 
-* This avoids deletion during `terraform destroy()` in `scripts/terraform.sh`.
-*/
-resource "null_resource" "ssh_config_include" {
-  depends_on = [local_file.ssh_config]
-
-  # Re-run when the content of the ssh_config changes
-  triggers = {
-    ssh_config_content = local_file.ssh_config.content
-  }
-
-  provisioner "local-exec" {
-    command     = ". ${path.root}/../../../scripts/utils_ssh.sh && integrate_ssh_config"
-    interpreter = ["/bin/bash", "-c"]
-  }
-
-  provisioner "local-exec" {
-    when        = destroy
-    command     = ". ${path.root}/../../../scripts/utils_ssh.sh && deintegrate_ssh_config"
-    interpreter = ["/bin/bash", "-c"]
-  }
-}
-
-/*
-* This makes sure this resource runs only after the "for_each" loop
-* in "configure_nodes" has completed for all nodes.
-*/
-resource "null_resource" "prepare_ssh_access" {
-  depends_on = [null_resource.ssh_config_include]
-
-  triggers = {
-    # The ID of the VMs change when they are (re)established. 
-    # This modifies jsonencode and thus trigger this resource。
-    vm_provisioning_complete = jsonencode(var.inventory.status_trigger)
-  }
-
-  provisioner "local-exec" {
-    command     = <<-EOT
-      set -e
-      echo ">>> Verifying VM liveness and preparing SSH access..."
-      . ${path.root}/../../../scripts/utils_ssh.sh
-      bootstrap_ssh_known_hosts ${join(" ", [for node in var.inventory.nodes : node.ip])}
-      echo ">>> Liveness check passed. SSH access is ready."
-    EOT
-    interpreter = ["/bin/bash", "-c"]
-  }
-}
-
-/*
 * Generate the Ansible inventory file from template
 */
 resource "local_file" "inventory" {
@@ -86,7 +23,7 @@ resource "local_file" "inventory" {
 
 resource "null_resource" "provision_cluster" {
 
-  depends_on = [null_resource.prepare_ssh_access, local_file.inventory]
+  depends_on = [local_file.inventory]
 
   provisioner "local-exec" {
 

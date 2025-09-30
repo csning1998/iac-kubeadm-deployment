@@ -135,9 +135,14 @@ prompt_verify_ssh() {
 # Function: Prepend the Include directive to ~/.ssh/config for the k8s cluster
 integrate_ssh_config() {
   # Default to ~/.ssh/config if not set, though it should be set by the caller.
+  local k8s_config_path="$1"
+  if [[ -z "${k8s_config_path}" ]]; then
+    echo "Error: No config path provided to integrate_ssh_config." >&2
+    return 1
+  fi
+
   local ssh_config_file="${SSH_CONFIG:-$HOME/.ssh/config}"
-  local k8s_config_path="$HOME/.ssh/iac-kubeadm-deployment_config"
-  local include_line="Include $k8s_config_path"
+  local include_line="Include ${k8s_config_path}"
 
   # Ensure the directory exists and config file exists
   mkdir -p "$(dirname "$ssh_config_file")" || {
