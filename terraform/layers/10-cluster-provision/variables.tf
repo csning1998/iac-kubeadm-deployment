@@ -4,6 +4,7 @@
 variable "k8s_cluster_config" {
   description = "Define all nodes including virtual hardware resources"
   type = object({
+    cluster_name = string
     nodes = object({
       masters = list(object({
         ip   = string
