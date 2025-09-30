@@ -7,7 +7,7 @@ locals {
   ssh_public_key_path = vault("secret/data/iac-kubeadm-deployment/variables", "ssh_public_key_path")
 
   # The final hostname is dynamically composed from variables.
-  final_vm_name = "${var.common_spec.vm_name}-${var.build_spec.suffix}"
+  final_vm_name = "${var.common_spec.vm_name}-${var.build_spec.suffix}.qcow2"
 }
 
 source "qemu" "ubuntu" {
