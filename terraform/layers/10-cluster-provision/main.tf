@@ -39,7 +39,6 @@ module "provisioner_kvm" {
 module "ssh_config_manager" {
   source = "../../modules/81-ssh-config-manager"
 
-  # Pass parameters directly without complex locals
   config_name = var.k8s_cluster_config.cluster_name
   nodes       = module.provisioner_kvm.all_nodes_map
   vm_credentials = {

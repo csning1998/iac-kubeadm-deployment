@@ -25,7 +25,6 @@ module "provisioner_kvm" {
         gateway       = local.registry_nat_network_gateway
         subnet_prefix = local.registry_nat_network_subnet_prefix
         bridge_name   = var.registry_infrastructure.network.nat.bridge_name
-
       }
       hostonly = {
         name        = var.registry_infrastructure.network.hostonly.name

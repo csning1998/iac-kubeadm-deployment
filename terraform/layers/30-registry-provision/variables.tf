@@ -1,3 +1,4 @@
+
 # Registry Server Topology & Configuration
 
 variable "registry_config" {
@@ -30,7 +31,6 @@ variable "registry_infrastructure" {
         name        = string
         cidr        = string
         bridge_name = string
-
       })
     })
     storage_pool_name = optional(string, "iac-registry")

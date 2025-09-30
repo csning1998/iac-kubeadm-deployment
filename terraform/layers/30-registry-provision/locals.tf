@@ -1,6 +1,5 @@
 
 locals {
-  provisioner_output = module.provisioner_kvm
 
   all_nodes_map = { for idx, config in var.registry_config.nodes.registry :
     "registry-server-${format("%02d", idx)}" => config
