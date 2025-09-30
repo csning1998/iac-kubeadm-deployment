@@ -10,6 +10,3 @@
 
 - name: Section D. Install Kubernetes components
   ansible.builtin.include_tasks: D-kube-components.yaml
-
-- name: Section E. Finalize image and clean up
-  ansible.builtin.include_tasks: E-finalization.yaml

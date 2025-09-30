@@ -10,3 +10,9 @@
   become: true
   roles:
     - 02-base-kubernetes
+
+- name: "Play 3: Final Permission Check and Clean up"
+  hosts: "all"
+  become: true
+  roles:
+    - 09-image-finalization

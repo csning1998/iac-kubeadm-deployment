@@ -5,7 +5,7 @@
       ansible.builtin.get_url:
         url: https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key
         dest: /tmp/kubernetes-apt-keyring.asc
-        mode: '0644'
+        mode: "0644"
 
     - name: "Step 1b. Dearmor Kubernetes GPG key"
       ansible.builtin.command:
@@ -43,6 +43,14 @@
       ansible.builtin.systemd:
         name: kubelet
         enabled: true
+
+    - name: "Step 6. Clean up temporary files"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/crio.key
+        - /tmp/kubernetes-apt-keyring.asc
 
     # - name: "Step 6. Pre-pull container images for control plane"
     #   ansible.builtin.command: kubeadm config images pull --cri-socket unix:///var/run/crio/crio.sock
