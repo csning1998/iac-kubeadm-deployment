@@ -34,6 +34,9 @@ vault/keys/
 vault/tls/
 
 
+## Golang
+/iac-tool
+
 ### IDEs
 .vscode
 .idea
