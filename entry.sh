@@ -117,7 +117,7 @@ select opt in "${options[@]}"; do
       if prompt_install_libvirt_tools; then
         setup_libvirt_environment
       fi
-      echo "# Setup KVM / QEMU workflow completed successfully."
+      echo "# Setup KVM / QEMU workflow completed."
       break
       ;;
     "[ONCE-ONLY] Setup Core IaC Tools for Native")
@@ -125,7 +125,7 @@ select opt in "${options[@]}"; do
       if prompt_install_iac_tools; then
         setup_iac_tools
       fi
-      echo "# Setup Core IaC Tools workflow completed successfully."
+      echo "# Setup Core IaC Tools workflow completed."
       break
       ;;
     "[ONCE-ONLY] Verify IaC Environment for Native")
@@ -148,7 +148,7 @@ select opt in "${options[@]}"; do
       cleanup_packer_output "20-k8s-base"
       cleanup_terraform_layer "10-cluster-provision"
       report_execution_time
-      echo "# Reset All workflow completed successfully."
+      echo "# Reset All workflow completed."
       break
       ;;
     "Rebuild Packer: Registry Base Image")
@@ -178,7 +178,7 @@ select opt in "${options[@]}"; do
       cleanup_terraform_layer "10-cluster-provision"
       apply_terraform_layer "10-cluster-provision"
       report_execution_time
-      echo "# Rebuild All workflow completed successfully."
+      echo "# Rebuild All workflow completed."
       break
       ;;
     "Rebuild Terraform: Full Cluster (Layer 10)")
@@ -190,7 +190,7 @@ select opt in "${options[@]}"; do
       cleanup_terraform_layer "10-cluster-provision"
       apply_terraform_layer "10-cluster-provision"
       report_execution_time
-      echo "# Rebuild Terraform workflow completed successfully."
+      echo "# Rebuild Terraform workflow completed."
       break
       ;;
     "Rebuild Terraform Layer 10: KVM Provision Only")
@@ -202,7 +202,7 @@ select opt in "${options[@]}"; do
       cleanup_terraform_layer "10-cluster-provision"
       apply_terraform_layer "10-cluster-provision" "module.provisioner_kvm"
       report_execution_time
-      echo "# Rebuild Terraform KVM Provisioner workflow completed successfully."
+      echo "# Rebuild Terraform KVM Provisioner workflow completed."
       break
       ;;
     "Rebuild Terraform Layer 10: Ansible Bootstrapper Only")
@@ -211,7 +211,7 @@ select opt in "${options[@]}"; do
       ensure_libvirt_services_running
       bootstrap_kubernetes_cluster
       report_execution_time
-      echo "# Rebuild Terraform Ansible Bootstrapper workflow completed successfully."
+      echo "# Rebuild Terraform Ansible Bootstrapper workflow completed."
       break
       ;;
     "[DEV] Rebuild Layer 10 via Ansible Command")
@@ -221,7 +221,7 @@ select opt in "${options[@]}"; do
       verify_ssh
       apply_ansible_stage_II
       report_execution_time
-      echo "# [DEV] Rebuild via direct Ansible command completed successfully."
+      echo "# [DEV] Rebuild via direct Ansible command completed."
       break
       ;;
     "Rebuild Terraform Layer 20: Kubernetes Addons")
@@ -230,7 +230,7 @@ select opt in "${options[@]}"; do
       verify_ssh
       reapply_terraform_layer "20-k8s-addons"
       report_execution_time
-      echo "# Rebuild Terraform Kubernetes Addons workflow completed successfully."
+      echo "# Rebuild Terraform Kubernetes Addons workflow completed."
       break
       ;;
     "Rebuild Terraform Layer 30: Registry Server")
@@ -238,14 +238,14 @@ select opt in "${options[@]}"; do
       ensure_libvirt_services_running
       reapply_terraform_layer "30-registry-provision"
       report_execution_time
-      echo "# Rebuild Terraform Registry Server workflow completed successfully."
+      echo "# Rebuild Terraform Registry Server workflow completed."
       break
       ;;
     "Verify SSH")
       echo "# Executing Verify SSH workflow..."
       if ! check_ssh_key_exists; then break; fi
       prompt_verify_ssh
-      echo "# Verify SSH workflow completed successfully."
+      echo "# Verify SSH workflow completed."
       break
       ;;
     "Quit")
