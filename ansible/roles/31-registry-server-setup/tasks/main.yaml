@@ -17,16 +17,7 @@
         mode: "0644"
       notify: Restart registry container
 
-    - name: "Step 3. Ensure Docker is installed"
-      ansible.builtin.apt:
-        name:
-          - docker-ce
-          - docker-ce-cli
-          - containerd.io
-        state: present
-        update_cache: true
-
-    - name: "Step 4. Start the Docker Registry container with the custom config"
+    - name: "Step 3. Start the Docker Registry container with the custom config"
       community.docker.docker_container:
         name: registry
         image: registry:2
