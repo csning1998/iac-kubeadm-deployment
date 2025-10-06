@@ -21,16 +21,16 @@
 
     - name: "Step 2. Enable bridge traffic modules"
       ansible.builtin.template:
-        src: 02-k8s_modules.j2
+        src: B-k8s_modules.j2
         dest: /etc/modules-load.d/k8s.conf
-        mode: '0644'
+        mode: "0644"
       notify: Load kernel modules
 
     - name: "Step 3. Set sysctl parameters"
       ansible.builtin.template:
-        src: 02-k8s_sysctl.conf.j2
+        src: B-k8s_sysctl.conf.j2
         dest: /etc/sysctl.d/k8s.conf
-        mode: '0644'
+        mode: "0644"
       notify: Apply sysctl settings
 
     - name: "Step 4. Check if swap is active"
