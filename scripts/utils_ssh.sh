@@ -3,7 +3,7 @@
 # This script contains general utility and helper functions.
 
 readonly SSH_CONFIG="$HOME/.ssh/config"
-readonly KNOWN_HOSTS_FILE="$HOME/.ssh/k8s_cluster_known_hosts"
+# readonly KNOWN_HOSTS_FILE="$HOME/.ssh/k8s_cluster_known_hosts"
 
 # Function: Check if the required SSH private key exists
 check_ssh_key_exists() {
@@ -220,22 +220,30 @@ deintegrate_ssh_config() {
 }
 
 bootstrap_ssh_known_hosts() {
+  if [ $# -lt 2 ]; then
+    echo "#### Error: Not enough arguments. Usage: bootstrap_ssh_known_hosts <config_name> <ip1> [<ip2>...]" >&2
+    return 1
+  fi
   if [ $# -eq 0 ]; then
     echo "#### Error: No IP addresses provided to bootstrap_ssh_known_hosts." >&2
     return 1
   fi
 
+  local config_name="$1"
+  shift
+  local known_hosts_file="$HOME/.ssh/known_hosts_${config_name}"
+
   echo ">>> Preparing for Ansible: Clearing old host keys and scanning new ones..."
   mkdir -p "$HOME/.ssh"
-  rm -f "${KNOWN_HOSTS_FILE}"
+  rm -f "${known_hosts_file}"
   
   echo "#### Scanning host keys for all nodes..."
   # Iterate through all IP address parameters passed from `terraform/modules/ansible/main.tf`
   for ip in "$@"; do
     echo "#### Waiting for SSH on ${ip} to be ready..."
     for i in {1..30}; do # Wait for up to 30 seconds
-      if ssh-keyscan -H "${ip}" >> "${KNOWN_HOSTS_FILE}" 2>/dev/null; then
-        echo "      - Scanned key for ${ip} and added to ${KNOWN_HOSTS_FILE}"
+      if ssh-keyscan -H "${ip}" >> "${known_hosts_file}" 2>/dev/null; then
+        echo "      - Scanned key for ${ip} and added to ${known_hosts_file}"
         break
       fi
       if [ "${i}" -eq 30 ]; then
@@ -246,7 +254,7 @@ bootstrap_ssh_known_hosts() {
     done
   done
   
-  echo "#### Host key scanning complete. File created at ${KNOWN_HOSTS_FILE}"
+  echo "#### Host key scanning complete. File created at ${known_hosts_file}"
   echo "--------------------------------------------------"
 }
 
