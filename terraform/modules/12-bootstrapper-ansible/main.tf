@@ -16,6 +16,7 @@ resource "local_file" "inventory" {
     worker_nodes     = [for node in var.inventory.nodes : node if startswith(node.key, "k8s-worker")],
     ansible_ssh_user = var.vm_credentials.username,
     extra_vars       = var.ansible_config.extra_vars
+    registry_host    = var.ansible_config.registry_host
   })
   filename        = "${var.ansible_config.root_path}/inventory.yaml"
   file_permission = "0644"

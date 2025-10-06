@@ -34,7 +34,7 @@ resource "libvirt_network" "nat_net" {
 
 resource "libvirt_network" "hostonly_net" {
   name      = var.libvirt_infrastructure.network.hostonly.name
-  mode      = "nat" # Use NAT to enable DHCP and DNS
+  mode      = "route" # To let external network accesses VM directly via IP address
   bridge    = var.libvirt_infrastructure.network.hostonly.bridge_name
   addresses = [var.libvirt_infrastructure.network.hostonly.cidr]
   dhcp {

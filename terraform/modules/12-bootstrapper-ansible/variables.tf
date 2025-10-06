@@ -29,7 +29,8 @@ variable "vm_credentials" {
 variable "ansible_config" {
   description = "Configurations for the Ansible execution environment and playbook."
   type = object({
-    root_path = string
+    root_path     = string
+    registry_host = string
     extra_vars = object({
       k8s_master_ips        = list(string)
       k8s_ha_virtual_ip     = string

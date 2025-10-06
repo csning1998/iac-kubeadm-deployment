@@ -19,6 +19,7 @@ variable "k8s_cluster_config" {
     })
     base_image_path = optional(string, "../../../packer/output/20-k8s-base/ubuntu-server-24-20-k8s-base.qcow2")
     ha_virtual_ip   = string
+    registry_host   = string
     pod_subnet      = optional(string, "10.244.0.0/16")
   })
 

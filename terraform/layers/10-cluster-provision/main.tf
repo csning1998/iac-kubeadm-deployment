@@ -52,7 +52,8 @@ module "bootstrapper_ansible" {
   source = "../../modules/12-bootstrapper-ansible"
 
   ansible_config = {
-    root_path = local.ansible_root_path
+    root_path     = local.ansible_root_path
+    registry_host = var.k8s_cluster_config.registry_host
     extra_vars = {
       k8s_master_ips        = local.k8s_master_ips
       k8s_ha_virtual_ip     = var.k8s_cluster_config.ha_virtual_ip
