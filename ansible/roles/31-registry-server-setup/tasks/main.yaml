@@ -1,0 +1,39 @@
+---
+- name: "Section A: Configure and Run Registry as a Pull-Through Cache"
+  block:
+    - name: "Step 1. Create directory for registry config and data"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /data/registry
+        - /etc/docker/registry
+
+    - name: "Step 2. Template out the registry-config.yml"
+      ansible.builtin.template:
+        src: registry-config.yml.j2
+        dest: /etc/docker/registry/config.yml
+        mode: "0644"
+      notify: Restart registry container
+
+    - name: "Step 3. Ensure Docker is installed"
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+        update_cache: true
+
+    - name: "Step 4. Start the Docker Registry container with the custom config"
+      community.docker.docker_container:
+        name: registry
+        image: registry:2
+        state: started
+        restart_policy: always
+        ports:
+          - "5000:5000"
+        volumes:
+          - /data/registry:/var/lib/registry
+          - /etc/docker/registry/config.yml:/etc/docker/registry/config.yml:ro
