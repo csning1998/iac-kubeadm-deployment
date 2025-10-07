@@ -80,7 +80,13 @@ resource "libvirt_cloudinit_disk" "cloud_init" {
     ssh_public_key = data.local_file.ssh_public_key.content
   })
 
-  network_config = templatefile("${path.root}/../../templates/network_config.tftpl", {})
+  network_config = templatefile("${path.root}/../../templates/network_config.tftpl", {
+    nat_mac          = "52:54:00:00:00:${format("%02x", index(keys(var.vm_config.all_nodes_map), each.key))}"
+    nat_ip_cidr      = "${var.libvirt_infrastructure.network.nat.subnet_prefix}.${split(".", each.value.ip)[3]}/${split("/", var.libvirt_infrastructure.network.nat.cidr)[1]}"
+    hostonly_mac     = "52:54:00:10:00:${format("%02x", index(keys(var.vm_config.all_nodes_map), each.key))}"
+    hostonly_ip_cidr = "${each.value.ip}/${split("/", var.libvirt_infrastructure.network.hostonly.cidr)[1]}"
+    nat_gateway      = var.libvirt_infrastructure.network.nat.gateway
+  })
 }
 
 resource "libvirt_domain" "nodes" {
@@ -98,11 +104,13 @@ resource "libvirt_domain" "nodes" {
   network_interface {
     network_name = libvirt_network.nat_net.name
     addresses    = ["${var.libvirt_infrastructure.network.nat.subnet_prefix}.${split(".", each.value.ip)[3]}"]
+    mac          = "52:54:00:00:00:${format("%02x", index(keys(var.vm_config.all_nodes_map), each.key))}"
   }
 
   network_interface {
     network_name = libvirt_network.hostonly_net.name
     addresses    = [each.value.ip]
+    mac          = "52:54:00:10:00:${format("%02x", index(keys(var.vm_config.all_nodes_map), each.key))}"
   }
 
   disk {
