@@ -1,17 +1,22 @@
 version: 0.1
 log:
-  level: info
+  level: debug
+  formatter: text
+  fields:
+    service: registry
 storage:
   filesystem:
     rootdirectory: /var/lib/registry
   delete:
     enabled: true
 http:
-  addr: 0.0.0.0:5000
+  addr: :5000
 health:
   storagedriver:
     enabled: true
     interval: 10s
     threshold: 3
 proxy:
-  remoteurl: https://registry.k8s.io
+  remoteurl: http://{{ nginx_listen_ip }}:5000
+  headers:
+    X-Proxy-Loop-Breaker: "true"
