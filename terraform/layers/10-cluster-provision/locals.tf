@@ -12,7 +12,7 @@ locals {
   all_nodes_map  = merge(local.masters_map, local.workers_map)
   k8s_master_ips = [for config in var.k8s_cluster_config.nodes.masters : config.ip]
 
-  k8s_cluster_nat_network_gateway       = cidrhost(var.cluster_infrastructure.network.nat.cidr, 2)
+  k8s_cluster_nat_network_gateway       = cidrhost(var.cluster_infrastructure.network.nat.cidr, 1)
   k8s_cluster_nat_network_subnet_prefix = join(".", slice(split(".", split("/", var.cluster_infrastructure.network.nat.cidr)[0]), 0, 3))
 
   # Flatten the all_nodes_map into the list format expected by the ssh-config-manager module.
