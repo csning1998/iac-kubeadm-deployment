@@ -48,8 +48,8 @@ module "ssh_config_manager" {
   status_trigger = module.provisioner_kvm.vm_status_trigger
 }
 
-module "bootstrapper_ansible" {
-  source = "../../modules/12-bootstrapper-ansible"
+module "bootstrapper_ansible_cluster" {
+  source = "../../modules/12-bootstrapper-ansible-cluster"
 
   ansible_config = {
     root_path     = local.ansible_root_path

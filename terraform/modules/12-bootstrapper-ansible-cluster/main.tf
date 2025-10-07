@@ -11,14 +11,14 @@ terraform {
 * Generate the Ansible inventory file from template
 */
 resource "local_file" "inventory" {
-  content = templatefile("${path.root}/../../templates/inventory.yaml.tftpl", {
+  content = templatefile("${path.root}/../../templates/inventory-cluster.yaml.tftpl", {
     master_nodes     = [for node in var.inventory.nodes : node if startswith(node.key, "k8s-master")],
     worker_nodes     = [for node in var.inventory.nodes : node if startswith(node.key, "k8s-worker")],
     ansible_ssh_user = var.vm_credentials.username,
     extra_vars       = var.ansible_config.extra_vars
     registry_host    = var.ansible_config.registry_host
   })
-  filename        = "${var.ansible_config.root_path}/inventory.yaml"
+  filename        = "${var.ansible_config.root_path}/inventory-cluster.yaml"
   file_permission = "0644"
 }
 
@@ -41,7 +41,7 @@ resource "null_resource" "provision_cluster" {
       mkdir -p ${var.ansible_config.root_path}/fetched
 
       ansible-playbook \
-        -i ${var.ansible_config.root_path}/inventory.yaml \
+        -i ${var.ansible_config.root_path}/inventory-cluster.yaml \
         --private-key ${nonsensitive(var.vm_credentials.ssh_private_key_path)} \
         --extra-vars "ansible_ssh_user=${nonsensitive(var.vm_credentials.username)}" \
         -v \

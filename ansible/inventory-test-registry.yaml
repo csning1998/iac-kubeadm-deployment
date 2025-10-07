@@ -1,7 +1,0 @@
----
-all:
-  children:
-    registry:
-      hosts:
-        registry-server-00:
-          ansible_host: 172.16.135.200

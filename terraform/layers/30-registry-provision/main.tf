@@ -47,3 +47,21 @@ module "ssh_config_manager_registry" {
   }
   status_trigger = module.provisioner_kvm.vm_status_trigger
 }
+
+module "bootstrapper_ansible_cluster" {
+  source = "../../modules/13-bootstrapper-ansible-registry"
+
+  ansible_config = {
+    root_path = local.ansible_root_path
+  }
+
+  vm_credentials = {
+    username             = data.vault_generic_secret.iac_vars.data["vm_username"]
+    ssh_private_key_path = data.vault_generic_secret.iac_vars.data["ssh_private_key_path"]
+  }
+
+  inventory = {
+    nodes          = module.provisioner_kvm.all_nodes_map
+    status_trigger = module.ssh_config_manager_registry.ssh_access_ready_trigger
+  }
+}

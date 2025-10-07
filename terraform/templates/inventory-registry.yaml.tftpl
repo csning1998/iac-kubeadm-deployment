@@ -1,0 +1,12 @@
+---
+all:
+  vars:
+      ansible_ssh_user: "${ansible_ssh_user}"
+
+  children:
+    master:
+      hosts:
+%{ for node in registry_nodes ~}
+        ${node.key}:
+          advertise_ip: ${node.ip}
+%{ endfor ~}
