@@ -1,0 +1,29 @@
+---
+- name: "Play 1: Clean up stale nodes from base image"
+  hosts: "{{ (groups['nodes'] | default([])) }}"
+  become: true
+  roles:
+    - 21-microk8s-cleanup
+
+- name: "Play 2: Configure High Availability MicroK8s Cluster"
+  hosts: "{{ (groups['nodes'] | default([])) | difference((groups['nodes'] | default([]))[:1]) }}"
+  become: true
+  roles:
+    - 22-microk8s-configure-ha
+
+- name: "Play 3: Configure MicroK8s Addons"
+  hosts: "{{ groups['nodes'][0] | default([]) }}"
+  become: true
+  roles:
+    - 23-microk8s-configure-addons
+
+- name: "Play 4: Setup Kubeconfig for all nodes"
+  hosts: nodes
+  become: true
+  roles:
+    - 24-microk8s-setup-kubeconfig
+# - name: "Play 5: Deploy Harbor application via Helm"
+#   hosts: "{{ groups['nodes'][0] | default([]) }}"
+#   become: true
+#   roles:
+#     - 41-deploy-harbor

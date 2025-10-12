@@ -55,8 +55,8 @@ Vault Server Status: Running (Unsealed)
  4) [ONCE-ONLY] Setup KVM / QEMU for Native                14) Rebuild Terraform Layer 10: KVM Provision Only
  5) [ONCE-ONLY] Setup Core IaC Tools for Native            15) Rebuild Terraform Layer 10: Ansible Bootstrapper Only
  6) [ONCE-ONLY] Verify IaC Environment for Native          16) [DEV] Rebuild Layer 10 via Ansible Command
- 7) Unseal Vault                                           17) Rebuild Terraform Layer 20: Kubernetes Addons
- 8) Switch Environment Strategy                            18) Rebuild Terraform Layer 30: Registry Server
+ 7) Unseal Vault                                           17) Rebuild Terraform Layer 20: Harbor Server
+ 8) Switch Environment Strategy                            18) Rebuild Terraform Layer 50: Kubernetes Addons
  9) Reset Packer and Terraform                             19) Verify SSH
 10) Rebuild Packer: Microk8s Base Image                    20) Quit
 
@@ -448,7 +448,7 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
 
 5. To test the cluster configuration by itself, you can use option `9`. This option will completely reset and clear the installer on every node in the Kubeadm Cluster and Registry Server, restoring them to a clean state. It is recommended to use this option if you need to perform isolated tests within the Ansible Playbook.
 
-6. Option `18`'s Registry Server is still under testing . . .
+6. Option `17`'s Harbor Server is still under testing . . .
 
 7. Option `19` primarily uses polling to test if the virtual machine is connectable and generally serves as a preliminary step for option `15`, `16`, and `17`, and `18`. Alternatively, you can use the following command to check the virtual machine's operational status.
 

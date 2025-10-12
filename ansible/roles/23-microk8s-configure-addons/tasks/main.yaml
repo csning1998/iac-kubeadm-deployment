@@ -1,0 +1,12 @@
+---
+- name: "Section: Configure and enable MicroK8s addons"
+  become: true
+  block:
+    - name: "Step1. Enable core addons for MicroK8s"
+      ansible.builtin.command:
+        cmd: "microk8s enable {{ item }}"
+      loop:
+        - dns
+        - hostpath-storage
+        - helm3
+      changed_when: true

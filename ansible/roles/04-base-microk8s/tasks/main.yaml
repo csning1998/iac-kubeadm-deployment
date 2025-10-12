@@ -58,3 +58,16 @@
         name: "{{ ssh_user }}"
         groups: microk8s
         append: true
+
+- name: "Section D: Reset MicroK8s state for golden image"
+  become: true
+  block:
+    - name: "Step D1. Leave the current cluster to reset node state"
+      ansible.builtin.command:
+        cmd: "microk8s reset"
+      changed_when: true
+
+    - name: "Step D2. Stop the MicroK8s service for clean state"
+      ansible.builtin.command:
+        cmd: "snap stop microk8s"
+      changed_when: true

@@ -1,0 +1,42 @@
+---
+- name: "Section: Join this node to the MicroK8s HA cluster"
+  become: true
+  block:
+    - name: "Step 1. Define the primary node from inventory"
+      ansible.builtin.set_fact:
+        primary_node: "{{ (groups['nodes'] | default([])) | first }}"
+
+    - name: "Step 2. Wait for MicroK8s to be ready on the primary node"
+      ansible.builtin.command:
+        cmd: "microk8s status --wait-ready"
+      delegate_to: "{{ primary_node }}"
+      changed_when: false
+
+    - name: "Step 3. Get the cluster join token from the primary node"
+      ansible.builtin.command:
+        cmd: "microk8s add-node"
+      delegate_to: "{{ primary_node }}"
+      changed_when: false
+      register: add_node_result
+
+    - name: "Step 4. Extract the join command for control-plane nodes"
+      ansible.builtin.set_fact:
+        join_command: "{{ add_node_result.stdout_lines | select('search', 'microk8s join') | first }}"
+
+    - name: "Step 5. Fail if join command could not be retrieved"
+      ansible.builtin.fail:
+        msg: "Could not retrieve a valid join command from the primary node."
+      when: join_command is not defined or join_command | length == 0
+
+    - name: "Step 6. Wait for MicroK8s to be ready on the current node"
+      ansible.builtin.command:
+        cmd: "microk8s status --wait-ready"
+      changed_when: false
+
+    - name: "Step 7. Execute the join command on the current node"
+      ansible.builtin.command:
+        cmd: "{{ join_command }}"
+      register: join_command_output
+      failed_when:
+        - "'already known to dqlite' not in join_command_output.stderr"
+        - join_command_output.rc > 0
