@@ -11,11 +11,11 @@ terraform {
 * Generate the Ansible inventory file from template
 */
 resource "local_file" "inventory" {
-  content = templatefile("${path.root}/../../templates/inventory-registry.yaml.tftpl", {
-    registry_nodes   = [for node in var.inventory.nodes : node if startswith(node.key, "registry-server")],
+  content = templatefile("${path.root}/../../templates/inventory-harbor-cluster.yaml.tftpl", {
+    harbor_nodes     = [for node in var.inventory.nodes : node if startswith(node.key, "harbor-node")],
     ansible_ssh_user = var.vm_credentials.username,
   })
-  filename        = "${var.ansible_config.root_path}/inventory-registry.yaml"
+  filename        = "${var.ansible_config.root_path}/inventory-harbor-cluster.yaml"
   file_permission = "0644"
 }
 
@@ -35,11 +35,11 @@ resource "null_resource" "provision_cluster" {
     command = <<-EOT
       set -e
       ansible-playbook \
-        -i ${var.ansible_config.root_path}/inventory-registry.yaml \
+        -i ${local_file.inventory.filename} \
         --private-key ${nonsensitive(var.vm_credentials.ssh_private_key_path)} \
         --extra-vars "ansible_ssh_user=${nonsensitive(var.vm_credentials.username)}" \
         -v \
-        ${var.ansible_config.root_path}/playbooks/30-provision-registry.yaml
+        ${var.ansible_config.root_path}/playbooks/20-provision-harbor.yaml
     EOT
 
     interpreter = ["/bin/bash", "-c"]

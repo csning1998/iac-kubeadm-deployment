@@ -6,7 +6,7 @@ module "provisioner_kvm" {
   # VM Configuration
   vm_config = {
     all_nodes_map   = local.all_nodes_map
-    base_image_path = var.registry_config.base_image_path
+    base_image_path = var.harbor_cluster_config.base_image_path
   }
 
   # VM Credentials from Vault
@@ -36,10 +36,10 @@ module "provisioner_kvm" {
   }
 }
 
-module "ssh_config_manager_registry" {
+module "ssh_config_manager_harbor" {
   source = "../../modules/81-ssh-config-manager"
 
-  config_name = var.registry_config.registry_name
+  config_name = var.harbor_cluster_config.cluster_name
   nodes       = module.provisioner_kvm.all_nodes_map
   vm_credentials = {
     username             = data.vault_generic_secret.iac_vars.data["vm_username"]
@@ -49,7 +49,7 @@ module "ssh_config_manager_registry" {
 }
 
 module "bootstrapper_ansible_cluster" {
-  source = "../../modules/13-bootstrapper-ansible-registry"
+  source = "../../modules/13-bootstrapper-ansible-harbor"
 
   ansible_config = {
     root_path = local.ansible_root_path
@@ -62,6 +62,6 @@ module "bootstrapper_ansible_cluster" {
 
   inventory = {
     nodes          = module.provisioner_kvm.all_nodes_map
-    status_trigger = module.ssh_config_manager_registry.ssh_access_ready_trigger
+    status_trigger = module.ssh_config_manager_harbor.ssh_access_ready_trigger
   }
 }

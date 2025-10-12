@@ -2,7 +2,7 @@
 # This file defines the variables for building the 'registry-base' image.
 
 build_spec = {
-  suffix   = "10-registry-base"
+  suffix   = "10-base-microk8s"
   vnc_port = 5998
 }
 

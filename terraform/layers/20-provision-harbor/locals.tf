@@ -1,8 +1,8 @@
 
 locals {
 
-  all_nodes_map = { for idx, config in var.registry_config.nodes.registry :
-    "registry-server-${format("%02d", idx)}" => config
+  all_nodes_map = { for idx, config in var.harbor_cluster_config.nodes.harbor :
+    "harbor-node-${format("%02d", idx)}" => config
   }
   ansible_root_path = abspath("${path.root}/../../../ansible")
 
@@ -14,7 +14,7 @@ locals {
         key = key
         ip  = node.ip
       }
-      config_name = var.registry_config.registry_name
+      config_name = var.harbor_cluster_config.cluster_name
     }
   ])
 }
