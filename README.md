@@ -391,7 +391,7 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
 2. The variable file for the Registry in `terraform/layers/30-registry-provision/terraform.tfvars` is relatively simple and can be created using the following command:
 
    ```bash
-   cat << EOF > terraform/layers/20-provision-harbor/terraform.tfvars
+   cat << EOF > terraform/layers/10-provision-harbor/terraform.tfvars
    # Defines the hardware and IP addresses for each virtual machine in the cluster.
    harbor_cluster_config = {
       cluster_name = "20-harbor-cluster"

@@ -39,7 +39,7 @@ resource "null_resource" "provision_cluster" {
         --private-key ${nonsensitive(var.vm_credentials.ssh_private_key_path)} \
         --extra-vars "ansible_ssh_user=${nonsensitive(var.vm_credentials.username)}" \
         -v \
-        ${var.ansible_config.root_path}/playbooks/20-provision-harbor.yaml
+        ${var.ansible_config.root_path}/playbooks/10-provision-harbor.yaml
     EOT
 
     interpreter = ["/bin/bash", "-c"]

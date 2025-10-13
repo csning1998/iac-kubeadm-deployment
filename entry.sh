@@ -87,7 +87,7 @@ options+=("Rebuild Terraform: Full Cluster (Layer 10)")
 options+=("Rebuild Terraform Layer 10: KVM Provision Only")
 options+=("Rebuild Terraform Layer 10: Ansible Bootstrapper Only")
 options+=("[DEV] Rebuild Layer 10 via Ansible Command")
-options+=("Rebuild Terraform Layer 20: Harbor Server")
+options+=("Rebuild Terraform Layer 10: Harbor Server")
 options+=("Rebuild Terraform Layer 50: Kubernetes Addons")
 options+=("Verify SSH")
 options+=("Quit")
@@ -234,10 +234,10 @@ select opt in "${options[@]}"; do
       echo "# [DEV] Rebuild via direct Ansible command completed."
       break
       ;;
-    "Rebuild Terraform Layer 20: Harbor Server")
+    "Rebuild Terraform Layer 10: Harbor Server")
       echo "# Executing Rebuild Terraform workflow for Registry Server..."
       ensure_libvirt_services_running
-      reapply_terraform_layer "20-provision-harbor"
+      reapply_terraform_layer "10-provision-harbor"
       report_execution_time
       echo "# Rebuild Terraform Registry Server workflow completed."
       break
