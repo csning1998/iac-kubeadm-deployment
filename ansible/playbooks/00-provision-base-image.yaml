@@ -1,12 +1,12 @@
 ---
 - name: "Play: Provision Kubernetes (Kubeadm) base image"
-  hosts: "20-base-kubeadm"
+  hosts: "02-base-kubeadm"
   become: true
   roles:
     - 02-base-kubeadm
 
 - name: "Play: Provision MicroK8s base image"
-  hosts: "10-base-microk8s"
+  hosts: "03-base-microk8s"
   become: true
   roles:
     - 03-base-microk8s

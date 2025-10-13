@@ -17,7 +17,7 @@ variable "k8s_cluster_config" {
         ram  = number
       }))
     })
-    base_image_path = optional(string, "../../../packer/output/20-base-kubeadm/ubuntu-server-24-20-base-kubeadm.qcow2")
+    base_image_path = optional(string, "../../../packer/output/02-base-kubeadm/ubuntu-server-24-02-base-kubeadm.qcow2")
     ha_virtual_ip   = string
     registry_host   = string
     pod_subnet      = optional(string, "10.244.0.0/16")

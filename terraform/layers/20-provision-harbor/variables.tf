@@ -12,7 +12,7 @@ variable "harbor_cluster_config" {
         ram  = number
       }))
     })
-    base_image_path = optional(string, "../../../packer/output/10-base-microk8s/ubuntu-server-24-10-base-microk8s.qcow2")
+    base_image_path = optional(string, "../../../packer/output/03-base-microk8s/ubuntu-server-24-03-base-microk8s.qcow2")
   })
   validation {
     condition     = length(var.harbor_cluster_config.nodes.harbor) % 2 != 0

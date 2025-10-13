@@ -79,8 +79,8 @@ options+=("[ONCE-ONLY] Verify IaC Environment for Native")
 options+=("Unseal Vault")
 options+=("Switch Environment Strategy")
 options+=("Reset Packer and Terraform")
-options+=("Rebuild Packer: Microk8s Base Image")
-options+=("Rebuild Packer: Kubeadm Base Image")
+options+=("Rebuild Packer: 02 Kubeadm Base Image")
+options+=("Rebuild Packer: 03 Microk8s Base Image")
 options+=("Rebuild Kubeadm Cluster (Packer + TF)")
 options+=("Rebuild Terraform: Full Cluster (Layer 10)")
 options+=("Rebuild Terraform Layer 10: KVM Provision Only")
@@ -144,28 +144,28 @@ select opt in "${options[@]}"; do
       echo "# Executing Reset All workflow..."
       purge_libvirt_resources
       destroy_terraform_layer "10-provision-kubeadm"
-      cleanup_packer_output "10-base-microk8s"
-      cleanup_packer_output "20-base-kubeadm"
+      cleanup_packer_output "03-base-microk8s"
+      cleanup_packer_output "02-base-kubeadm"
       cleanup_terraform_layer "10-provision-kubeadm"
       report_execution_time
       echo "# Reset All workflow completed."
       break
       ;;
-    "Rebuild Packer: Microk8s Base Image")
-      echo "# Executing Rebuild Packer workflow for Microk8s Base Image..."
-      if ! check_ssh_key_exists; then break; fi
-      ensure_libvirt_services_running
-      cleanup_packer_output "10-base-microk8s"
-      build_packer "10-base-microk8s"
-      report_execution_time
-      break
-      ;;
-    "Rebuild Packer: Kubeadm Base Image")
+    "Rebuild Packer: 02 Kubeadm Base Image")
       echo "# Executing Rebuild Packer workflow..."
       if ! check_ssh_key_exists; then break; fi
       ensure_libvirt_services_running
-      cleanup_packer_output "20-base-kubeadm"
-      build_packer "20-base-kubeadm"
+      cleanup_packer_output "02-base-kubeadm"
+      build_packer "02-base-kubeadm"
+      report_execution_time
+      break
+      ;;
+    "Rebuild Packer: 03 Microk8s Base Image")
+      echo "# Executing Rebuild Packer workflow for Microk8s Base Image..."
+      if ! check_ssh_key_exists; then break; fi
+      ensure_libvirt_services_running
+      cleanup_packer_output "03-base-microk8s"
+      build_packer "03-base-microk8s"
       report_execution_time
       break
       ;;
@@ -173,8 +173,8 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild All workflow for Kubernetes..."
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
-      cleanup_packer_output "20-base-kubeadm"
-      build_packer "20-base-kubeadm"
+      cleanup_packer_output "02-base-kubeadm"
+      build_packer "02-base-kubeadm"
       cleanup_terraform_layer "10-provision-kubeadm"
       apply_terraform_layer "10-provision-kubeadm"
       report_execution_time
