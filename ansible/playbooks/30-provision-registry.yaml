@@ -1,6 +1,0 @@
----
-- name: "Test: Configure Registry Server"
-  hosts: registry-server-00
-  become: true
-  roles:
-    - 31-registry-server-setup
