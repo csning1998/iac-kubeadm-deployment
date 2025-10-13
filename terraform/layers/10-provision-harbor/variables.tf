@@ -22,7 +22,7 @@ variable "harbor_cluster_config" {
 
 # Registry Server Infrastructure Network Configuration
 
-variable "registry_infrastructure" {
+variable "harbor_infrastructure" {
   description = "All Libvirt-level infrastructure configurations for the Registry Server."
   type = object({
     network = object({
