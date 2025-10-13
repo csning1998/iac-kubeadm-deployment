@@ -81,6 +81,7 @@ options+=("Switch Environment Strategy")
 options+=("Reset Packer and Terraform")
 options+=("Rebuild Packer: 02 Kubeadm Base Image")
 options+=("Rebuild Packer: 03 Microk8s Base Image")
+options+=("Rebuild Packer: 04 Postgres Base Image")
 options+=("Rebuild Kubeadm Cluster (Packer + TF)")
 options+=("Rebuild Terraform: Full Cluster (Layer 10)")
 options+=("Rebuild Terraform Layer 10: KVM Provision Only")
@@ -166,6 +167,15 @@ select opt in "${options[@]}"; do
       ensure_libvirt_services_running
       cleanup_packer_output "03-base-microk8s"
       build_packer "03-base-microk8s"
+      report_execution_time
+      break
+      ;;
+    "Rebuild Packer: 04 Postgres Base Image")
+      echo "# Executing Rebuild Packer workflow..."
+      if ! check_ssh_key_exists; then break; fi
+      ensure_libvirt_services_running
+      cleanup_packer_output "04-base-postgres"
+      build_packer "04-base-postgres"
       report_execution_time
       break
       ;;
