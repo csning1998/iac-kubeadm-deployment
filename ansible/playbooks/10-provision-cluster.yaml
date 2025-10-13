@@ -1,9 +1,15 @@
 ---
+# - name: "Play 0: Pre-flight - Configure CRI-O Registry Mirrors"
+#   hosts: all
+#   become: true
+#   roles:
+#     - 03-configure-registry-mirror
+
 - name: "Play 1: Setup HA Load Balancer on all master nodes"
   hosts: "{{ 'master' if (groups['master'] | length) > 1 else 'none' }}"
   become: true
   roles:
-    - 11-ha-loadbalancer
+    - 11-kubeadm-ha-loadbalancer
 
 - name: "Play 2: Initialize the primary master node"
   hosts: "{{ groups['master'][0] | default([]) }}"

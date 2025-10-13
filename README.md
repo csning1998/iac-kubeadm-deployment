@@ -49,16 +49,16 @@ The content in Section 1 and Section 2 serves as prerequisite setup before forma
 Environment: NATIVE
 Vault Server Status: Running (Unsealed)
 
- 1) [ONCE-ONLY] Set up CA Certs for TLS                    11) Rebuild Packer: K8s Base Image
- 2) [ONCE-ONLY] Initialize Vault                           12) Rebuild K8s Cluster (Packer + TF)
+ 1) [ONCE-ONLY] Set up CA Certs for TLS                    11) Rebuild Packer: Kubeadm Base Image
+ 2) [ONCE-ONLY] Initialize Vault                           12) Rebuild Kubeadm Cluster (Packer + TF)
  3) [ONCE-ONLY] Generate SSH Key                           13) Rebuild Terraform: Full Cluster (Layer 10)
  4) [ONCE-ONLY] Setup KVM / QEMU for Native                14) Rebuild Terraform Layer 10: KVM Provision Only
  5) [ONCE-ONLY] Setup Core IaC Tools for Native            15) Rebuild Terraform Layer 10: Ansible Bootstrapper Only
  6) [ONCE-ONLY] Verify IaC Environment for Native          16) [DEV] Rebuild Layer 10 via Ansible Command
- 7) Unseal Vault                                           17) Rebuild Terraform Layer 20: Kubernetes Addons
- 8) Switch Environment Strategy                            18) Rebuild Terraform Layer 30: Registry Server
+ 7) Unseal Vault                                           17) Rebuild Terraform Layer 20: Harbor Server
+ 8) Switch Environment Strategy                            18) Rebuild Terraform Layer 50: Kubernetes Addons
  9) Reset Packer and Terraform                             19) Verify SSH
-10) Rebuild Packer: Registry Base Image                    20) Quit
+10) Rebuild Packer: Microk8s Base Image                    20) Quit
 
 >>> Please select an action:
 ```
@@ -391,12 +391,15 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
 2. The variable file for the Registry in `terraform/layers/30-registry-provision/terraform.tfvars` is relatively simple and can be created using the following command:
 
    ```bash
-   cat << EOF > terraform/layers/10-cluster-provision/terraform.tfvars
+   cat << EOF > terraform/layers/20-provision-harbor/terraform.tfvars
    # Defines the hardware and IP addresses for each virtual machine in the cluster.
-   registry_config = {
+   harbor_cluster_config = {
+      cluster_name = "20-harbor-cluster"
       nodes = {
-         registry = [
+         harbor = [
             { ip = "172.16.135.200", vcpu = 2, ram = 4096 },
+            { ip = "172.16.135.201", vcpu = 2, ram = 4096 },
+            { ip = "172.16.135.202", vcpu = 2, ram = 4096 },
          ]
       }
    }
@@ -434,20 +437,20 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
 
    Deploying other Linux distro would be supported if I have time. I'm still a full-time university student.
 
-2. After completing all the above setup steps, you can use `entry.sh`, enter `12` to access _"Rebuild K8s Cluster (Packer + TF)"_ to perform automated deployment of the Kubernetes cluster. Based on testing, the current complete deployment of a HA Kubernetes Cluster takes approximately 7 minutes from Packer to finished.
+2. After completing all the above setup steps, you can use `entry.sh`, enter `12` to access _"Rebuild Kubeadm Cluster (Packer + TF)"_ to perform automated deployment of the Kubernetes cluster. Based on testing, the current complete deployment of a HA Kubernetes Cluster takes approximately 7 minutes from Packer to finished.
 
 3. For isolated testing of Packer or Terraform, you can select options `10` through `18` in `entry.sh`. The Terraform tests can be run on Layer 10's `11-provisioner-kvm` module with option `14`, Layer 10's `12-bootstrapper-ansible` module with option `15`, or both modules together with option `13`.
 
 4. Option `16` is specifically designed for the following two scenarios:
 
    1. To simply test the Layer 10 Ansible Playbook rather than through Terraform
-   2. To clean up all Kubernetes components in the Cluster. This is typically followed by executing option `17` _"Rebuild Terraform Layer 20: Kubernetes Addons"_ after completing option `16`
+   2. To clean up all Kubernetes components in the Cluster. This is typically followed by executing option `17` _"Rebuild Terraform Layer 50: Kubernetes Addons"_ after completing option `16`
 
-5. To test the cluster configuration by itself, you can use option `9`. This option will completely reset and clear the installer on every node in the K8s Cluster and Registry Server, restoring them to a clean state. It is recommended to use this option if you need to perform isolated tests within the Ansible Playbook.
+5. To test the cluster configuration by itself, you can use option `9`. This option will completely reset and clear the installer on every node in the Kubeadm Cluster and Registry Server, restoring them to a clean state. It is recommended to use this option if you need to perform isolated tests within the Ansible Playbook.
 
-6. Option `18`'s Registry Server is still under testing . . .
+6. Option `17`'s Harbor Server is still under testing . . .
 
-7. Option `19` primarily uses polling to test if the virtual machine is connectable and generally serves as a preliminary step for option `15`, `16`, and `17`. Alternatively, you can use the following command to check the virtual machine's operational status.
+7. Option `19` primarily uses polling to test if the virtual machine is connectable and generally serves as a preliminary step for option `15`, `16`, and `17`, and `18`. Alternatively, you can use the following command to check the virtual machine's operational status.
 
    ```shell
    sudo virsh list --all
@@ -459,7 +462,7 @@ This project employs three tools - Packer, Terraform, and Ansible - using an Inf
 
 ### A. Deployment Workflow
 
-The entire automated deployment process is triggered by option `12` _"Rebuild K8s Cluster (Packer + TF)
+The entire automated deployment process is triggered by option `12` _"Rebuild Kubeadm Cluster (Packer + TF)
 "_ in the `./entry.sh` script, with detailed steps shown in the diagram below:
 
 ```mermaid

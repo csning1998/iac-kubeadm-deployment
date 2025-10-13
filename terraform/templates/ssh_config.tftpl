@@ -4,6 +4,6 @@ Host ${node.key}
   User ${ssh_user}
   IdentityFile ${ssh_private_key_path}
   StrictHostKeyChecking yes
-  UserKnownHostsFile ~/.ssh/k8s_cluster_known_hosts
+  UserKnownHostsFile ~/.ssh/known_hosts_${config_name}
 
 %{~ endfor ~}

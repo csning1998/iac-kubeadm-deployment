@@ -6,7 +6,7 @@ module "provisioner_kvm" {
   # VM Configuration
   vm_config = {
     all_nodes_map   = local.all_nodes_map
-    base_image_path = var.k8s_cluster_config.base_image_path
+    base_image_path = var.harbor_cluster_config.base_image_path
   }
 
   # VM Credentials from Vault
@@ -20,26 +20,26 @@ module "provisioner_kvm" {
   libvirt_infrastructure = {
     network = {
       nat = {
-        name          = var.cluster_infrastructure.network.nat.name
-        cidr          = var.cluster_infrastructure.network.nat.cidr
-        gateway       = local.k8s_cluster_nat_network_gateway
-        subnet_prefix = local.k8s_cluster_nat_network_subnet_prefix
-        bridge_name   = var.cluster_infrastructure.network.nat.bridge_name
+        name          = var.registry_infrastructure.network.nat.name
+        cidr          = var.registry_infrastructure.network.nat.cidr
+        gateway       = local.registry_nat_network_gateway
+        subnet_prefix = local.registry_nat_network_subnet_prefix
+        bridge_name   = var.registry_infrastructure.network.nat.bridge_name
       }
       hostonly = {
-        name        = var.cluster_infrastructure.network.hostonly.name
-        cidr        = var.cluster_infrastructure.network.hostonly.cidr
-        bridge_name = var.cluster_infrastructure.network.hostonly.bridge_name
+        name        = var.registry_infrastructure.network.hostonly.name
+        cidr        = var.registry_infrastructure.network.hostonly.cidr
+        bridge_name = var.registry_infrastructure.network.hostonly.bridge_name
       }
     }
-    storage_pool_name = var.cluster_infrastructure.storage_pool_name
+    storage_pool_name = var.registry_infrastructure.storage_pool_name
   }
 }
 
-module "ssh_config_manager" {
+module "ssh_config_manager_harbor" {
   source = "../../modules/81-ssh-config-manager"
 
-  config_name = var.k8s_cluster_config.cluster_name
+  config_name = var.harbor_cluster_config.cluster_name
   nodes       = module.provisioner_kvm.all_nodes_map
   vm_credentials = {
     username             = data.vault_generic_secret.iac_vars.data["vm_username"]
@@ -48,17 +48,11 @@ module "ssh_config_manager" {
   status_trigger = module.provisioner_kvm.vm_status_trigger
 }
 
-module "bootstrapper_ansible" {
-  source = "../../modules/12-bootstrapper-ansible"
+module "bootstrapper_ansible_cluster" {
+  source = "../../modules/13-bootstrapper-ansible-harbor"
 
   ansible_config = {
     root_path = local.ansible_root_path
-    extra_vars = {
-      k8s_master_ips        = local.k8s_master_ips
-      k8s_ha_virtual_ip     = var.k8s_cluster_config.ha_virtual_ip
-      k8s_pod_subnet        = var.k8s_cluster_config.pod_subnet
-      k8s_nat_subnet_prefix = local.k8s_cluster_nat_network_subnet_prefix
-    }
   }
 
   vm_credentials = {
@@ -68,6 +62,6 @@ module "bootstrapper_ansible" {
 
   inventory = {
     nodes          = module.provisioner_kvm.all_nodes_map
-    status_trigger = module.ssh_config_manager.ssh_access_ready_trigger
+    status_trigger = module.ssh_config_manager_harbor.ssh_access_ready_trigger
   }
 }

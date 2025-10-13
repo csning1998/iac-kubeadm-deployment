@@ -6,6 +6,7 @@ all:
     k8s_pod_subnet: "${extra_vars.k8s_pod_subnet}"  # The CIDR block for the Kubernetes pod network.
     k8s_nat_subnet_prefix: "${extra_vars.k8s_nat_subnet_prefix}"  # The first three octets of the NAT subnet.
     ansible_ssh_user: "${ansible_ssh_user}"  # Username for SSH access to the VMs
+    registry_host: "${registry_host}"
 
   children:
     master:

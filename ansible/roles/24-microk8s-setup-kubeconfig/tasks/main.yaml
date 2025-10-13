@@ -1,0 +1,25 @@
+---
+- name: "Section A: Generate and place kubeconfig for the user"
+  become: true
+  block:
+    - name: "Step A1. Create .kube directory for the SSH user"
+      ansible.builtin.file:
+        path: "/home/{{ ansible_ssh_user }}/.kube"
+        state: directory
+        owner: "{{ ansible_ssh_user }}"
+        group: "{{ ansible_ssh_user }}"
+        mode: "0750"
+
+    - name: "Step A2. Generate kubeconfig from MicroK8s"
+      ansible.builtin.command:
+        cmd: "microk8s config"
+      register: microk8s_config
+      changed_when: false
+
+    - name: "Step A3. Save kubeconfig to user's directory with correct permissions"
+      ansible.builtin.copy:
+        content: "{{ microk8s_config.stdout }}"
+        dest: "/home/{{ ansible_ssh_user }}/.kube/config"
+        owner: "{{ ansible_ssh_user }}"
+        group: "{{ ansible_ssh_user }}"
+        mode: "0600"

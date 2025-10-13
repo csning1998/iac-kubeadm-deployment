@@ -1,9 +1,23 @@
 #cloud-config
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    nat_interface:
+      match:
+        macaddress: "${nat_mac}"
+      set-name: ens4
+      dhcp4: false
+      addresses:
+        - "${nat_ip_cidr}"
+      gateway4: "${nat_gateway}"
+      nameservers:
+        addresses: [8.8.8.8, 1.1.1.1]
 
-version: 2
-renderer: networkd
-ethernets:
-  all_interfaces:
-    match:
-      name: en*
-    dhcp4: true
+    hostonly_interface:
+      match:
+        macaddress: "${hostonly_mac}"
+      set-name: ens3
+      dhcp4: false
+      addresses:
+        - "${hostonly_ip_cidr}"

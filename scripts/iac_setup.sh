@@ -201,7 +201,7 @@ setup_iac_tools() {
 
     echo "#### Installing Ansible..."
     sudo dnf install -y ansible-core
-    ansible-galaxy collection install ansible.posix community.docker
+    ansible-galaxy collection install ansible.posix community.general community.docker community.kubernetes
 
     echo "#### Installing HashiCorp Toolkits (Terraform and Packer)..."
     cat <<EOF | sudo tee /etc/yum.repos.d/hashicorp.repo

@@ -2,7 +2,7 @@
 # This file defines the variables for building the 'k8s-base' (cluster) image.
 
 build_spec = {
-  suffix   = "20-k8s-base"
+  suffix   = "20-base-kubeadm"
   vnc_port = 5999
 }
 

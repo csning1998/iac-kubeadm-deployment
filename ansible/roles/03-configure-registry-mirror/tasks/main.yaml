@@ -1,0 +1,15 @@
+---
+- name: "Section: Configure registry mirrors for CRI-O"
+  block:
+    - name: "Step 1. Create registries configuration directory"
+      ansible.builtin.file:
+        path: /etc/containers/registries.conf.d
+        state: directory
+        mode: "0755"
+
+    - name: "Step 2. Template out the registry mirror configuration"
+      ansible.builtin.template:
+        src: registries.conf.j2
+        dest: /etc/containers/registries.conf.d/01-mirror.conf
+        mode: "0644"
+      notify: Restart crio service

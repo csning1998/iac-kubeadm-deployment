@@ -7,7 +7,7 @@ packer/secret.auto.pkrvars.hcl
 .ansible
 ansible/group_vars/all.yaml
 ansible/logs
-ansible/inventory.yaml
+ansible/inventory-*.yaml
 ansible/packer-provisioner-ansible*
 ansible/fetched/
 backup

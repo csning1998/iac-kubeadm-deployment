@@ -22,6 +22,7 @@ resource "local_file" "ssh_config" {
     nodes                = var.nodes
     ssh_user             = var.vm_credentials.username
     ssh_private_key_path = var.vm_credentials.ssh_private_key_path
+    config_name          = var.config_name
   })
   filename        = local.ssh_config_path
   file_permission = "0600"
@@ -71,7 +72,7 @@ resource "null_resource" "prepare_ssh_access" {
       set -e
       echo ">>> Verifying VM liveness and preparing SSH access..."
       . ${path.module}/../../../scripts/utils_ssh.sh
-      bootstrap_ssh_known_hosts ${join(" ", [for node in var.nodes : node.ip])}
+      bootstrap_ssh_known_hosts "${var.config_name}" ${join(" ", [for node in var.nodes : node.ip])}
       echo ">>> Liveness check passed. SSH access is ready."
     EOT
     interpreter = ["/bin/bash", "-c"]

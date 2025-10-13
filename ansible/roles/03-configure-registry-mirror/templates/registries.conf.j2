@@ -1,0 +1,30 @@
+# This file is managed by Ansible using the v2 registry configuration format.
+# The 'insecure = true' flag is specified per mirror since we are using HTTP.
+
+[[registry]]
+location = "{{ registry_host }}"
+insecure = true  # to prevent "http: server gave HTTP response to HTTPS client"
+
+[[registry]]
+location = "docker.io"
+mirrors = [
+  { location = "{{ registry_host }}" }
+]
+
+[[registry]]
+location = "quay.io"
+mirrors = [
+  { location = "{{ registry_host }}" }
+]
+
+[[registry]]
+location = "k8s.gcr.io"
+mirrors = [
+  { location = "{{ registry_host }}" }
+]
+
+[[registry]]
+location = "registry.k8s.io"
+mirrors = [
+  { location = "{{ registry_host }}" }
+]

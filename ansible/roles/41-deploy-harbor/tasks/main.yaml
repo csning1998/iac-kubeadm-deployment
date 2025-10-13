@@ -1,0 +1,41 @@
+# ---
+# - name: "Section A: Deploy Harbor application via Helm"
+#   become: true
+#   block:
+#     - name: "Step A1. Add the Harbor Helm repository"
+#       community.kubernetes.helm_repository:
+#         name: harbor
+#         repo_url: "https://helm.goharbor.io"
+#         kubeconfig: "/home/{{ ansible_ssh_user }}/.kube/config"
+
+#     - name: "Step A2. Deploy Harbor using the Helm Chart"
+#       community.kubernetes.helm:
+#         name: harbor
+#         chart_ref: harbor/harbor
+#         release_namespace: harbor
+#         create_namespace: true
+#         state: present
+#         wait: true
+#         kubeconfig: "/home/{{ ansible_ssh_user }}/.kube/config"
+#         values:
+#           expose:
+#             type: NodePort
+#             tls:
+#               enabled: false
+#             nodePort:
+#               name: harbor
+#               ports:
+#                 http:
+#                   port: 80
+#                   nodePort: 30080
+
+#           externalURL: "http://{{ ansible_default_ipv4.address }}:30080"
+
+#           harborAdminPassword: "HarborPassword123"
+
+#           notary:
+#             enabled: false
+#           trivy:
+#             enabled: false
+#           chartmuseum:
+#             enabled: false

@@ -1,19 +1,23 @@
 
 # Registry Server Topology & Configuration
 
-variable "registry_config" {
+variable "harbor_cluster_config" {
   description = "Define the registry server including virtual hardware resources."
   type = object({
-    registry_name = string
+    cluster_name = string
     nodes = object({
-      registry = list(object({
+      harbor = list(object({
         ip   = string
         vcpu = number
         ram  = number
       }))
     })
-    base_image_path = optional(string, "../../../packer/output/10-registry-base/ubuntu-server-24-10-registry-base.qcow2")
+    base_image_path = optional(string, "../../../packer/output/10-base-microk8s/ubuntu-server-24-10-base-microk8s.qcow2")
   })
+  validation {
+    condition     = length(var.harbor_cluster_config.nodes.harbor) % 2 != 0
+    error_message = "The number of MicroK8s nodes for the Harbor cluster must be an odd number (1, 3, 5, etc.) to ensure a stable dqlite quorum."
+  }
 }
 
 # Registry Server Infrastructure Network Configuration
@@ -33,6 +37,6 @@ variable "registry_infrastructure" {
         bridge_name = string
       })
     })
-    storage_pool_name = optional(string, "iac-registry")
+    storage_pool_name = optional(string, "iac-harbor")
   })
 }
