@@ -12,6 +12,9 @@ terraform {
 */
 resource "local_file" "inventory" {
   content = templatefile("${path.root}/../../templates/inventory-postgres-cluster.yaml.tftpl", {
+    etcd_ips     = [for node in values(var.etcd_nodes) : node.ip],
+    postgres_ips = [for node in values(var.postgres_nodes) : node.ip],
+
     # Use the variable passed from the layer
     ansible_ssh_user = var.vm_credentials.username,
     etcd_nodes       = var.etcd_nodes,
