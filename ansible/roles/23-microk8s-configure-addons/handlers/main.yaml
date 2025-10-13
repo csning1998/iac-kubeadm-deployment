@@ -3,5 +3,5 @@
   listen: "Restart microk8s service"
   become: true
   ansible.builtin.command:
-    cmd: "microk8s stop microk8s start"
+    cmd: "snap restart microk8s"
   changed_when: true

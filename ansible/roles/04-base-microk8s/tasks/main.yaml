@@ -41,14 +41,12 @@
         cmd: "snap alias microk8s.kubectl kubectl"
       args:
         creates: /snap/bin/kubectl
-      changed_when: true
 
     - name: "Step B4. Alias microk8s.helm3 to helm"
       ansible.builtin.command:
         cmd: "snap alias microk8s.helm3 helm"
       args:
         creates: /snap/bin/helm
-      changed_when: true
 
 - name: "Section C: Add SSH user to the 'microk8s' group for basic access"
   become: true

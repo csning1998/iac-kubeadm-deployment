@@ -9,4 +9,5 @@
         - dns
         - hostpath-storage
         - helm3
-      changed_when: true
+      register: enable_result
+      changed_when: "'is already enabled' not in enable_result.stdout"

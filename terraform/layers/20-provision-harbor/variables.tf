@@ -16,7 +16,7 @@ variable "harbor_cluster_config" {
   })
   validation {
     condition     = length(var.harbor_cluster_config.nodes.harbor) % 2 != 0
-    error_message = "The number of master nodes must be an odd number (1, 3, 5, etc.) to ensure a stable etcd quorum."
+    error_message = "The number of MicroK8s nodes for the Harbor cluster must be an odd number (1, 3, 5, etc.) to ensure a stable dqlite quorum."
   }
 }
 

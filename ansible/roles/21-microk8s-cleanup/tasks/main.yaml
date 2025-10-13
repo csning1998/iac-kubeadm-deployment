@@ -1,7 +1,7 @@
 ---
 - name: "Section: Start MicroK8s service on all provisioned nodes"
   block:
-    - name: "Step 0.1: Wait for Kubernetes API to be available"
+    - name: "Step 1: Wait for Kubernetes API to be available"
       ansible.builtin.command:
         cmd: "kubectl get nodes"
       register: kubectl_check
@@ -10,17 +10,17 @@
       delay: 6
       changed_when: false
 
-    - name: "Step 0.2: Get list of all node names known to Kubernetes"
+    - name: "Step 2: Get list of all node names known to Kubernetes"
       ansible.builtin.command:
         cmd: "kubectl get nodes -o jsonpath='{.items[*].metadata.name}'"
       register: kube_nodes_result
       changed_when: false
 
-    - name: "Step 0.3: Identify stale nodes (nodes in k8s but not in inventory)"
+    - name: "Step 3: Identify stale nodes (nodes in k8s but not in inventory)"
       ansible.builtin.set_fact:
         stale_nodes: "{{ kube_nodes_result.stdout.split(' ') | difference(groups['nodes']) }}"
 
-    - name: "Step 0.4: Remove stale nodes from the cluster"
+    - name: "Step 4: Remove stale nodes from the cluster"
       ansible.builtin.command:
         cmd: "kubectl delete node {{ item }}"
       loop: "{{ stale_nodes }}"
