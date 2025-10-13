@@ -1,17 +1,17 @@
 ---
-- name: "Play 1: Provision MicroK8s base image"
-  hosts: "10-base-microk8s"
-  become: true
-  roles:
-    - 04-base-microk8s
-
-- name: "Play 2: Provision Kubernetes (Kubeadm) base image"
+- name: "Play: Provision Kubernetes (Kubeadm) base image"
   hosts: "20-base-kubeadm"
   become: true
   roles:
     - 02-base-kubeadm
 
-- name: "Play 3: Final Permission Check and Clean up"
+- name: "Play: Provision MicroK8s base image"
+  hosts: "10-base-microk8s"
+  become: true
+  roles:
+    - 03-base-microk8s
+
+- name: "Play: Final Permission Check and Clean up"
   hosts: "all"
   become: true
   roles:
