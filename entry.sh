@@ -84,13 +84,14 @@ options+=("Rebuild Packer: 03 Microk8s Base Image")
 options+=("Rebuild Packer: 04 Postgres Base Image")
 options+=("Rebuild Kubeadm Cluster (Packer + TF)")
 options+=("Rebuild Terraform: Full Cluster (Layer 10)")
-# options+=("Rebuild Terraform Layer 10: KVM Provision Only")
-# options+=("Rebuild Terraform Layer 10: Ansible Bootstrapper Only")
 options+=("[DEV] Rebuild Layer 10 via Ansible Command")
 options+=("Rebuild Terraform Layer 10: Harbor Server")
+options+=("Rebuild Terraform Layer 10: Postgres Service")
 options+=("Rebuild Terraform Layer 50: Kubernetes Addons")
 options+=("Verify SSH")
 options+=("Quit")
+# options+=("Rebuild Terraform Layer 10: KVM Provision Only")
+# options+=("Rebuild Terraform Layer 10: Ansible Bootstrapper Only")
 
 select opt in "${options[@]}"; do
   # Record start time
@@ -203,27 +204,6 @@ select opt in "${options[@]}"; do
       echo "# Rebuild Terraform workflow completed."
       break
       ;;
-    # "Rebuild Terraform Layer 10: KVM Provision Only")
-    #   echo "# Executing Rebuild Terraform workflow for KVM Provisioner only..."
-    #   if ! check_ssh_key_exists; then break; fi
-    #   purge_libvirt_resources
-    #   ensure_libvirt_services_running
-    #   destroy_terraform_layer "10-provision-kubeadm"
-    #   cleanup_terraform_layer "10-provision-kubeadm"
-    #   apply_terraform_layer "10-provision-kubeadm" "module.provisioner_kvm"
-    #   report_execution_time
-    #   echo "# Rebuild Terraform KVM Provisioner workflow completed."
-    #   break
-    #   ;;
-    # "Rebuild Terraform Layer 10: Ansible Bootstrapper Only")
-    #   echo "# Executing Rebuild Terraform workflow for Ansible Bootstrapper only..."
-    #   if ! check_ssh_key_exists; then break; fi
-    #   ensure_libvirt_services_running
-    #   bootstrap_kubernetes_cluster
-    #   report_execution_time
-    #   echo "# Rebuild Terraform Ansible Bootstrapper workflow completed."
-    #   break
-    #   ;;
     "[DEV] Rebuild Layer 10 via Ansible Command")
       echo "# Executing [DEV] Rebuild via direct Ansible command..."
       if ! check_ssh_key_exists; then break; fi
@@ -235,11 +215,19 @@ select opt in "${options[@]}"; do
       break
       ;;
     "Rebuild Terraform Layer 10: Harbor Server")
-      echo "# Executing Rebuild Terraform workflow for Registry Server..."
+      echo "# Executing Rebuild Terraform workflow for Harbor Server..."
       ensure_libvirt_services_running
       reapply_terraform_layer "10-provision-harbor"
       report_execution_time
-      echo "# Rebuild Terraform Registry Server workflow completed."
+      echo "# Rebuild Terraform Harbor Server workflow completed."
+      break
+      ;;
+    "Rebuild Terraform Layer 10: Postgres Service")
+      echo "# Executing Rebuild Terraform workflow for Postgres Service..."
+      ensure_libvirt_services_running
+      reapply_terraform_layer "10-provision-postgres"
+      report_execution_time
+      echo "# Rebuild Terraform Postgres Service workflow completed."
       break
       ;;
     "Rebuild Terraform Layer 50: Kubeadm Cluster Addons")
@@ -262,6 +250,27 @@ select opt in "${options[@]}"; do
       echo "# Exiting script."
       break
       ;;
+    # "Rebuild Terraform Layer 10: KVM Provision Only")
+    #   echo "# Executing Rebuild Terraform workflow for KVM Provisioner only..."
+    #   if ! check_ssh_key_exists; then break; fi
+    #   purge_libvirt_resources
+    #   ensure_libvirt_services_running
+    #   destroy_terraform_layer "10-provision-kubeadm"
+    #   cleanup_terraform_layer "10-provision-kubeadm"
+    #   apply_terraform_layer "10-provision-kubeadm" "module.provisioner_kvm"
+    #   report_execution_time
+    #   echo "# Rebuild Terraform KVM Provisioner workflow completed."
+    #   break
+    #   ;;
+    # "Rebuild Terraform Layer 10: Ansible Bootstrapper Only")
+    #   echo "# Executing Rebuild Terraform workflow for Ansible Bootstrapper only..."
+    #   if ! check_ssh_key_exists; then break; fi
+    #   ensure_libvirt_services_running
+    #   bootstrap_kubernetes_cluster
+    #   report_execution_time
+    #   echo "# Rebuild Terraform Ansible Bootstrapper workflow completed."
+    #   break
+    #   ;;
     *) echo "# Invalid option $REPLY";;
   esac
 done

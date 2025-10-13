@@ -1,0 +1,48 @@
+
+# Registry Server Topology & Configuration
+
+variable "postgres_cluster_config" {
+  description = "Define the registry server including virtual hardware resources."
+  type = object({
+    cluster_name = string
+    nodes = object({
+      postgres = list(object({
+        ip   = string
+        vcpu = number
+        ram  = number
+      }))
+      etcd = list(object({
+        ip   = string
+        vcpu = number
+        ram  = number
+      }))
+      haproxy = list(object({
+        ip   = string
+        vcpu = number
+        ram  = number
+      }))
+    })
+    base_image_path = optional(string, "../../../packer/output/04-base-postgres/ubuntu-server-24-04-base-postgres.qcow2")
+  })
+}
+
+# Registry Server Infrastructure Network Configuration
+
+variable "postgres_infrastructure" {
+  description = "All Libvirt-level infrastructure configurations for the Postgres Service."
+  type = object({
+    network = object({
+      nat = object({
+        name        = string
+        cidr        = string
+        bridge_name = string
+      })
+      hostonly = object({
+        name        = string
+        cidr        = string
+        bridge_name = string
+      })
+    })
+    storage_pool_name = optional(string, "iac-postgres")
+  })
+}
