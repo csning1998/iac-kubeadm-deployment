@@ -84,10 +84,10 @@ options+=("Rebuild Packer: 03 Microk8s Base Image")
 options+=("Rebuild Packer: 04 Postgres Base Image")
 options+=("Rebuild Kubeadm Cluster (Packer + TF)")
 options+=("Rebuild Terraform: Full Cluster (Layer 10)")
-options+=("[DEV] Rebuild Layer 10 via Ansible Command")
 options+=("Rebuild Terraform Layer 10: Harbor Server")
 options+=("Rebuild Terraform Layer 10: Postgres Service")
 options+=("Rebuild Terraform Layer 50: Kubernetes Addons")
+options+=("[DEV] Rebuild Layer 10 via Ansible Command")
 options+=("Verify SSH")
 options+=("Quit")
 # options+=("Rebuild Terraform Layer 10: KVM Provision Only")
@@ -204,16 +204,6 @@ select opt in "${options[@]}"; do
       echo "# Rebuild Terraform workflow completed."
       break
       ;;
-    "[DEV] Rebuild Layer 10 via Ansible Command")
-      echo "# Executing [DEV] Rebuild via direct Ansible command..."
-      if ! check_ssh_key_exists; then break; fi
-      ensure_libvirt_services_running
-      verify_ssh
-      apply_ansible_stage_II
-      report_execution_time
-      echo "# [DEV] Rebuild via direct Ansible command completed."
-      break
-      ;;
     "Rebuild Terraform Layer 10: Harbor Server")
       echo "# Executing Rebuild Terraform workflow for Harbor Server..."
       ensure_libvirt_services_running
@@ -237,6 +227,15 @@ select opt in "${options[@]}"; do
       reapply_terraform_layer "50-provision-kubeadm-addons"
       report_execution_time
       echo "# Rebuild Terraform Kubernetes (Kubeadm) Addons workflow completed."
+      break
+      ;;
+    "[DEV] Rebuild Layer 10 via Ansible Command")
+      echo "# Executing [DEV] Rebuild via direct Ansible command..."
+      if ! check_ssh_key_exists; then break; fi
+      ensure_libvirt_services_running
+      selector_playbook
+      report_execution_time
+      echo "# [DEV] Rebuild via direct Ansible command completed."
       break
       ;;
     "Verify SSH")
