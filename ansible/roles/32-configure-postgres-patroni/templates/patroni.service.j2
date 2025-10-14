@@ -1,0 +1,18 @@
+[Unit]
+Description=Patroni - A HA solution for PostgreSQL
+After=network.target
+
+[Service]
+Type=simple
+User=postgres
+Group=postgres
+# Patroni needs the pg_ctl binary in its PATH
+Environment="PATH=/usr/lib/postgresql/18/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+# ExecStart must point to the patroni executable inside the virtual environment
+ExecStart=/opt/patroni-venv/bin/patroni /etc/patroni.yml
+KillMode=process
+TimeoutSec=30
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

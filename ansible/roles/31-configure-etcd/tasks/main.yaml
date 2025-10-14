@@ -1,0 +1,63 @@
+---
+- name: "Section A: Prepare etcd User and Directories"
+  block:
+    - name: "Step A1. Ensure the 'etcd' group exists"
+      ansible.builtin.group:
+        name: etcd
+        state: present
+        system: true
+
+    - name: "Step A2. Ensure the 'etcd' user exists"
+      ansible.builtin.user:
+        name: etcd
+        group: etcd
+        shell: /bin/false
+        system: true
+        create_home: false
+
+    - name: "Step A3. Create the etcd data directory"
+      ansible.builtin.file:
+        path: /var/lib/etcd
+        state: directory
+        owner: etcd
+        group: etcd
+        mode: "0700"
+    - name: "Step A4. Create the etcd configuration directory"
+      ansible.builtin.file:
+        path: /etc/etcd
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+- name: "Section B: Configure etcd Service"
+  block:
+    - name: "Step B1. Create etcd config file from template"
+      ansible.builtin.template:
+        src: etcd.conf.j2
+        dest: /etc/etcd/etcd.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart etcd
+
+    - name: "Step B2. Create etcd systemd service file"
+      ansible.builtin.template:
+        src: etcd.service.j2
+        dest: /etc/systemd/system/etcd.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart etcd
+
+- name: "Section C: Start and Enable etcd Service"
+  block:
+    - name: "Step C1. Reload systemd daemon"
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: "Step C2. Enable and start the etcd service"
+      ansible.builtin.systemd:
+        name: etcd
+        state: started
+        enabled: true

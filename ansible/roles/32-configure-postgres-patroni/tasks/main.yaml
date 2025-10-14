@@ -1,0 +1,60 @@
+---
+- name: "Section A: Prepare Python Environment and Install Patroni"
+  block:
+    - name: "Step A1. Create Python virtual environment for Patroni"
+      ansible.builtin.command:
+        cmd: python3 -m venv /opt/patroni-venv
+        creates: /opt/patroni-venv/bin/activate
+
+    - name: "Step A2. Install Patroni and dependencies into virtual environment"
+      ansible.builtin.pip:
+        name:
+          - patroni[etcd]
+          - psycopg2-binary
+        virtualenv: /opt/patroni-venv
+        virtualenv_command: /usr/bin/python3 -m venv
+
+- name: "Section B: Stop and Disable default PostgreSQL service"
+  block:
+    - name: "Step B1. Ensure default postgresql service is stopped and disabled"
+      ansible.builtin.systemd:
+        name: postgresql
+        state: stopped
+        enabled: false
+      # Ignore errors if the service doesn't exist (it might be postgresql@.service)
+      ignore_errors: true
+
+- name: "Section C: Configure Patroni Service"
+  block:
+    - name: "Step C1. Create Patroni config file from template"
+      ansible.builtin.template:
+        src: patroni.yaml.j2
+        dest: /etc/patroni.yaml
+        owner: postgres
+        group: postgres
+        mode: "0600"
+      notify: Restart Patroni
+
+    - name: "Step C2. Create Patroni systemd service file from template"
+      ansible.builtin.template:
+        src: patroni.service.j2
+        dest: /etc/systemd/system/patroni.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart Patroni
+
+- name: "Section D: Start and Enable Patroni Service"
+  block:
+    - name: "Step D1. Flush handlers to apply config changes"
+      ansible.builtin.meta: flush_handlers
+
+    - name: "Step D2. Reload systemd daemon"
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: "Step D3. Enable and start the Patroni service"
+      ansible.builtin.systemd:
+        name: patroni
+        state: started
+        enabled: true

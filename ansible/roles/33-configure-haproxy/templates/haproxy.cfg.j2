@@ -1,0 +1,53 @@
+global
+    log /dev/log    local0
+    log /dev/log    local1 notice
+    chroot /var/lib/haproxy
+    stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+    stats timeout 30s
+    user haproxy
+    group haproxy
+    daemon
+
+defaults
+    log     global
+    mode    tcp
+    option  tcplog
+    option  dontlognull
+    timeout connect 5000
+    timeout client  50000
+    timeout server  50000
+
+# HAProxy status monitoring page
+listen stats
+    bind *:{{ haproxy_stats_port | default(7000) }}
+    mode http
+    stats enable
+    stats uri /
+    stats refresh 10s
+    stats admin if TRUE
+
+# Read-Write Frontend
+# Routes all traffic to port 5000 to the Leader node
+listen postgres_readwrite
+    bind *:{{ haproxy_rw_port | default(5000) }}
+    mode tcp
+    option httpchk OPTIONS /master
+    http-check expect status 200
+    default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
+    balance first
+    {% for ip in postgres_cluster_ips %}
+    server pg-node-{{ loop.index0 }} {{ ip }}:{{ postgres_port | default(5432) }} check port {{ patroni_api_port | default(8008) }}
+    {% endfor %}
+
+# Read-Only Frontend
+# Routes all traffic to port 5001 to the Replica nodes
+listen postgres_readonly
+    bind *:{{ haproxy_ro_port | default(5001) }}
+    mode tcp
+    option httpchk OPTIONS /replica
+    http-check expect status 200
+    default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
+    balance roundrobin
+    {% for ip in postgres_cluster_ips %}
+    server pg-node-{{ loop.index0 }} {{ ip }}:{{ postgres_port | default(5432) }} check port {{ patroni_api_port | default(8008) }}
+    {% endfor %}

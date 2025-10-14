@@ -1,0 +1,6 @@
+---
+- name: Restart Patroni
+  listen: "Restart Patroni"
+  ansible.builtin.systemd:
+    name: patroni
+    state: restarted

@@ -1,0 +1,54 @@
+# Global settings for the Patroni cluster
+scope: postgres-ha-cluster # A unique name for the cluster
+namespace: /service/postgres/ # The base path in etcd for this cluster's data
+name: {{ inventory_hostname }}
+
+# REST API for health checks and management
+restapi:
+  listen: "{{ ansible_host }}:8008"
+  connect_address: "{{ ansible_host }}:8008"
+
+# etcd configuration for Distributed Configuration Store (DCS)
+etcd:
+  # Creates a comma-separated list of etcd endpoints, e.g., "1.1.1.1:2379,2.2.2.2:2379"
+  hosts: "{{ etcd_cluster_ips | map('regex_replace', '(.*)', '\\1:2379') | join(',') }}"
+  ttl: 30
+
+# Bootstrap configuration (only used by the first node to initialize the cluster)
+bootstrap:
+  dcs:
+    ttl: 20
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 1048576
+    postgresql:
+      use_pg_rewind: true
+  initdb:
+    - encoding: UTF8
+    - data-checksums
+  pg_hba:
+    - host all all 0.0.0.0/0 md5
+    - host replication repuser 0.0.0.0/0 md5
+
+# PostgreSQL server configuration managed by Patroni
+postgresql:
+  listen: "{{ ansible_host }}:5432"
+  connect_address: "{{ ansible_host }}:5432"
+  data_dir: /var/lib/postgresql/18/data # Patroni will manage this directory
+  pgpass: /tmp/pgpass{{ postgresql_port | default(5432) }}
+  
+  # IMPORTANT: These passwords should be managed via Ansible Vault in production
+  authentication:
+    replication:
+      username: repuser
+      password: "ReplicationPassword123"
+    superuser:
+      username: postgres
+      password: "SuperuserPassword123"
+  
+  # Key parameters for replication and HA
+  parameters:
+    max_connections: 100
+    max_wal_senders: 10
+    wal_level: replica
+    hot_standby: "on"
