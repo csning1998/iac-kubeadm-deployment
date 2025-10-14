@@ -233,40 +233,61 @@ deintegrate_ssh_config() {
 
 bootstrap_ssh_known_hosts() {
   if [ $# -lt 2 ]; then
-    echo "#### Error: Not enough arguments. Usage: bootstrap_ssh_known_hosts <config_name> <ip1> [<ip2>...]" >&2
-    return 1
-  fi
-  if [ $# -eq 0 ]; then
-    echo "#### Error: No IP addresses provided to bootstrap_ssh_known_hosts." >&2
+    echo "#### Error: Not enough arguments. Usage: bootstrap_ssh_known_hosts <config_name> [skip_poll] <host1> [<host2>...]" >&2
     return 1
   fi
 
   local config_name="$1"
-  shift
+  shift # Shift arguments to the left, $1 is gone.
+  local perform_poll=true
+
+  # Check if the new first argument is our flag.
+  if [[ "$1" == "skip_poll" ]]; then
+    perform_poll=false
+    shift # Shift again, flag is gone, remaining arguments are hosts.
+  fi
+
+  # After potential shifts, if no arguments remain, there are no hosts to process.
+  if [ $# -eq 0 ]; then
+    echo "#### Error: No hosts provided to bootstrap_ssh_known_hosts." >&2
+    return 1
+  fi
+
   local known_hosts_file="$HOME/.ssh/known_hosts_${config_name}"
 
-  echo ">>> Preparing for Ansible: Clearing old host keys and scanning new ones..."
+  echo ">>> Preparing SSH known_hosts: ${known_hosts_file}"
   mkdir -p "$HOME/.ssh"
   rm -f "${known_hosts_file}"
   
   echo "#### Scanning host keys for all nodes..."
-  # Iterate through all IP address parameters passed from `terraform/modules/ansible/main.tf`
-  for ip in "$@"; do
-    echo "#### Waiting for SSH on ${ip} to be ready..."
-    for i in {1..30}; do # Wait for up to 30 seconds
-      if ssh-keyscan -H "${ip}" >> "${known_hosts_file}" 2>/dev/null; then
-        echo "      - Scanned key for ${ip} and added to ${known_hosts_file}"
-        break
-      fi
-      if [ "${i}" -eq 30 ]; then
-        echo "#### Error: Timed out waiting for SSH on ${ip}." >&2
+  # Iterate through all remaining arguments, which are guaranteed to be hosts.
+  for host in "$@"; do
+    if ${perform_poll}; then
+      # --- Terraform Path: Poll for SSH service to become available ---
+      echo "#### Waiting for SSH on ${host} to be ready..."
+      local success=false
+      for i in {1..30}; do
+        if ssh-keyscan -T 2 -H "${host}" >> "${known_hosts_file}" 2>/dev/null; then
+          echo "      - Scanned key for ${host} and added to ${known_hosts_file}"
+          success=true
+          break
+        fi
+        sleep 1
+      done
+      if ! ${success}; then
+        echo "#### Error: Timed out waiting for SSH on ${host}." >&2
         return 1
       fi
-      sleep 1
-    done
+    else
+      # --- Manual Ansible Path: Scan directly without polling ---
+      echo "#### Scanning host key for running host: ${host}..."
+      if ! ssh-keyscan -T 5 -H "${host}" >> "${known_hosts_file}" 2>/dev/null; then
+        echo "#### WARNING: Failed to scan host key for ${host}." >&2
+      fi
+    fi
   done
   
-  echo "#### Host key scanning complete. File created at ${known_hosts_file}"
+  echo "#### Host key scanning complete."
   echo "--------------------------------------------------"
 }
 

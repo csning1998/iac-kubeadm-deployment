@@ -13,15 +13,41 @@ run_ansible_playbook() {
   local private_key_path="${SSH_PRIVATE_KEY}"
   local relative_inventory_path="ansible/${inventory_file}"
   local relative_playbook_path="ansible/playbooks/${playbook_file}"
+  local full_inventory_path="${SCRIPT_DIR}/${relative_inventory_path}"
 
   if [ ! -f "${SCRIPT_DIR}/${relative_playbook_path}" ]; then
-      echo "FATAL: Playbook not found at '${relative_playbook_path}'" >&2
-      return 1
+    echo "FATAL: Playbook not found at '${relative_playbook_path}'" >&2
+    return 1
   fi
-  if [ ! -f "${SCRIPT_DIR}/${relative_inventory_path}" ]; then
-      echo "FATAL: Inventory not found at '${relative_inventory_path}'" >&2
-      return 1
+  if [ ! -f "${full_inventory_path}" ]; then
+    echo "FATAL: Inventory not found at '${full_inventory_path}'" >&2
+    return 1
   fi
+
+  # --- STEP 1: Derive the config_name from the inventory filename ---
+  local config_name
+  config_name=$(basename "${inventory_file}" | sed 's/^inventory-//;s/\.yaml$//')
+
+  # --- STEP 2: Use ansible-inventory to reliably get all host IPs ---
+  local all_hosts
+  all_hosts=$(ansible-inventory -i "${full_inventory_path}" \
+      --list | jq -r '._meta.hostvars | keys[] | select(. != "localhost")')
+
+  if [ -z "${all_hosts}" ]; then
+    echo "FATAL: No hosts could be parsed from the inventory file via 'ansible-inventory'." >&2
+    return 1
+  fi
+  
+  echo "==========================="
+  echo "Derived Config Name: ${config_name}"
+  echo "Detected Hosts for SSH scan: $(echo ${all_hosts} | tr '\n' ' ')"
+  echo "==========================="
+
+  local hosts_array=()
+  readarray -t hosts_array <<< "${all_hosts}"
+
+  # --- STEP 3: Call the function used by Terraform ---
+  bootstrap_ssh_known_hosts "${config_name}" "skip_poll" "${hosts_array[@]}"
 
   echo ">>> STEP: Running Ansible Playbook [${playbook_file}] with inventory [${inventory_file}]"
 
