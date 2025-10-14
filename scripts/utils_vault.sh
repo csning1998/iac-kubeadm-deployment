@@ -81,7 +81,7 @@ initialize_vault() {
 
   echo "####"
   echo "#### Vault is initialized and ready."
-  echo "#### Next Step: Manually run 'vault kv put secret/iac-kubeadm-deployment/variables ...' with your secrets."
+  echo "#### Next Step: Manually run 'vault kv put secret/on-premise-gitlab-deployment/variables ...' with your secrets."
   echo "####"
 }
 

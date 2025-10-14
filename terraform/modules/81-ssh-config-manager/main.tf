@@ -13,7 +13,7 @@ locals {
 }
 
 /*
-* Generate a ~/.ssh/iac-kubeadm-deployment_config file in the user's home directory with an alias and a specified public key
+* Generate a ~/.ssh/on-premise-gitlab-deployment_config file in the user's home directory with an alias and a specified public key
 * for passwordless SSH using the alias (e.g., ssh k8s-master-00).
 */
 resource "local_file" "ssh_config" {

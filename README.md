@@ -1,4 +1,4 @@
-# PoC: Deploy HA Kubernetes Cluster using QEMU + KVM with Packer, Terraform, and Ansible
+# PoC: Deploy GitLab Helm on HA Kubeadm Cluster using QEMU + KVM with Packer, Terraform, Vault, and Ansible
 
 ## Section 0. Introduction
 
@@ -14,7 +14,7 @@ The machine specifications used for development are as follows, for reference:
 You can clone the project using the following command:
 
 ```shell
-git clone https://github.com/csning1998/iac-kubeadm-deployment.git
+git clone https://github.com/csning1998/on-premise-gitlab-deployment.git
 ```
 
 ### A. Disclaimer
@@ -41,7 +41,7 @@ The output may show:
 The content in Section 1 and Section 2 serves as prerequisite setup before formal execution. Project lifecycle management and configuration are handled through the `entry.sh` script in the root directory. After executing `./entry.sh`, you will see the following content:
 
 ```text
-➜  iac-kubeadm-deployment git:(main) ✗ ./entry.sh
+➜  on-premise-gitlab-deployment git:(main) ✗ ./entry.sh
 ... (Some preflight check)
 
 ======= IaC-Driven Virtualization Management =======
@@ -191,7 +191,7 @@ To ensure the project runs smoothly, please follow the procedures below to compl
 
 0. **Environment variable file:** The script `entry.sh` will automatically create a `.env` environment variable that is used by for script files, which can be ignored.
 
-1. **Generate SSH Key:** During the execution of Terraform and Ansible, SSH keys will be used for node access authentication and configuration management. You can generate these by running `./entry.sh` and entering `3` to access the _"Generate SSH Key"_ option. You can enter your desired key name or simply use the default value `id_ed25519_iac-kubeadm-deployment`. The generated public and private key pair will be stored in the `~/.ssh` directory
+1. **Generate SSH Key:** During the execution of Terraform and Ansible, SSH keys will be used for node access authentication and configuration management. You can generate these by running `./entry.sh` and entering `3` to access the _"Generate SSH Key"_ option. You can enter your desired key name or simply use the default value `id_ed25519_on-premise-gitlab-deployment`. The generated public and private key pair will be stored in the `~/.ssh` directory
 
 2. **Switch Environment:** You can switch between "Container" or "Native" environment by using `./entry.sh` and entering `8`. Currently this project primarily uses Podman, and I _personally_ recommend decoupling the Podman and Docker runtime environments to prevent execution issues caused by SELinux-related permissions. For example, SELinux policies do not allow a `container_t` process that is common in Docker to connect to a `virt_var_run_t` Socket, which may cause Terraform Provider or `virsh` to receive "Permission Denied" errors when running in containers, even though everything appears normal from a filesystem permissions perspective.
 
@@ -318,7 +318,7 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
    vault kv put \
       -address="https://127.0.0.1:8200" \
       -ca-cert="${PWD}/vault/tls/ca.pem" \
-      secret/iac-kubeadm-deployment/variables \
+      secret/on-premise-gitlab-deployment/variables \
       ssh_username="some-user-name-for-ssh" \
       ssh_password="some-user-password-for-ssh" \
       ssh_password_hash=$(echo -n "$ssh_password" | mkpasswd -m sha-512 -P 0) \

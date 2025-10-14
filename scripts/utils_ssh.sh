@@ -23,7 +23,7 @@ check_ssh_key_exists() {
 
 # Function: Generate an SSH key for IaC automation (unattended mode)
 generate_ssh_key() {
-  local default_key_name="id_ed25519_iac-kubeadm-deployment"
+  local default_key_name="id_ed25519_on-premise-gitlab-deployment"
   local key_name
 
   echo "#### This utility will generate an SSH key for IaC automation (unattended mode)."
@@ -61,7 +61,7 @@ generate_ssh_key() {
   echo "--------------------------------------------------"
 }
 
-# Function: Verify SSH access to hosts defined in ~/.ssh/iac-kubeadm-deployment_config
+# Function: Verify SSH access to hosts defined in ~/.ssh/on-premise-gitlab-deployment_config
 verify_ssh() {
   echo ">>> STEP: Performing strict SSH access verification for all IaC configurations..."
 
