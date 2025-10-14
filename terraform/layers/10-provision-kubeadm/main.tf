@@ -49,7 +49,7 @@ module "ssh_config_manager" {
 }
 
 module "bootstrapper_ansible_cluster" {
-  source = "../../modules/12-bootstrapper-ansible-cluster"
+  source = "../../modules/12-bootstrapper-ansible-kubeadm"
 
   ansible_config = {
     root_path     = local.ansible_root_path
