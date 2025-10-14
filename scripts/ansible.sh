@@ -30,8 +30,8 @@ run_ansible_playbook() {
 
   # --- STEP 2: Use ansible-inventory to reliably get all host IPs ---
   local all_hosts
-  all_hosts=$(ansible-inventory -i "${full_inventory_path}" \
-      --list | jq -r '._meta.hostvars | keys[] | select(. != "localhost")')
+  all_hosts=$(ansible-inventory -i "${full_inventory_path}" --list | \
+              jq -r '._meta.hostvars | to_entries[] | .value.ansible_host // .key')
 
   if [ -z "${all_hosts}" ]; then
     echo "FATAL: No hosts could be parsed from the inventory file via 'ansible-inventory'." >&2
