@@ -1,6 +1,6 @@
 
 variable "config_name" {
-  description = "A unique name for this SSH configuration set (e.g., 'k8s-cluster')."
+  description = "A unique name for this SSH configuration set (e.g., 'kubeadm-cluster')."
   type        = string
 }
 

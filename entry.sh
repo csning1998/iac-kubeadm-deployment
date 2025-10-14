@@ -83,7 +83,7 @@ options+=("Rebuild Packer: 02 Kubeadm Base Image")
 options+=("Rebuild Packer: 03 Microk8s Base Image")
 options+=("Rebuild Packer: 04 Postgres Base Image")
 options+=("Rebuild Kubeadm Cluster (Packer + TF)")
-options+=("Rebuild Terraform: Full Cluster (Layer 10)")
+options+=("Rebuild Terraform Layer 10: Kubeadm Cluster")
 options+=("Rebuild Terraform Layer 10: Harbor Server")
 options+=("Rebuild Terraform Layer 10: Postgres Service")
 options+=("Rebuild Terraform Layer 50: Kubernetes Addons")
@@ -192,7 +192,7 @@ select opt in "${options[@]}"; do
       echo "# Rebuild All workflow completed."
       break
       ;;
-    "Rebuild Terraform: Full Cluster (Layer 10)")
+    "Rebuild Terraform Layer 10: Kubeadm Cluster")
       echo "# Executing Rebuild Terraform workflow for the full cluster..."
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources

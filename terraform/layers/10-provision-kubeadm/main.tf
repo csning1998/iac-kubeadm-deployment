@@ -6,7 +6,7 @@ module "provisioner_kvm" {
   # VM Configuration
   vm_config = {
     all_nodes_map   = local.all_nodes_map
-    base_image_path = var.k8s_cluster_config.base_image_path
+    base_image_path = var.kubeadm_cluster_config.base_image_path
   }
 
   # VM Credentials from Vault
@@ -39,7 +39,7 @@ module "provisioner_kvm" {
 module "ssh_config_manager" {
   source = "../../modules/81-ssh-config-manager"
 
-  config_name = var.k8s_cluster_config.cluster_name
+  config_name = var.kubeadm_cluster_config.cluster_name
   nodes       = module.provisioner_kvm.all_nodes_map
   vm_credentials = {
     username             = data.vault_generic_secret.iac_vars.data["vm_username"]
@@ -53,11 +53,11 @@ module "bootstrapper_ansible_cluster" {
 
   ansible_config = {
     root_path     = local.ansible_root_path
-    registry_host = var.k8s_cluster_config.registry_host
+    registry_host = var.kubeadm_cluster_config.registry_host
     extra_vars = {
       k8s_master_ips        = local.k8s_master_ips
-      k8s_ha_virtual_ip     = var.k8s_cluster_config.ha_virtual_ip
-      k8s_pod_subnet        = var.k8s_cluster_config.pod_subnet
+      k8s_ha_virtual_ip     = var.kubeadm_cluster_config.ha_virtual_ip
+      k8s_pod_subnet        = var.kubeadm_cluster_config.pod_subnet
       k8s_nat_subnet_prefix = local.k8s_cluster_nat_network_subnet_prefix
     }
   }

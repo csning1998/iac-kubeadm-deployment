@@ -11,5 +11,5 @@ output "kubeconfig_content" {
 
 output "k8s_pod_subnet" {
   description = "The CIDR for the Pod network."
-  value       = var.k8s_cluster_config.pod_subnet
+  value       = var.kubeadm_cluster_config.pod_subnet
 }

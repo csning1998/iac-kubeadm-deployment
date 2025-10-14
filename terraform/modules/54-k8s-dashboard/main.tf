@@ -1,7 +1,7 @@
 
 resource "helm_release" "kubernetes_dashboard" {
 
-  # Ref: https://artifacthub.io/packages/helm/k8s-dashboard/kubernetes-dashboard
+  # Ref: https://artifacthub.io/packages/helm/kubeadm-dashboard/kubernetes-dashboard
 
   name             = "kubernetes-dashboard"
   repository       = "https://kubernetes.github.io/dashboard/"

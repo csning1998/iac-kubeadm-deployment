@@ -353,7 +353,7 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
    ```shell
    cat << EOF > terraform/layers/10-cluster-provision/terraform.tfvars
    # Defines the hardware and IP addresses for each virtual machine in the cluster.
-   k8s_cluster_config = {
+   kubeadm_cluster_config = {
       nodes = {
          masters = [
             { ip = "172.16.134.200", vcpu = 4, ram = 4096 },
@@ -374,19 +374,19 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
          nat = {
             name        = "iac-kubeadm-nat-net"
             cidr        = "172.16.86.0/24"
-            bridge_name = "k8s-nat-br" # IFNAMSIZ is 15 user-visible characters with the null terminator included.
+            bridge_name = "kubeadm-nat-br" # IFNAMSIZ is 15 user-visible characters with the null terminator included.
          }
          hostonly = {
             name        = "iac-kubeadm-hostonly-net"
             cidr        = "172.16.134.0/24"
-            bridge_name = "k8s-host-br"
+            bridge_name = "kubeadm-host-br"
          }
       }
    }
    EOF
    ```
 
-   For users setting up an (HA) Cluster, the number of elements in `k8s_cluster_config.nodes.masters` and `k8s_cluster_config.nodes.workers` determines the number of nodes generated. Ensure the quantity of nodes in `k8s_cluster_config.nodes.masters` is an odd number to prevent the etcd Split-Brain risk in Kubernetes. Meanwhile, `k8s_cluster_config.nodes.workers` can be configured based on the number of IPs. The IPs provided by the user must correspond to the host-only network segment.
+   For users setting up an (HA) Cluster, the number of elements in `kubeadm_cluster_config.nodes.masters` and `kubeadm_cluster_config.nodes.workers` determines the number of nodes generated. Ensure the quantity of nodes in `kubeadm_cluster_config.nodes.masters` is an odd number to prevent the etcd Split-Brain risk in Kubernetes. Meanwhile, `kubeadm_cluster_config.nodes.workers` can be configured based on the number of IPs. The IPs provided by the user must correspond to the host-only network segment.
 
 2. The variable file for the Registry in `terraform/layers/30-registry-provision/terraform.tfvars` is relatively simple and can be created using the following command:
 
@@ -505,7 +505,7 @@ sequenceDiagram
 
 1. **Packer + Ansible: Provisioning base Kubernetes Golden Image**
 
-   Packer plays the role of an "image factory" in this project, with its core task being to automate the creation of a standardized virtual machine template (Golden Image) pre-configured with all Kubernetes dependencies. The project uses `packer/source.pkr.hcl` as its definition file and it's driven by `packer/20-k8s-base.pkrvars.hcl`, with a workflow that includes: automatically downloading the `Ubuntu Server 24.04 ISO` file and completing unattended installation using cloud-init; starting SSH connection and invoking the Ansible Provisioner after installation; executing `ansible/playbooks/00-provision-base-image.yaml` to install necessary components such as `kubelet`, `kubeadm`, `kubectl`, and `CRI-O` (also configure it to use `cgroup` driver); finally shutting down the virtual machine and producing a `*.qcow2` format template for Terraform to use. The goal of this phase is to "bake" all infrequently changing software and configurations into the image to reduce the time required for subsequent deployments.
+   Packer plays the role of an "image factory" in this project, with its core task being to automate the creation of a standardized virtual machine template (Golden Image) pre-configured with all Kubernetes dependencies. The project uses `packer/source.pkr.hcl` as its definition file and it's driven by `packer/02-base-kubeadm.pkrvars.hcl`, with a workflow that includes: automatically downloading the `Ubuntu Server 24.04 ISO` file and completing unattended installation using cloud-init; starting SSH connection and invoking the Ansible Provisioner after installation; executing `ansible/playbooks/00-provision-base-image.yaml` to install necessary components such as `kubelet`, `kubeadm`, `kubectl`, and `CRI-O` (also configure it to use `cgroup` driver); finally shutting down the virtual machine and producing a `*.qcow2` format template for Terraform to use. The goal of this phase is to "bake" all infrequently changing software and configurations into the image to reduce the time required for subsequent deployments.
 
 2. **Terraform: The Infrastructure Orchestrator**
 
@@ -513,7 +513,7 @@ sequenceDiagram
 
    -  **Node Deployment (Layer 10)**:
 
-      -  Based on `k8s_cluster_config` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
+      -  Based on `kubeadm_cluster_config` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
       -  Next, Terraform's libvirt provider will quickly clone virtual machines based on the `.qcow2` file. Under the hardware resources listed in Section 0, cloning 6 virtual machines can be completed in approximately 15 seconds.
 
    -  **Cluster Configuration (Layer 20)**:

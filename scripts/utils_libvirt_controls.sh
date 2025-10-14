@@ -30,7 +30,7 @@ purge_libvirt_resources() {
   echo ">>> STEP: Purging stale libvirt resources..."
 
   # Destroy and undefine all VMs (domains)
-  for vm in $(sudo virsh list --all --name | grep 'k8s-'); do
+  for vm in $(sudo virsh list --all --name | grep 'kubeadm-'); do
     echo "#### Destroying and undefining VM: $vm"
     sudo virsh destroy "$vm" >/dev/null 2>&1 || true
     sudo virsh undefine "$vm" --remove-all-storage >/dev/null 2>&1 || true
@@ -39,7 +39,7 @@ purge_libvirt_resources() {
   # Check if the storage pool exists before listing volumes
   if sudo virsh pool-info iac-kubeadm >/dev/null 2>&1; then
     # Delete all associated storage volumes
-    for vol in $(sudo virsh vol-list iac-kubeadm | grep 'k8s-' | awk '{print $1}'); do
+    for vol in $(sudo virsh vol-list iac-kubeadm | grep 'kubeadm-' | awk '{print $1}'); do
       echo "#### Deleting volume: $vol"
       sudo virsh vol-delete --pool iac-kubeadm "$vol" >/dev/null 2>&1 || true
     done

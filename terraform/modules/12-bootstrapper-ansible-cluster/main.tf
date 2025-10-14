@@ -12,8 +12,8 @@ terraform {
 */
 resource "local_file" "inventory" {
   content = templatefile("${path.root}/../../templates/inventory-kubeadm-cluster.yaml.tftpl", {
-    master_nodes     = [for node in var.inventory.nodes : node if startswith(node.key, "k8s-master")],
-    worker_nodes     = [for node in var.inventory.nodes : node if startswith(node.key, "k8s-worker")],
+    master_nodes     = [for node in var.inventory.nodes : node if startswith(node.key, "kubeadm-master")],
+    worker_nodes     = [for node in var.inventory.nodes : node if startswith(node.key, "kubeadm-worker")],
     ansible_ssh_user = var.vm_credentials.username,
     extra_vars       = var.ansible_config.extra_vars
     registry_host    = var.ansible_config.registry_host

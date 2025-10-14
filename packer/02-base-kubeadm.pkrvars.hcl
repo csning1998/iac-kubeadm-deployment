@@ -1,5 +1,5 @@
 
-# This file defines the variables for building the 'k8s-base' (cluster) image.
+# This file defines the variables for building the 'kubeadm-base' (cluster) image.
 
 build_spec = {
   suffix   = "02-base-kubeadm"
