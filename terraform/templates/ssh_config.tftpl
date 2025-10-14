@@ -1,9 +1,11 @@
+UserKnownHostsFile ~/.ssh/known_hosts_${config_name}
+
 %{~ for node in nodes ~}
 Host ${node.key}
   HostName ${node.ip}
   User ${ssh_user}
   IdentityFile ${ssh_private_key_path}
   StrictHostKeyChecking yes
-  UserKnownHostsFile ~/.ssh/known_hosts_${config_name}
+  PasswordAuthentication no
 
 %{~ endfor ~}
