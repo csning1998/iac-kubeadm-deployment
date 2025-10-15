@@ -9,9 +9,11 @@ restapi:
   connect_address: "{{ ansible_host }}:8008"
 
 # etcd configuration for Distributed Configuration Store (DCS)
-etcd:
-  # Creates a comma-separated list of etcd endpoints, e.g., "1.1.1.1:2379,2.2.2.2:2379"
-  hosts: "{{ etcd_cluster_ips | map('regex_replace', '(.*)', '\\1:2379') | join(',') }}"
+etcd3:
+  hosts:
+{% for ip in etcd_cluster_ips %}
+    - {{ ip }}:2379
+{% endfor %}
   ttl: 30
 
 # Bootstrap configuration (only used by the first node to initialize the cluster)

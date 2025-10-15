@@ -9,7 +9,7 @@
     - name: "Step A2. Install Patroni and dependencies into virtual environment"
       ansible.builtin.pip:
         name:
-          - patroni[etcd]
+          - patroni[etcd3]
           - psycopg2-binary
         virtualenv: /opt/patroni-venv
         virtualenv_command: /usr/bin/python3 -m venv
@@ -28,8 +28,8 @@
   block:
     - name: "Step C1. Create Patroni config file from template"
       ansible.builtin.template:
-        src: patroni.yaml.j2
-        dest: /etc/patroni.yaml
+        src: patroni.yml.j2
+        dest: /etc/patroni.yml
         owner: postgres
         group: postgres
         mode: "0600"
