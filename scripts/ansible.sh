@@ -1,5 +1,49 @@
 #!/bin/bash
 
+# Extracts confidential variables from Vault for specific playbooks.
+extractor_confidential_var() {
+  local playbook_file="$1"
+  local extra_vars_string=""
+
+  case "${playbook_file}" in
+    "10-provision-postgres.yaml")
+      echo "#### Postgres playbook detected. Fetching credentials from Vault..." >&2
+
+      local vault_path="secret/on-premise-gitlab-deployment/databases"
+      local secrets_json
+
+      if ! secrets_json=$(vault kv get -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" -format=json "${vault_path}"); then
+        echo "FATAL: Failed to fetch secrets from Vault at path '${vault_path}'. Is Vault unsealed?" >&2
+        return 1
+      fi
+
+      local superuser_pass
+      local replication_pass
+      superuser_pass=$(echo "${secrets_json}" | jq -r '.data.data.pg_superuser_password')
+      replication_pass=$(echo "${secrets_json}" | jq -r '.data.data.pg_replication_password')
+
+      if [[ -z "${superuser_pass}" || "${superuser_pass}" == "null" || -z "${replication_pass}" || "${replication_pass}" == "null" ]]; then
+        echo "FATAL: Could not find confidential vars in Vault at '${vault_path}'." >&2
+        return 1
+      fi
+
+      extra_vars_string="--extra-vars 'pg_superuser_password=${superuser_pass}' --extra-vars 'pg_replication_password=${replication_pass}'"
+
+      echo "#### Credentials fetched successfully." >&2
+      ;;
+
+    # "10-provision-redis.yaml")
+    #   echo "#### Redis playbook detected. Fetching credentials..."
+    #   # fetch Redis passwords here in the future
+    #   ;;
+    *)
+      ;;
+  esac
+
+  echo "${extra_vars_string}"
+  return 0
+}
+
 # [Dev] This function is for faster reset and re-execute the Ansible Playbook
 run_ansible_playbook() {
   local playbook_file="$1"  # (e.g., "10-provision-cluster.yaml").
@@ -51,11 +95,17 @@ run_ansible_playbook() {
 
   echo ">>> STEP: Running Ansible Playbook [${playbook_file}] with inventory [${inventory_file}]"
 
+  local extra_vars
+  if ! extra_vars=$(extractor_confidential_var "${playbook_file}"); then
+    return 1  # the extractor func will print its err
+  fi
+
   local cmd="ansible-playbook \
     -i ${relative_inventory_path} \
     --private-key ${private_key_path} \
-    -vv \
-    ${relative_playbook_path}"
+    ${extra_vars} \
+    ${relative_playbook_path} \
+    -vv"
 
   run_command "${cmd}" "${SCRIPT_DIR}"
   echo "#### Playbook execution finished."
