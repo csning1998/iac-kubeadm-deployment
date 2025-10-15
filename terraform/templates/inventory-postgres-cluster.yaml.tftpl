@@ -4,6 +4,7 @@ all:
     ansible_user: "${ansible_ssh_user}"
     etcd_cluster_ips: ${jsonencode(etcd_ips)}
     postgres_cluster_ips: ${jsonencode(postgres_ips)}
+    postgres_allowed_subnet: "172.16.136.0/24"
     patroni_api_port: 8008
     haproxy_rw_port: 5000
     haproxy_ro_port: 5001

@@ -28,9 +28,13 @@ bootstrap:
   initdb:
     - encoding: UTF8
     - data-checksums
+    - auth-host: md5
+    - auth-local: md5
   pg_hba:
-    - host all all 0.0.0.0/0 md5
-    - host replication repuser 0.0.0.0/0 md5
+    - host all all {{ postgres_allowed_subnet }} md5
+    - host replication repuser {{ postgres_allowed_subnet }} md5
+    - host all all 127.0.0.1/32 md5
+    - host replication repuser 127.0.0.1/32 md5
 
 # PostgreSQL server configuration managed by Patroni
 postgresql:

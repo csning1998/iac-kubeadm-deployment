@@ -7,7 +7,7 @@ Type=simple
 User=postgres
 Group=postgres
 # Patroni needs the pg_ctl binary in its PATH
-Environment="PATH=/usr/lib/postgresql/18/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+Environment="PATH=/usr/lib/postgresql/{{ postgres_version | default('18') }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
 # ExecStart must point to the patroni executable inside the virtual environment
 ExecStart=/opt/patroni-venv/bin/patroni /etc/patroni.yml
 KillMode=process
