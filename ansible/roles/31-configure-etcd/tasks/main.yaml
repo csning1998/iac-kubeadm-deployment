@@ -1,6 +1,13 @@
 ---
 - name: "Section A: Prepare etcd User and Directories"
   block:
+    - name: "Step A0. Install HAProxy package"
+      ansible.builtin.apt:
+        name:
+          - etcd-client
+        state: present
+        update_cache: true
+
     - name: "Step A1. Ensure the 'etcd' group exists"
       ansible.builtin.group:
         name: etcd
