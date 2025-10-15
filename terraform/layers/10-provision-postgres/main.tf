@@ -53,6 +53,9 @@ module "bootstrapper_ansible_cluster" {
 
   ansible_config = {
     root_path = local.ansible_root_path
+    extra_vars = {
+      postgres_allowed_subnet = var.postgres_infrastructure.postgres_allowed_subnet
+    }
   }
 
   vm_credentials = {

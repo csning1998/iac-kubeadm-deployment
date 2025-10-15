@@ -16,10 +16,11 @@ resource "local_file" "inventory" {
     postgres_ips = [for node in values(var.postgres_nodes) : node.ip],
 
     # Use the variable passed from the layer
-    ansible_ssh_user = var.vm_credentials.username,
-    etcd_nodes       = var.etcd_nodes,
-    postgres_nodes   = var.postgres_nodes,
-    haproxy_nodes    = var.haproxy_nodes
+    ansible_ssh_user        = var.vm_credentials.username,
+    etcd_nodes              = var.etcd_nodes,
+    postgres_nodes          = var.postgres_nodes,
+    haproxy_nodes           = var.haproxy_nodes
+    postgres_allowed_subnet = var.ansible_config.extra_vars.postgres_allowed_subnet
   })
   filename = "${var.ansible_config.root_path}/inventory-postgres-cluster.yaml"
 }

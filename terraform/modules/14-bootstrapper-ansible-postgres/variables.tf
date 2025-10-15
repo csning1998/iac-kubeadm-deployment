@@ -51,6 +51,9 @@ variable "ansible_config" {
   description = "Configurations for the Ansible execution environment and playbook."
   type = object({
     root_path = string
+    extra_vars = object({
+      postgres_allowed_subnet = string
+    })
   })
 }
 

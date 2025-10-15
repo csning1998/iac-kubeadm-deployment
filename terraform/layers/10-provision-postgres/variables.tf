@@ -43,6 +43,7 @@ variable "postgres_infrastructure" {
         bridge_name = string
       })
     })
-    storage_pool_name = optional(string, "iac-postgres")
+    postgres_allowed_subnet = optional(string, "172.16.136.0/24")
+    storage_pool_name       = optional(string, "iac-postgres")
   })
 }
