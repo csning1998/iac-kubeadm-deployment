@@ -3,7 +3,9 @@
   block:
     - name: "Step A1. Install HAProxy package"
       ansible.builtin.apt:
-        name: haproxy
+        name:
+          - haproxy
+          - postgresql-client
         state: present
         update_cache: true
 
