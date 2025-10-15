@@ -314,19 +314,32 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
 
 4. Next, you only need to manually modify the following variables used in the project.
 
-   ```shell
-   vault kv put \
-      -address="https://127.0.0.1:8200" \
-      -ca-cert="${PWD}/vault/tls/ca.pem" \
-      secret/on-premise-gitlab-deployment/variables \
-      ssh_username="some-user-name-for-ssh" \
-      ssh_password="some-user-password-for-ssh" \
-      ssh_password_hash=$(echo -n "$ssh_password" | mkpasswd -m sha-512 -P 0) \
-      vm_username="some-user-name-for-vm" \
-      vm_password="some-user-password-for-vm" \
-      ssh_public_key_path="~/.ssh/some-ssh-key-name.pub" \
-      ssh_private_key_path="~/.ssh/some-ssh-key-name"
-   ```
+   -  **For Common Variables in this Project**
+
+      ```shell
+      vault kv put \
+         -address="https://127.0.0.1:8200" \
+         -ca-cert="${PWD}/vault/tls/ca.pem" \
+         secret/on-premise-gitlab-deployment/variables \
+         ssh_username="some-user-name-for-ssh" \
+         ssh_password="some-user-password-for-ssh" \
+         ssh_password_hash=$(echo -n "$ssh_password" | mkpasswd -m sha-512 -P 0) \
+         vm_username="some-user-name-for-vm" \
+         vm_password="some-user-password-for-vm" \
+         ssh_public_key_path="~/.ssh/some-ssh-key-name.pub" \
+         ssh_private_key_path="~/.ssh/some-ssh-key-name"
+      ```
+
+   -  **For Databases**
+
+      ```shell
+      vault kv put \
+         -address="https://127.0.0.1:8200" \
+         -ca-cert="${PWD}/vault/tls/ca.pem" \
+         secret/on-premise-gitlab-deployment/databases \
+         pg_superuser_password="a-more-secure-pwd-for-superuser" \
+         pg_replication_password="a-more-secure-pwd-for-replication"
+      ```
 
    -  **Note 1:**
 
@@ -394,7 +407,7 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
    cat << EOF > terraform/layers/10-provision-harbor/terraform.tfvars
    # Defines the hardware and IP addresses for each virtual machine in the cluster.
    harbor_cluster_config = {
-      cluster_name = "20-harbor-cluster"
+      cluster_name = "10-harbor-cluster"
       nodes = {
          harbor = [
             { ip = "172.16.135.200", vcpu = 2, ram = 4096 },

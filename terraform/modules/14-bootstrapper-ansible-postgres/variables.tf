@@ -37,6 +37,14 @@ variable "vm_credentials" {
   })
 }
 
+variable "db_credentials" {
+  description = "Credentials for Ansible to access the target Databases."
+  type = object({
+    superuser_password   = string
+    replication_password = string
+  })
+}
+
 # Ansible Playbook Configuration
 
 variable "ansible_config" {

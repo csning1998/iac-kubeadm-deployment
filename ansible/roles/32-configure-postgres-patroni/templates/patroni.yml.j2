@@ -39,14 +39,14 @@ postgresql:
   data_dir: /var/lib/postgresql/18/data # Patroni will manage this directory
   pgpass: /tmp/pgpass{{ postgresql_port | default(5432) }}
   
-  # IMPORTANT: These passwords should be managed via Ansible Vault in production
+  # These credential is managed by HashiCorp Vault via Terraform
   authentication:
     replication:
       username: repuser
-      password: "ReplicationPassword123"
+      password: "{{ pg_replication_password }}"
     superuser:
       username: postgres
-      password: "SuperuserPassword123"
+      password: "{{ pg_superuser_password }}"
   
   # Key parameters for replication and HA
   parameters:

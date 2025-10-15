@@ -48,6 +48,8 @@ resource "null_resource" "provision_cluster" {
         -i ${local_file.inventory.filename} \
         --private-key ${nonsensitive(var.vm_credentials.ssh_private_key_path)} \
         --extra-vars "ansible_ssh_user=${nonsensitive(var.vm_credentials.username)}" \
+        --extra-vars "pg_replication_password=${nonsensitive(var.db_credentials.replication_password)}" \
+        --extra-vars "pg_superuser_password=${nonsensitive(var.db_credentials.superuser_password)}" \
         -v \
         ${var.ansible_config.root_path}/playbooks/10-provision-postgres.yaml
     EOT
