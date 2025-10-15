@@ -1,0 +1,37 @@
+---
+- name: "Section C: Install etcd Binaries"
+  become: true
+  vars:
+    etcd_version: "v3.5.14"
+    etcd_download_url: "https://github.com/etcd-io/etcd/releases/download/{{ etcd_version }}/etcd-{{ etcd_version }}-linux-amd64.tar.gz"
+    etcd_install_dir: "/usr/local/bin"
+  block:
+    - name: "Step C1. Download etcd package"
+      ansible.builtin.get_url:
+        url: "{{ etcd_download_url }}"
+        dest: "/tmp/etcd-{{ etcd_version }}.tar.gz"
+        mode: "0644"
+
+    - name: "Step C2. Extract etcd package"
+      ansible.builtin.unarchive:
+        src: "/tmp/etcd-{{ etcd_version }}.tar.gz"
+        dest: /tmp
+        remote_src: true
+
+    - name: "Step C3. Copy etcd binaries to install directory"
+      ansible.builtin.copy:
+        src: "/tmp/etcd-{{ etcd_version }}-linux-amd64/{{ item }}"
+        dest: "{{ etcd_install_dir }}/{{ item }}"
+        remote_src: true
+        mode: "0755"
+      loop:
+        - etcd
+        - etcdctl
+
+    - name: "Step C4. Clean up temporary etcd files"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "/tmp/etcd-{{ etcd_version }}.tar.gz"
+        - "/tmp/etcd-{{ etcd_version }}-linux-amd64"

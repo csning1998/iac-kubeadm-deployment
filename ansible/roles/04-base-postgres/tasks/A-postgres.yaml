@@ -1,0 +1,41 @@
+---
+- name: "Section A: Install PostgreSQL Server via Official Apt Repository"
+  become: true
+  block:
+    - name: "Step 1. Install prerequisites for adding repository"
+      ansible.builtin.apt:
+        name:
+          - curl
+          - ca-certificates
+        state: present
+        update_cache: true
+
+    - name: "Step 2. Ensure PostgreSQL common GPG key directory exists"
+      ansible.builtin.file:
+        path: /usr/share/postgresql-common/pgdg
+        state: directory
+        mode: "0755"
+
+    - name: "Step 3. Import the PostgreSQL repository signing key"
+      ansible.builtin.get_url:
+        url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        dest: /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+        mode: "0644"
+      register: gpg_key_result
+      until: gpg_key_result is succeeded
+      retries: 5
+      delay: 2
+
+    - name: "Step 4. Create the PostgreSQL repository configuration file"
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+        state: present
+        filename: pgdg
+
+    - name: "Step 5. Install PostgreSQL server and client packages (Version 18)"
+      ansible.builtin.apt:
+        name:
+          - postgresql-18
+          - postgresql-contrib-18
+        state: present
+        update_cache: true

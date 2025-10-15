@@ -1,4 +1,4 @@
-# PoC: Deploy HA Kubernetes Cluster using QEMU + KVM with Packer, Terraform, and Ansible
+# PoC: Deploy GitLab Helm on HA Kubeadm Cluster using QEMU + KVM with Packer, Terraform, Vault, and Ansible
 
 ## Section 0. Introduction
 
@@ -14,7 +14,7 @@ The machine specifications used for development are as follows, for reference:
 You can clone the project using the following command:
 
 ```shell
-git clone https://github.com/csning1998/iac-kubeadm-deployment.git
+git clone https://github.com/csning1998/on-premise-gitlab-deployment.git
 ```
 
 ### A. Disclaimer
@@ -41,7 +41,7 @@ The output may show:
 The content in Section 1 and Section 2 serves as prerequisite setup before formal execution. Project lifecycle management and configuration are handled through the `entry.sh` script in the root directory. After executing `./entry.sh`, you will see the following content:
 
 ```text
-➜  iac-kubeadm-deployment git:(main) ✗ ./entry.sh
+➜  on-premise-gitlab-deployment git:(main) ✗ ./entry.sh
 ... (Some preflight check)
 
 ======= IaC-Driven Virtualization Management =======
@@ -166,21 +166,72 @@ The user's CPU must support virtualization technology to enable QEMU-KVM functio
 -  **Clean up Libvirt resources**: You can use the following command to remove all Libvirt resources related to this project:
 
    ```shell
-   sudo virsh list --all --name | grep '^\(k8s\|registry\)-' | while read -r domain; do \
-      sudo virsh destroy "${domain}" --graceful >/dev/null 2>&1; \
-      sudo virsh undefine "${domain}" --nvram; \
+   # Virtual machine (Domain) name prefix list
+   DOMAIN_PREFIXES=(
+      "kubeadm-"
+      "harbor-"
+      "postgres-"
+      "haproxy-"
+      "etcd-"
+   )
+
+   # Storage pool (Pool) name list (used for deleting storage volumes and the pools themselves)
+   POOL_NAMES=(
+      "iac-kubeadm"
+      "iac-harbor"
+      "iac-postgres"
+   )
+
+   # Network name prefix list (combined with hostonly-net and nat-net)
+   NET_PREFIXES=(
+      "iac-kubeadm"
+      "iac-harbor"
+      "iac-postgres"
+   )
+
+   # --- Process virtual machines (Domains) ---
+   echo "--- Processing virtual machines (Domains) ---"
+   for prefix in "${DOMAIN_PREFIXES[@]}"; do
+      echo "Finding virtual machines starting with '${prefix}'..."
+      sudo virsh list --all --name | grep "^${prefix}" | while read -r domain; do
+         if [[ -n "${domain}" ]]; then
+            echo "Processing domain: ${domain}..."
+            sudo virsh destroy "${domain}" --graceful >/dev/null 2>&1
+            sudo virsh undefine "${domain}" --nvram
+         fi
+      done
    done
-   for pool in iac-kubeadm iac-registry; do \
-      sudo virsh vol-list --pool "${pool}" --details | awk 'NR>2 {print $1}' | while read -r vol; do \
-         sudo virsh vol-delete "${vol}" --pool "${pool}"; \
-      done; \
+
+   # --- Process storage volumes (Volumes) ---
+   echo -e "\n--- Processing storage volumes (Volumes) ---"
+   for pool in "${POOL_NAMES[@]}"; do
+      echo "Finding storage volumes in pool '${pool}'..."
+      sudo virsh vol-list "${pool}" --details | awk 'NR>2 {print $1}' | while read -r vol; do
+         if [[ -n "${vol}" ]]; then
+            echo "Deleting volume: ${vol} from pool ${pool}..."
+            sudo virsh vol-delete --pool "${pool}" "${vol}"
+         fi
+      done
    done
-   for net in iac-kubeadm-hostonly-net iac-kubeadm-nat-net iac-registry-hostonly-net iac-registry-nat-net; do \
-      sudo virsh net-destroy "${net}" && sudo virsh net-undefine "${net}"; \
+
+   # --- Process storage pools (Pools) ---
+   echo -e "\n--- Processing storage pools (Pools) ---"
+   for pool in "${POOL_NAMES[@]}"; do
+      echo "Processing pool: ${pool}..."
+      sudo virsh pool-destroy "${pool}" && sudo virsh pool-undefine "${pool}"
    done
-   for pool in iac-kubeadm iac-registry; do \
-      sudo virsh pool-destroy "${pool}" && sudo virsh pool-undefine "${pool}"; \
+
+   # --- Process networks (Networks) ---
+   echo -e "\n--- Processing networks (Networks) ---"
+   for prefix in "${NET_PREFIXES[@]}"; do
+      for suffix in "hostonly-net" "nat-net"; do
+         net_name="${prefix}-${suffix}"
+         echo "Processing network: ${net_name}..."
+         sudo virsh net-destroy "${net_name}" && sudo virsh net-undefine "${net_name}"
+      done
    done
+
+   echo -e "\n--- Cleanup complete ---"
    ```
 
 ## Section 2. Configuration
@@ -191,7 +242,7 @@ To ensure the project runs smoothly, please follow the procedures below to compl
 
 0. **Environment variable file:** The script `entry.sh` will automatically create a `.env` environment variable that is used by for script files, which can be ignored.
 
-1. **Generate SSH Key:** During the execution of Terraform and Ansible, SSH keys will be used for node access authentication and configuration management. You can generate these by running `./entry.sh` and entering `3` to access the _"Generate SSH Key"_ option. You can enter your desired key name or simply use the default value `id_ed25519_iac-kubeadm-deployment`. The generated public and private key pair will be stored in the `~/.ssh` directory
+1. **Generate SSH Key:** During the execution of Terraform and Ansible, SSH keys will be used for node access authentication and configuration management. You can generate these by running `./entry.sh` and entering `3` to access the _"Generate SSH Key"_ option. You can enter your desired key name or simply use the default value `id_ed25519_on-premise-gitlab-deployment`. The generated public and private key pair will be stored in the `~/.ssh` directory
 
 2. **Switch Environment:** You can switch between "Container" or "Native" environment by using `./entry.sh` and entering `8`. Currently this project primarily uses Podman, and I _personally_ recommend decoupling the Podman and Docker runtime environments to prevent execution issues caused by SELinux-related permissions. For example, SELinux policies do not allow a `container_t` process that is common in Docker to connect to a `virt_var_run_t` Socket, which may cause Terraform Provider or `virsh` to receive "Permission Denied" errors when running in containers, even though everything appears normal from a filesystem permissions perspective.
 
@@ -314,19 +365,32 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
 
 4. Next, you only need to manually modify the following variables used in the project.
 
-   ```shell
-   vault kv put \
-      -address="https://127.0.0.1:8200" \
-      -ca-cert="${PWD}/vault/tls/ca.pem" \
-      secret/iac-kubeadm-deployment/variables \
-      ssh_username="some-user-name-for-ssh" \
-      ssh_password="some-user-password-for-ssh" \
-      ssh_password_hash=$(echo -n "$ssh_password" | mkpasswd -m sha-512 -P 0) \
-      vm_username="some-user-name-for-vm" \
-      vm_password="some-user-password-for-vm" \
-      ssh_public_key_path="~/.ssh/some-ssh-key-name.pub" \
-      ssh_private_key_path="~/.ssh/some-ssh-key-name"
-   ```
+   -  **For Common Variables in this Project**
+
+      ```shell
+      vault kv put \
+         -address="https://127.0.0.1:8200" \
+         -ca-cert="${PWD}/vault/tls/ca.pem" \
+         secret/on-premise-gitlab-deployment/variables \
+         ssh_username="some-user-name-for-ssh" \
+         ssh_password="some-user-password-for-ssh" \
+         ssh_password_hash=$(echo -n "$ssh_password" | mkpasswd -m sha-512 -P 0) \
+         vm_username="some-user-name-for-vm" \
+         vm_password="some-user-password-for-vm" \
+         ssh_public_key_path="~/.ssh/some-ssh-key-name.pub" \
+         ssh_private_key_path="~/.ssh/some-ssh-key-name"
+      ```
+
+   -  **For Databases**
+
+      ```shell
+      vault kv put \
+         -address="https://127.0.0.1:8200" \
+         -ca-cert="${PWD}/vault/tls/ca.pem" \
+         secret/on-premise-gitlab-deployment/databases \
+         pg_superuser_password="a-more-secure-pwd-for-superuser" \
+         pg_replication_password="a-more-secure-pwd-for-replication"
+      ```
 
    -  **Note 1:**
 
@@ -353,7 +417,7 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
    ```shell
    cat << EOF > terraform/layers/10-cluster-provision/terraform.tfvars
    # Defines the hardware and IP addresses for each virtual machine in the cluster.
-   k8s_cluster_config = {
+   kubeadm_cluster_config = {
       nodes = {
          masters = [
             { ip = "172.16.134.200", vcpu = 4, ram = 4096 },
@@ -374,27 +438,27 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
          nat = {
             name        = "iac-kubeadm-nat-net"
             cidr        = "172.16.86.0/24"
-            bridge_name = "k8s-nat-br" # IFNAMSIZ is 15 user-visible characters with the null terminator included.
+            bridge_name = "kubeadm-nat-br" # IFNAMSIZ is 15 user-visible characters with the null terminator included.
          }
          hostonly = {
             name        = "iac-kubeadm-hostonly-net"
             cidr        = "172.16.134.0/24"
-            bridge_name = "k8s-host-br"
+            bridge_name = "kubeadm-host-br"
          }
       }
    }
    EOF
    ```
 
-   For users setting up an (HA) Cluster, the number of elements in `k8s_cluster_config.nodes.masters` and `k8s_cluster_config.nodes.workers` determines the number of nodes generated. Ensure the quantity of nodes in `k8s_cluster_config.nodes.masters` is an odd number to prevent the etcd Split-Brain risk in Kubernetes. Meanwhile, `k8s_cluster_config.nodes.workers` can be configured based on the number of IPs. The IPs provided by the user must correspond to the host-only network segment.
+   For users setting up an (HA) Cluster, the number of elements in `kubeadm_cluster_config.nodes.masters` and `kubeadm_cluster_config.nodes.workers` determines the number of nodes generated. Ensure the quantity of nodes in `kubeadm_cluster_config.nodes.masters` is an odd number to prevent the etcd Split-Brain risk in Kubernetes. Meanwhile, `kubeadm_cluster_config.nodes.workers` can be configured based on the number of IPs. The IPs provided by the user must correspond to the host-only network segment.
 
-2. The variable file for the Registry in `terraform/layers/30-registry-provision/terraform.tfvars` is relatively simple and can be created using the following command:
+2. The variable file for the (HA) Harbor in `terraform/layers/10-provision-harbor/terraform.tfvars` can be created using the following command:
 
    ```bash
-   cat << EOF > terraform/layers/20-provision-harbor/terraform.tfvars
+   cat << EOF > terraform/layers/10-provision-harbor/terraform.tfvars
    # Defines the hardware and IP addresses for each virtual machine in the cluster.
    harbor_cluster_config = {
-      cluster_name = "20-harbor-cluster"
+      cluster_name = "10-harbor-cluster"
       nodes = {
          harbor = [
             { ip = "172.16.135.200", vcpu = 2, ram = 4096 },
@@ -404,7 +468,7 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
       }
    }
 
-   registry_infrastructure = {
+   cluster_infrastructure = {
       network = {
          nat = {
             name        = "iac-registry-nat-net"
@@ -416,6 +480,50 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
             cidr        = "172.16.135.0/24"
             bridge_name = "reg-host-br"
          }
+      }
+   }
+   EOF
+   ```
+
+   This architecture was designed primarily to conform to the structural specifications of the variables in the `terraform/modules/11-provisioner-kvm/variables.tf` module.
+
+3. The variable file for the (HA) Postgres / etcd in `terraform/layers/10-provision-postgres/terraform.tfvars` can be created using the following command:
+
+   ```bash
+   cat << EOF > terraform/layers/10-provision-postgres/terraform.tfvars
+   # Defines the hardware and IP addresses for each virtual machine in the cluster.
+   postgres_cluster_config = {
+      cluster_name = "10-postgres-cluster"
+      nodes = {
+         postgres = [
+            { ip = "172.16.136.200", vcpu = 4, ram = 4096 },
+            # { ip = "172.16.136.201", vcpu = 4, ram = 4096 }, # for HA Postgres
+            # { ip = "172.16.136.202", vcpu = 4, ram = 4096 },
+         ],
+         etcd = [
+            { ip = "172.16.136.210", vcpu = 2, ram = 2048 },
+            # { ip = "172.16.136.211", vcpu = 2, ram = 2048 }, # for HA etcd
+            # { ip = "172.16.136.212", vcpu = 2, ram = 2048 }
+         ],
+         haproxy = [
+            { ip = "172.16.136.220", vcpu = 2, ram = 2048 }
+         ]
+      }
+   }
+
+   postgres_infrastructure = {
+      network = {
+         nat = {
+            name        = "iac-postgres-nat-net"
+            cidr        = "172.16.88.0/24"
+            bridge_name = "pos-nat-br" # IFNAMSIZ is 15 user-visible characters with the null terminator included.
+         }
+         hostonly = {
+            name        = "iac-postgres-hostonly-net"
+            cidr        = "172.16.136.0/24"
+            bridge_name = "pos-host-br"
+         }
+         postgres_allowed_subnet = "172.16.136.0/24"
       }
    }
    EOF
@@ -505,7 +613,7 @@ sequenceDiagram
 
 1. **Packer + Ansible: Provisioning base Kubernetes Golden Image**
 
-   Packer plays the role of an "image factory" in this project, with its core task being to automate the creation of a standardized virtual machine template (Golden Image) pre-configured with all Kubernetes dependencies. The project uses `packer/source.pkr.hcl` as its definition file and it's driven by `packer/20-k8s-base.pkrvars.hcl`, with a workflow that includes: automatically downloading the `Ubuntu Server 24.04 ISO` file and completing unattended installation using cloud-init; starting SSH connection and invoking the Ansible Provisioner after installation; executing `ansible/playbooks/00-provision-base-image.yaml` to install necessary components such as `kubelet`, `kubeadm`, `kubectl`, and `CRI-O` (also configure it to use `cgroup` driver); finally shutting down the virtual machine and producing a `*.qcow2` format template for Terraform to use. The goal of this phase is to "bake" all infrequently changing software and configurations into the image to reduce the time required for subsequent deployments.
+   Packer plays the role of an "image factory" in this project, with its core task being to automate the creation of a standardized virtual machine template (Golden Image) pre-configured with all Kubernetes dependencies. The project uses `packer/source.pkr.hcl` as its definition file and it's driven by `packer/02-base-kubeadm.pkrvars.hcl`, with a workflow that includes: automatically downloading the `Ubuntu Server 24.04 ISO` file and completing unattended installation using cloud-init; starting SSH connection and invoking the Ansible Provisioner after installation; executing `ansible/playbooks/00-provision-base-image.yaml` to install necessary components such as `kubelet`, `kubeadm`, `kubectl`, and `CRI-O` (also configure it to use `cgroup` driver); finally shutting down the virtual machine and producing a `*.qcow2` format template for Terraform to use. The goal of this phase is to "bake" all infrequently changing software and configurations into the image to reduce the time required for subsequent deployments.
 
 2. **Terraform: The Infrastructure Orchestrator**
 
@@ -513,7 +621,7 @@ sequenceDiagram
 
    -  **Node Deployment (Layer 10)**:
 
-      -  Based on `k8s_cluster_config` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
+      -  Based on `kubeadm_cluster_config` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
       -  Next, Terraform's libvirt provider will quickly clone virtual machines based on the `.qcow2` file. Under the hardware resources listed in Section 0, cloning 6 virtual machines can be completed in approximately 15 seconds.
 
    -  **Cluster Configuration (Layer 20)**:

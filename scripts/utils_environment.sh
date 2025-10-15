@@ -36,7 +36,7 @@ generate_env_file() {
 
   # 1. Set defaults
   local default_strategy="native"
-  local default_ssh_key="$HOME/.ssh/id_ed25519_iac-kubeadm-deployment"
+  local default_ssh_key="$HOME/.ssh/id_ed25519_on-premise-gitlab-deployment"
 
   # 2. Get the GID of the libvirt group on the host
   local default_libvirt_gid
@@ -57,6 +57,7 @@ ENVIRONMENT_STRATEGY="${default_strategy}"
 # --- Vault Configuration ---
 VAULT_ADDR="https://127.0.0.1:8200"
 VAULT_CACERT="${PWD}/vault/tls/ca.pem"
+VAULT_CACERT_PODMAN="/app/vault/tls/ca.pem"
 VAULT_TOKEN=""
 
 # --- User and SSH Configuration ---
@@ -101,7 +102,7 @@ switch_environment_strategy_handler() {
   echo
   echo "INFO: Resetting Terraform state before switching strategy to prevent inconsistencies..."
   (cd "${TERRAFORM_DIR}" && rm -rf .terraform .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup)
-  rm -rf "$HOME/.ssh/iac-kubeadm-deployment_config"
+  rm -rf "$HOME/.ssh/on-premise-gitlab-deployment_config"
   echo "#### Terraform state reset."
   echo "INFO: Purge libvirt resources (VMs, networks, storage pools)"
   purge_libvirt_resources

@@ -39,8 +39,11 @@ run_command() {
     # Map the host path to the container's /app path.
     local container_work_dir="${host_work_dir/#$SCRIPT_DIR//app}"
     echo "INFO: Executing command in container '${container_name}'..."
-    (cd "${SCRIPT_DIR}" && ${compose_cmd} -f "${compose_file}" exec "${service_name}" bash -c "cd \"${container_work_dir}\" && ${cmd_string}")
-
+    (cd "${SCRIPT_DIR}" && ${compose_cmd} -f "${compose_file}" exec \
+      -e "VAULT_ADDR=${VAULT_ADDR}" \
+      -e "VAULT_CACERT=${VAULT_CACERT_PODMAN}" \
+      -e "VAULT_TOKEN=${VAULT_TOKEN}" \
+      "${service_name}" bash -c "cd \"${container_work_dir}\" && ${cmd_string}")
   else
     # Native Mode: Execute the command directly on the host. 
     (cd "${host_work_dir}" && eval "${cmd_string}")

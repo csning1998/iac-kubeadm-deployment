@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"iac-kubeadm-deployment/cmd/iac-tool/internal/executor"
+	"on-premise-gitlab-deployment/cmd/iac-tool/internal/executor"
 	"os"
 
 	"github.com/spf13/cobra"

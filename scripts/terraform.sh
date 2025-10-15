@@ -26,7 +26,7 @@ cleanup_terraform_layer() {
   # Clean up global state associated with the cluster if cleaning the main cluster layer.
   # This check now uses a hardcoded string, matching the requested pattern.
   if [[ "${layer_name}" == "10-cluster-provision" ]]; then
-      rm -rf "${USER_HOME_DIR}/.ssh/iac-kubeadm-deployment_config"
+      rm -rf "${USER_HOME_DIR}/.ssh/on-premise-gitlab-deployment_config"
       echo "#### Removed global SSH configuration for cluster."
   fi
 

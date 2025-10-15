@@ -79,17 +79,19 @@ options+=("[ONCE-ONLY] Verify IaC Environment for Native")
 options+=("Unseal Vault")
 options+=("Switch Environment Strategy")
 options+=("Reset Packer and Terraform")
-options+=("Rebuild Packer: Microk8s Base Image")
-options+=("Rebuild Packer: Kubeadm Base Image")
+options+=("Rebuild Packer: 02 Kubeadm Base Image")
+options+=("Rebuild Packer: 03 Microk8s Base Image")
+options+=("Rebuild Packer: 04 Postgres Base Image")
 options+=("Rebuild Kubeadm Cluster (Packer + TF)")
-options+=("Rebuild Terraform: Full Cluster (Layer 10)")
-options+=("Rebuild Terraform Layer 10: KVM Provision Only")
-options+=("Rebuild Terraform Layer 10: Ansible Bootstrapper Only")
-options+=("[DEV] Rebuild Layer 10 via Ansible Command")
-options+=("Rebuild Terraform Layer 20: Harbor Server")
+options+=("Rebuild Terraform Layer 10: Kubeadm Cluster")
+options+=("Rebuild Terraform Layer 10: Harbor Server")
+options+=("Rebuild Terraform Layer 10: Postgres Service")
 options+=("Rebuild Terraform Layer 50: Kubernetes Addons")
+options+=("[DEV] Rebuild Layer 10 via Ansible Command")
 options+=("Verify SSH")
 options+=("Quit")
+# options+=("Rebuild Terraform Layer 10: KVM Provision Only")
+# options+=("Rebuild Terraform Layer 10: Ansible Bootstrapper Only")
 
 select opt in "${options[@]}"; do
   # Record start time
@@ -144,28 +146,37 @@ select opt in "${options[@]}"; do
       echo "# Executing Reset All workflow..."
       purge_libvirt_resources
       destroy_terraform_layer "10-provision-kubeadm"
-      cleanup_packer_output "10-base-microk8s"
-      cleanup_packer_output "20-base-kubeadm"
+      cleanup_packer_output "03-base-microk8s"
+      cleanup_packer_output "02-base-kubeadm"
       cleanup_terraform_layer "10-provision-kubeadm"
       report_execution_time
       echo "# Reset All workflow completed."
       break
       ;;
-    "Rebuild Packer: Microk8s Base Image")
-      echo "# Executing Rebuild Packer workflow for Microk8s Base Image..."
-      if ! check_ssh_key_exists; then break; fi
-      ensure_libvirt_services_running
-      cleanup_packer_output "10-base-microk8s"
-      build_packer "10-base-microk8s"
-      report_execution_time
-      break
-      ;;
-    "Rebuild Packer: Kubeadm Base Image")
+    "Rebuild Packer: 02 Kubeadm Base Image")
       echo "# Executing Rebuild Packer workflow..."
       if ! check_ssh_key_exists; then break; fi
       ensure_libvirt_services_running
-      cleanup_packer_output "20-base-kubeadm"
-      build_packer "20-base-kubeadm"
+      cleanup_packer_output "02-base-kubeadm"
+      build_packer "02-base-kubeadm"
+      report_execution_time
+      break
+      ;;
+    "Rebuild Packer: 03 Microk8s Base Image")
+      echo "# Executing Rebuild Packer workflow for Microk8s Base Image..."
+      if ! check_ssh_key_exists; then break; fi
+      ensure_libvirt_services_running
+      cleanup_packer_output "03-base-microk8s"
+      build_packer "03-base-microk8s"
+      report_execution_time
+      break
+      ;;
+    "Rebuild Packer: 04 Postgres Base Image")
+      echo "# Executing Rebuild Packer workflow..."
+      if ! check_ssh_key_exists; then break; fi
+      ensure_libvirt_services_running
+      cleanup_packer_output "04-base-postgres"
+      build_packer "04-base-postgres"
       report_execution_time
       break
       ;;
@@ -173,15 +184,15 @@ select opt in "${options[@]}"; do
       echo "# Executing Rebuild All workflow for Kubernetes..."
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
-      cleanup_packer_output "20-base-kubeadm"
-      build_packer "20-base-kubeadm"
+      cleanup_packer_output "02-base-kubeadm"
+      build_packer "02-base-kubeadm"
       cleanup_terraform_layer "10-provision-kubeadm"
       apply_terraform_layer "10-provision-kubeadm"
       report_execution_time
       echo "# Rebuild All workflow completed."
       break
       ;;
-    "Rebuild Terraform: Full Cluster (Layer 10)")
+    "Rebuild Terraform Layer 10: Kubeadm Cluster")
       echo "# Executing Rebuild Terraform workflow for the full cluster..."
       if ! check_ssh_key_exists; then break; fi
       purge_libvirt_resources
@@ -193,43 +204,20 @@ select opt in "${options[@]}"; do
       echo "# Rebuild Terraform workflow completed."
       break
       ;;
-    "Rebuild Terraform Layer 10: KVM Provision Only")
-      echo "# Executing Rebuild Terraform workflow for KVM Provisioner only..."
-      if ! check_ssh_key_exists; then break; fi
-      purge_libvirt_resources
+    "Rebuild Terraform Layer 10: Harbor Server")
+      echo "# Executing Rebuild Terraform workflow for Harbor Server..."
       ensure_libvirt_services_running
-      destroy_terraform_layer "10-provision-kubeadm"
-      cleanup_terraform_layer "10-provision-kubeadm"
-      apply_terraform_layer "10-provision-kubeadm" "module.provisioner_kvm"
+      reapply_terraform_layer "10-provision-harbor"
       report_execution_time
-      echo "# Rebuild Terraform KVM Provisioner workflow completed."
+      echo "# Rebuild Terraform Harbor Server workflow completed."
       break
       ;;
-    "Rebuild Terraform Layer 10: Ansible Bootstrapper Only")
-      echo "# Executing Rebuild Terraform workflow for Ansible Bootstrapper only..."
-      if ! check_ssh_key_exists; then break; fi
+    "Rebuild Terraform Layer 10: Postgres Service")
+      echo "# Executing Rebuild Terraform workflow for Postgres Service..."
       ensure_libvirt_services_running
-      bootstrap_kubernetes_cluster
+      reapply_terraform_layer "10-provision-postgres"
       report_execution_time
-      echo "# Rebuild Terraform Ansible Bootstrapper workflow completed."
-      break
-      ;;
-    "[DEV] Rebuild Layer 10 via Ansible Command")
-      echo "# Executing [DEV] Rebuild via direct Ansible command..."
-      if ! check_ssh_key_exists; then break; fi
-      ensure_libvirt_services_running
-      verify_ssh
-      apply_ansible_stage_II
-      report_execution_time
-      echo "# [DEV] Rebuild via direct Ansible command completed."
-      break
-      ;;
-    "Rebuild Terraform Layer 20: Harbor Server")
-      echo "# Executing Rebuild Terraform workflow for Registry Server..."
-      ensure_libvirt_services_running
-      reapply_terraform_layer "20-provision-harbor"
-      report_execution_time
-      echo "# Rebuild Terraform Registry Server workflow completed."
+      echo "# Rebuild Terraform Postgres Service workflow completed."
       break
       ;;
     "Rebuild Terraform Layer 50: Kubeadm Cluster Addons")
@@ -239,6 +227,15 @@ select opt in "${options[@]}"; do
       reapply_terraform_layer "50-provision-kubeadm-addons"
       report_execution_time
       echo "# Rebuild Terraform Kubernetes (Kubeadm) Addons workflow completed."
+      break
+      ;;
+    "[DEV] Rebuild Layer 10 via Ansible Command")
+      echo "# Executing [DEV] Rebuild via direct Ansible command..."
+      if ! check_ssh_key_exists; then break; fi
+      ensure_libvirt_services_running
+      selector_playbook
+      report_execution_time
+      echo "# [DEV] Rebuild via direct Ansible command completed."
       break
       ;;
     "Verify SSH")
@@ -252,6 +249,27 @@ select opt in "${options[@]}"; do
       echo "# Exiting script."
       break
       ;;
+    # "Rebuild Terraform Layer 10: KVM Provision Only")
+    #   echo "# Executing Rebuild Terraform workflow for KVM Provisioner only..."
+    #   if ! check_ssh_key_exists; then break; fi
+    #   purge_libvirt_resources
+    #   ensure_libvirt_services_running
+    #   destroy_terraform_layer "10-provision-kubeadm"
+    #   cleanup_terraform_layer "10-provision-kubeadm"
+    #   apply_terraform_layer "10-provision-kubeadm" "module.provisioner_kvm"
+    #   report_execution_time
+    #   echo "# Rebuild Terraform KVM Provisioner workflow completed."
+    #   break
+    #   ;;
+    # "Rebuild Terraform Layer 10: Ansible Bootstrapper Only")
+    #   echo "# Executing Rebuild Terraform workflow for Ansible Bootstrapper only..."
+    #   if ! check_ssh_key_exists; then break; fi
+    #   ensure_libvirt_services_running
+    #   bootstrap_kubernetes_cluster
+    #   report_execution_time
+    #   echo "# Rebuild Terraform Ansible Bootstrapper workflow completed."
+    #   break
+    #   ;;
     *) echo "# Invalid option $REPLY";;
   esac
 done

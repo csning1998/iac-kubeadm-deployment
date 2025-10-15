@@ -1,4 +1,4 @@
-module iac-kubeadm-deployment
+module on-premise-gitlab-deployment
 
 go 1.25.1
 

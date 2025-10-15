@@ -1,7 +1,0 @@
----
-- name: Restart crio service
-  listen: "Restart crio service"
-  ansible.builtin.systemd:
-    name: crio
-    state: restarted
-    daemon_reload: true

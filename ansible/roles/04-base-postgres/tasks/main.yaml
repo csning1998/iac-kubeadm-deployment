@@ -1,0 +1,9 @@
+---
+- name: Section A. Install PostgreSQL Server via Official apt Repository
+  ansible.builtin.include_tasks: A-postgres.yaml
+
+- name: Section B. Install Patroni Runtime Dependencies
+  ansible.builtin.include_tasks: B-patroni.yaml
+
+- name: Section C. Install etcd Binaries
+  ansible.builtin.include_tasks: C-etcd-binary.yaml

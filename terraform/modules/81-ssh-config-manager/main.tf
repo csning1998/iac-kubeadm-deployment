@@ -9,12 +9,12 @@ terraform {
 
 locals {
   # Dynamically construct file paths based on the provided config_name
-  ssh_config_path = pathexpand("~/.ssh/iac-kubeadm-${var.config_name}_config")
+  ssh_config_path = pathexpand("~/.ssh/config_iac-${var.config_name}")
 }
 
 /*
-* Generate a ~/.ssh/iac-kubeadm-deployment_config file in the user's home directory with an alias and a specified public key
-* for passwordless SSH using the alias (e.g., ssh k8s-master-00).
+* Generate a ~/.ssh/on-premise-gitlab-deployment_config file in the user's home directory with an alias and a specified public key
+* for passwordless SSH using the alias (e.g., ssh kubeadm-master-00).
 */
 resource "local_file" "ssh_config" {
 

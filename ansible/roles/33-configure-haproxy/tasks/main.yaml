@@ -1,0 +1,30 @@
+---
+- name: "Section A: Install and Configure HAProxy"
+  block:
+    - name: "Step A1. Install HAProxy package"
+      ansible.builtin.apt:
+        name:
+          - haproxy
+          - postgresql-client
+        state: present
+        update_cache: true
+
+    - name: "Step A2. Create HAProxy configuration from template"
+      ansible.builtin.template:
+        src: haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart HAProxy
+
+- name: "Section B: Start and Enable HAProxy Service"
+  block:
+    - name: "Step B1. Flush handlers to apply config changes"
+      ansible.builtin.meta: flush_handlers
+
+    - name: "Step B2. Enable and start the HAProxy service"
+      ansible.builtin.systemd:
+        name: haproxy
+        state: started
+        enabled: true
