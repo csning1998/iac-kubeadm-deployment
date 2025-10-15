@@ -166,21 +166,72 @@ The user's CPU must support virtualization technology to enable QEMU-KVM functio
 -  **Clean up Libvirt resources**: You can use the following command to remove all Libvirt resources related to this project:
 
    ```shell
-   sudo virsh list --all --name | grep '^\(k8s\|registry\)-' | while read -r domain; do \
-      sudo virsh destroy "${domain}" --graceful >/dev/null 2>&1; \
-      sudo virsh undefine "${domain}" --nvram; \
+   # Virtual machine (Domain) name prefix list
+   DOMAIN_PREFIXES=(
+      "kubeadm-"
+      "harbor-"
+      "postgres-"
+      "haproxy-"
+      "etcd-"
+   )
+
+   # Storage pool (Pool) name list (used for deleting storage volumes and the pools themselves)
+   POOL_NAMES=(
+      "iac-kubeadm"
+      "iac-harbor"
+      "iac-postgres"
+   )
+
+   # Network name prefix list (combined with hostonly-net and nat-net)
+   NET_PREFIXES=(
+      "iac-kubeadm"
+      "iac-harbor"
+      "iac-postgres"
+   )
+
+   # --- Process virtual machines (Domains) ---
+   echo "--- Processing virtual machines (Domains) ---"
+   for prefix in "${DOMAIN_PREFIXES[@]}"; do
+      echo "Finding virtual machines starting with '${prefix}'..."
+      sudo virsh list --all --name | grep "^${prefix}" | while read -r domain; do
+         if [[ -n "${domain}" ]]; then
+            echo "Processing domain: ${domain}..."
+            sudo virsh destroy "${domain}" --graceful >/dev/null 2>&1
+            sudo virsh undefine "${domain}" --nvram
+         fi
+      done
    done
-   for pool in iac-kubeadm iac-registry; do \
-      sudo virsh vol-list --pool "${pool}" --details | awk 'NR>2 {print $1}' | while read -r vol; do \
-         sudo virsh vol-delete "${vol}" --pool "${pool}"; \
-      done; \
+
+   # --- Process storage volumes (Volumes) ---
+   echo -e "\n--- Processing storage volumes (Volumes) ---"
+   for pool in "${POOL_NAMES[@]}"; do
+      echo "Finding storage volumes in pool '${pool}'..."
+      sudo virsh vol-list "${pool}" --details | awk 'NR>2 {print $1}' | while read -r vol; do
+         if [[ -n "${vol}" ]]; then
+            echo "Deleting volume: ${vol} from pool ${pool}..."
+            sudo virsh vol-delete --pool "${pool}" "${vol}"
+         fi
+      done
    done
-   for net in iac-kubeadm-hostonly-net iac-kubeadm-nat-net iac-registry-hostonly-net iac-registry-nat-net; do \
-      sudo virsh net-destroy "${net}" && sudo virsh net-undefine "${net}"; \
+
+   # --- Process storage pools (Pools) ---
+   echo -e "\n--- Processing storage pools (Pools) ---"
+   for pool in "${POOL_NAMES[@]}"; do
+      echo "Processing pool: ${pool}..."
+      sudo virsh pool-destroy "${pool}" && sudo virsh pool-undefine "${pool}"
    done
-   for pool in iac-kubeadm iac-registry; do \
-      sudo virsh pool-destroy "${pool}" && sudo virsh pool-undefine "${pool}"; \
+
+   # --- Process networks (Networks) ---
+   echo -e "\n--- Processing networks (Networks) ---"
+   for prefix in "${NET_PREFIXES[@]}"; do
+      for suffix in "hostonly-net" "nat-net"; do
+         net_name="${prefix}-${suffix}"
+         echo "Processing network: ${net_name}..."
+         sudo virsh net-destroy "${net_name}" && sudo virsh net-undefine "${net_name}"
+      done
    done
+
+   echo -e "\n--- Cleanup complete ---"
    ```
 
 ## Section 2. Configuration
@@ -401,7 +452,7 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
 
    For users setting up an (HA) Cluster, the number of elements in `kubeadm_cluster_config.nodes.masters` and `kubeadm_cluster_config.nodes.workers` determines the number of nodes generated. Ensure the quantity of nodes in `kubeadm_cluster_config.nodes.masters` is an odd number to prevent the etcd Split-Brain risk in Kubernetes. Meanwhile, `kubeadm_cluster_config.nodes.workers` can be configured based on the number of IPs. The IPs provided by the user must correspond to the host-only network segment.
 
-2. The variable file for the Registry in `terraform/layers/30-registry-provision/terraform.tfvars` is relatively simple and can be created using the following command:
+2. The variable file for the (HA) Harbor in `terraform/layers/10-provision-harbor/terraform.tfvars` can be created using the following command:
 
    ```bash
    cat << EOF > terraform/layers/10-provision-harbor/terraform.tfvars
@@ -417,7 +468,7 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
       }
    }
 
-   registry_infrastructure = {
+   cluster_infrastructure = {
       network = {
          nat = {
             name        = "iac-registry-nat-net"
@@ -429,6 +480,50 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
             cidr        = "172.16.135.0/24"
             bridge_name = "reg-host-br"
          }
+      }
+   }
+   EOF
+   ```
+
+   This architecture was designed primarily to conform to the structural specifications of the variables in the `terraform/modules/11-provisioner-kvm/variables.tf` module.
+
+3. The variable file for the (HA) Postgres / etcd in `terraform/layers/10-provision-postgres/terraform.tfvars` can be created using the following command:
+
+   ```bash
+   cat << EOF > terraform/layers/10-provision-postgres/terraform.tfvars
+   # Defines the hardware and IP addresses for each virtual machine in the cluster.
+   postgres_cluster_config = {
+      cluster_name = "10-postgres-cluster"
+      nodes = {
+         postgres = [
+            { ip = "172.16.136.200", vcpu = 4, ram = 4096 },
+            # { ip = "172.16.136.201", vcpu = 4, ram = 4096 }, # for HA Postgres
+            # { ip = "172.16.136.202", vcpu = 4, ram = 4096 },
+         ],
+         etcd = [
+            { ip = "172.16.136.210", vcpu = 2, ram = 2048 },
+            # { ip = "172.16.136.211", vcpu = 2, ram = 2048 }, # for HA etcd
+            # { ip = "172.16.136.212", vcpu = 2, ram = 2048 }
+         ],
+         haproxy = [
+            { ip = "172.16.136.220", vcpu = 2, ram = 2048 }
+         ]
+      }
+   }
+
+   postgres_infrastructure = {
+      network = {
+         nat = {
+            name        = "iac-postgres-nat-net"
+            cidr        = "172.16.88.0/24"
+            bridge_name = "pos-nat-br" # IFNAMSIZ is 15 user-visible characters with the null terminator included.
+         }
+         hostonly = {
+            name        = "iac-postgres-hostonly-net"
+            cidr        = "172.16.136.0/24"
+            bridge_name = "pos-host-br"
+         }
+         postgres_allowed_subnet = "172.16.136.0/24"
       }
    }
    EOF
