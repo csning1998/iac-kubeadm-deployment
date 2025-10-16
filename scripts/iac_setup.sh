@@ -190,54 +190,82 @@ setup_libvirt_environment() {
   echo "--------------------------------------------------"
 }
 
-# Function: Setup Core IaC Tools (Ansible, HashiCorp) for the detected OS Family
-setup_iac_tools() {
-  echo ">>> STEP: Setting up core IaC tools for OS Family: ${HOST_OS_FAMILY^^}..."
+# Function: Install OS-specific base dependencies
+install_os_dependencies() {
+  echo "#### Installing OS-specific base packages for ${HOST_OS_FAMILY^^}..."
 
   if [[ "${HOST_OS_FAMILY}" == "rhel" ]]; then
-    # --- RHEL / Fedora IaC Tools Setup ---
-    echo "#### Installing base packages using DNF..."
-    sudo dnf install -y jq openssh-clients python3 python3-pip wget gnupg whois curl
-
-    echo "#### Installing Ansible..."
-    sudo dnf install -y ansible-core
-    ansible-galaxy collection install ansible.posix community.general community.docker community.kubernetes
-
-    echo "#### Installing HashiCorp Toolkits (Terraform and Packer)..."
-    cat <<EOF | sudo tee /etc/yum.repos.d/hashicorp.repo
-[hashicorp]
-name=HashiCorp Stable - \$basearch
-baseurl=https://rpm.releases.hashicorp.com/RHEL/\$releasever/\$basearch/stable
-enabled=1
-gpgcheck=1
-gpgkey=https://rpm.releases.hashicorp.com/gpg
-EOF
-    sudo dnf -y install terraform packer vault
-    
+    sudo dnf install -y jq python3-pip wget curl whois gnupg openssh-clients
   elif [[ "${HOST_OS_FAMILY}" == "debian" ]]; then
-    # --- Debian / Ubuntu IaC Tools Setup ---
-    echo "#### Installing base packages using APT..."
     sudo apt-get update
-    sudo apt-get install -y jq openssh-client python3 python3-pip software-properties-common wget gnupg lsb-release whois curl
-
-    echo "#### Installing HashiCorp repository and tools (Terraform and Packer)..."
-    wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-    sudo apt-get update
-    sudo apt-get install terraform packer vault -y
-
-    echo "#### Installing Ansible..."
-    sudo add-apt-repository --yes --update ppa:ansible/ansible
-    sudo apt-get install ansible -y
+    sudo apt-get install -y jq python3-pip wget curl whois gnupg openssh-client
   else
     echo "FATAL: Unsupported OS family for native installation: ${HOST_OS_FAMILY}" >&2
     exit 1
   fi
+}
 
-  # --- Common Verification Step ---
+# Function: Install Ansible using pip
+install_ansible_core() {
+  echo "#### Installing Ansible Core using pip..."
+  sudo pip3 install ansible-core
+
+  echo "#### Installing Ansible Galaxy collections..."
+  ansible-galaxy collection install ansible.posix community.general community.docker community.kubernetes
+}
+
+# Function: Install HashiCorp tools using the universal binary method
+install_hashicorp_tools() {
+  echo "#### Installing HashiCorp Toolkits (Terraform, Packer, Vault)..."
+  local tools="terraform packer vault"
+
+  for tool in ${tools}; do
+    echo "  > Installing ${tool}..."
+    local latest_url
+    local extract_dir
+    extract_dir=$(mktemp -d)
+
+    trap 'rm -rf -- "$extract_dir"' EXIT # Ensure this dir is cleaned up even if the script fails
+
+    latest_url=$(curl -sL "https://releases.hashicorp.com/${tool}/index.json" | jq -r '.versions[].builds[] | select(.arch=="amd64" and .os=="linux") | .url' | sort -V | tail -n 1)
+
+    if [[ -z "${latest_url}" ]]; then
+        echo "  > ERROR: Could not find download URL for ${tool}. Skipping."
+        rm -rf -- "$extract_dir"
+        trap - EXIT
+        continue
+    fi
+
+    echo "  > Downloading to a temporary location..."
+    curl -Lo "${extract_dir}/${tool}.zip" "${latest_url}"
+
+    echo "  > Extracting in an isolated directory: ${extract_dir}"
+    unzip -o "${extract_dir}/${tool}.zip" -d "${extract_dir}"
+    
+    echo "  > Installing to /usr/local/bin/${tool}"
+    sudo mv "${extract_dir}/${tool}" /usr/local/bin/
+    sudo chmod +x "/usr/local/bin/${tool}"
+
+    rm -rf -- "$extract_dir"
+    trap - EXIT
+  done
+}
+
+# Function: Main Orchestration of installation ---
+setup_iac_tools() {
+  echo ">>> STEP: Setting up core IaC tools..."
+  
+  # Ensure core commands needed by the script itself are present
+  command -v curl >/dev/null 2>&1 || { echo "FATAL: curl is not installed. Please install it first." >&2; exit 1; }
+  command -v jq >/dev/null 2>&1 || { echo "FATAL: jq is not installed. Please install it first." >&2; exit 1; }
+
+  install_os_dependencies
+  install_ansible_core
+  install_hashicorp_tools
+
   echo "#### Verifying installed tools..."
   verify_core_iac_tools_installed
-  
+
   echo "#### Core IaC tools setup and verification completed."
   echo "--------------------------------------------------"
 }
