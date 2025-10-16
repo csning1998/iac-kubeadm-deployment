@@ -14,6 +14,11 @@ readonly ALL_LAYERS=(
     "10-provision-harbor"
     "10-provision-postgres"
 )
+readonly ALL_PACKER_LAYERS=(
+    "02-base-kubeadm"
+    "03-base-microk8s"
+    "04-base-postgres"
+)
 
 source "${SCRIPTS_LIB_DIR}/utils_environment.sh"
 
@@ -150,9 +155,7 @@ select opt in "${options[@]}"; do
     "Reset Packer and Terraform")
       echo "# Executing Reset All workflow..."
       purge_libvirt_resources "all"
-      cleanup_packer_output "04-base-postgres"
-      cleanup_packer_output "03-base-microk8s"
-      cleanup_packer_output "02-base-kubeadm"
+      cleanup_packer_output "all"
       cleanup_terraform_layer "all"
       report_execution_time
       echo "# Reset All workflow completed."

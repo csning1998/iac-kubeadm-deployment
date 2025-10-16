@@ -6,17 +6,29 @@
 cleanup_packer_output() {
   echo ">>> STEP: Cleaning Packer artifacts..."
 
-  # --- Provider-Specific Cleanup ---
-  # With keep_registered = false, Packer handles unregistering the VM.
-  # We only need to delete the output directory from the filesystem.
-
-  local layer_name="$1"
-  if [ -z "$layer_name" ]; then
-    echo "FATAL: No Packer layer specified for build_packer function." >&2
+  local target_layer="$1"
+  if [ -z "$target_layer" ]; then
+    echo "FATAL: No Packer layer specified for cleanup_packer_output function." >&2
     return 1
   fi
 
-  rm -rf "${PACKER_DIR}/output/${layer_name}"
+  local layers_to_clean=()
+
+  if [[ "$target_layer" == "all" ]]; then
+    echo "#### Preparing to clean all Packer output directories..."
+    if [ ${#ALL_PACKER_LAYERS[@]} -eq 0 ]; then
+      echo "Warning: ALL_PACKER_LAYERS array is not defined. Cannot clean 'all'."
+    else
+      layers_to_clean=("${ALL_PACKER_LAYERS[@]}")
+    fi
+  else
+    layers_to_clean=("$target_layer")
+  fi
+
+  for layer_name in "${layers_to_clean[@]}"; do
+    echo "#### Cleaning output for layer: ${layer_name}"
+    rm -rf "${PACKER_DIR}/output/${layer_name}"
+  done
 
   # --- Generic Packer Cache Cleanup ---
   if [ -d ~/.cache/packer ]; then
