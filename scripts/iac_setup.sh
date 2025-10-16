@@ -195,10 +195,10 @@ install_os_dependencies() {
   echo "#### Installing OS-specific base packages for ${HOST_OS_FAMILY^^}..."
 
   if [[ "${HOST_OS_FAMILY}" == "rhel" ]]; then
-    sudo dnf install -y jq python3-pip wget curl whois gnupg openssh-clients
+    sudo dnf install -y jq python3-pip wget curl whois gnupg openssh-clients unzip
   elif [[ "${HOST_OS_FAMILY}" == "debian" ]]; then
     sudo apt-get update
-    sudo apt-get install -y jq python3-pip wget curl whois gnupg openssh-client
+    sudo apt-get install -y jq python3-pip wget curl whois gnupg openssh-client unzip
   else
     echo "FATAL: Unsupported OS family for native installation: ${HOST_OS_FAMILY}" >&2
     exit 1
