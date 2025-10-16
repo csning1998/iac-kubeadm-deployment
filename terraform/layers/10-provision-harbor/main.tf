@@ -52,7 +52,8 @@ module "bootstrapper_ansible_cluster" {
   source = "../../modules/13-bootstrapper-ansible-harbor"
 
   ansible_config = {
-    root_path = local.ansible_root_path
+    root_path       = local.ansible_root_path
+    ssh_config_path = module.ssh_config_manager_harbor.ssh_config_file_path
   }
 
   vm_credentials = {

@@ -48,6 +48,7 @@ resource "null_resource" "provision_cluster" {
       ansible-playbook \
         -i ${local_file.inventory.filename} \
         --private-key ${nonsensitive(var.vm_credentials.ssh_private_key_path)} \
+        --ssh-common-args='-F ${var.ansible_config.ssh_config_path}' \
         --extra-vars "ansible_ssh_user=${nonsensitive(var.vm_credentials.username)}" \
         --extra-vars "pg_replication_password=${nonsensitive(var.db_credentials.replication_password)}" \
         --extra-vars "pg_superuser_password=${nonsensitive(var.db_credentials.superuser_password)}" \

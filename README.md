@@ -22,7 +22,17 @@ git clone https://github.com/csning1998/on-premise-gitlab-deployment.git
 -  This project currently only works on Linux devices with CPU virtualization support, and has **not yet** been tested on other distros such as Fedora 41, Arch, CentOS, and WSL2.
 -  Currently, these features have only been tested on my personal computer through several system reinstallations, so there may inevitably be some functionality issues. I've tried my best to prevent and address these.
 
-### B. Note
+### B. Prerequisites
+
+Before you begin, ensure you have the following:
+
+-  A Linux host (RHEL 10 or Ubuntu 24 recommended).
+-  A CPU with virtualization support enabled (VT-x or AMD-V).
+-  `sudo` access.
+-  `podman` and `podman compose` installed (for containerized mode).
+-  `whois` package installed (for the `mkpasswd` command).
+
+### C. Note
 
 This project requires CPU with virtualization support. For users whose CPUs don't support virtualization, you can refer to the `legacy-workstation-on-ubuntu` branch. This has been tested on Ubuntu 24 to achieve the same basic functionality. Use the following in shell to check if your device support virtualization:
 
@@ -36,7 +46,7 @@ The output may show:
 -  Virtualization: AMD-V (AMD)
 -  If there is no output, virtualization might not be supported.
 
-### C. The Entrypoint: `entry.sh`
+### D. The Entrypoint: `entry.sh`
 
 The content in Section 1 and Section 2 serves as prerequisite setup before formal execution. Project lifecycle management and configuration are handled through the `entry.sh` script in the root directory. After executing `./entry.sh`, you will see the following content:
 
@@ -49,39 +59,70 @@ The content in Section 1 and Section 2 serves as prerequisite setup before forma
 Environment: NATIVE
 Vault Server Status: Running (Unsealed)
 
- 1) [ONCE-ONLY] Set up CA Certs for TLS                    11) Rebuild Packer: Kubeadm Base Image
- 2) [ONCE-ONLY] Initialize Vault                           12) Rebuild Kubeadm Cluster (Packer + TF)
- 3) [ONCE-ONLY] Generate SSH Key                           13) Rebuild Terraform: Full Cluster (Layer 10)
- 4) [ONCE-ONLY] Setup KVM / QEMU for Native                14) Rebuild Terraform Layer 10: KVM Provision Only
- 5) [ONCE-ONLY] Setup Core IaC Tools for Native            15) Rebuild Terraform Layer 10: Ansible Bootstrapper Only
- 6) [ONCE-ONLY] Verify IaC Environment for Native          16) [DEV] Rebuild Layer 10 via Ansible Command
- 7) Unseal Vault                                           17) Rebuild Terraform Layer 20: Harbor Server
- 8) Switch Environment Strategy                            18) Rebuild Terraform Layer 50: Kubernetes Addons
- 9) Reset Packer and Terraform                             19) Verify SSH
-10) Rebuild Packer: Microk8s Base Image                    20) Quit
+1) [ONCE-ONLY] Set up CA Certs for TLS              9) Purge All Libvirt Resources
+2) [ONCE-ONLY] Initialize Vault                    10) Purge All Packer and Terraform Resources
+3) [ONCE-ONLY] Generate SSH Key                    11) Build Packer Base Image
+4) [ONCE-ONLY] Setup KVM / QEMU for Native         12) Provision Terraform Layer 10
+5) [ONCE-ONLY] Setup Core IaC Tools for Native     13) [DEV] Rebuild Layer 10 via Ansible Command
+6) [ONCE-ONLY] Verify IaC Environment for Native   14) Verify SSH
+7) Unseal Vault                                    15) Quit
+8) Switch Environment Strategy
 
 >>> Please select an action:
 ```
 
-### Prerequisites
+Among options `11`, `12`, and `13`, there are submenus. These menus are dynamically created based on the directories under `packer/output` and `terraform/layers`. In the current complete setup, they are:
 
-Before you begin, ensure you have the following:
+1. If you select `11) Build Packer Base Image`
 
--  A Linux host (RHEL 10 or Ubuntu 24 recommended).
--  A CPU with virtualization support enabled (VT-x or AMD-V).
--  `sudo` access.
--  `podman` and `podman compose` installed (for containerized mode).
--  `whois` package installed (for the `mkpasswd` command).
+   ```text
+   >>> Please select an action: 11
+   # Entering Packer build selection menu...
+   #### Checking status of libvirt service...
+   --> libvirt service is already running.
+
+   1) 02-base-kubeadm
+   2) 03-base-microk8s
+   3) 04-base-postgres
+   4) Back to Main Menu
+   >>> Please select an action:
+   ```
+
+2. If you select `12) Provision Terraform Layer 10`
+
+   ```text
+   >>> Please select an action: 12
+   # Entering Terraform layer management menu...
+   #### Checking status of libvirt service...
+   --> libvirt service is already running.
+
+   1) 10-provision-harbor          3) 10-provision-postgres        5) Back to Main Menu
+   2) 10-provision-kubeadm         4) 50-provision-kubeadm-addons
+   >>> Please select an action:
+   ```
+
+3. If you select `13) [DEV] Rebuild Layer 10 via Ansible Command`
+
+   ```text
+   >>> Please select an action: 13
+   # Executing [DEV] Rebuild via direct Ansible command...
+   #### Checking status of libvirt service...
+   --> libvirt service is already running.
+
+   1) 10-provision-cluster.yaml   3) 10-provision-postgres.yaml
+   2) 10-provision-harbor.yaml    4) Back to Main Menu
+   >>> Please select an action:
+   ```
 
 **A description of how to use this script follows below.**
 
 ## Section 1. Environmental Setup
 
-### Required. KVM / QEMU
+### A. Required. KVM / QEMU
 
 The user's CPU must support virtualization technology to enable QEMU-KVM functionality. You can choose whether to install it through option `4` via script (but this has only been tested on Ubuntu 24 and RHEL 10), or refer to relevant resources to set up the KVM and QEMU environment on your own.
 
-### Option 1. Install IaC tools on Native
+### B. Option 1. Install IaC tools on Native
 
 1. **Install HashiCorp Toolkit - Terraform and Packer**
 
@@ -106,7 +147,7 @@ The user's CPU must support virtualization technology to enable QEMU-KVM functio
    #### Red Hat Ansible: Installed
    ```
 
-### Option 2. Run IaC tools inside Container: Podman
+### B. Option 2. Run IaC tools inside Container: Podman
 
 0. _I am still looking for a method that does not require `sudo`._
 
@@ -141,7 +182,7 @@ The user's CPU must support virtualization technology to enable QEMU-KVM functio
    sudo virsh pool-undefine iac-kubeadm
    ```
 
-### Miscellaneous
+### C. Miscellaneous
 
 -  **Suggested Plugins for VSCode:** Enhance productivity with syntax support:
 
@@ -162,77 +203,6 @@ The user's CPU must support virtualization technology to enable QEMU-KVM functio
       ```shell
       code --install-extension szTheory.vscode-packer-powertools
       ```
-
--  **Clean up Libvirt resources**: You can use the following command to remove all Libvirt resources related to this project:
-
-   ```shell
-   # Virtual machine (Domain) name prefix list
-   DOMAIN_PREFIXES=(
-      "kubeadm-"
-      "harbor-"
-      "postgres-"
-      "haproxy-"
-      "etcd-"
-   )
-
-   # Storage pool (Pool) name list (used for deleting storage volumes and the pools themselves)
-   POOL_NAMES=(
-      "iac-kubeadm"
-      "iac-harbor"
-      "iac-postgres"
-   )
-
-   # Network name prefix list (combined with hostonly-net and nat-net)
-   NET_PREFIXES=(
-      "iac-kubeadm"
-      "iac-harbor"
-      "iac-postgres"
-   )
-
-   # --- Process virtual machines (Domains) ---
-   echo "--- Processing virtual machines (Domains) ---"
-   for prefix in "${DOMAIN_PREFIXES[@]}"; do
-      echo "Finding virtual machines starting with '${prefix}'..."
-      sudo virsh list --all --name | grep "^${prefix}" | while read -r domain; do
-         if [[ -n "${domain}" ]]; then
-            echo "Processing domain: ${domain}..."
-            sudo virsh destroy "${domain}" --graceful >/dev/null 2>&1
-            sudo virsh undefine "${domain}" --nvram
-         fi
-      done
-   done
-
-   # --- Process storage volumes (Volumes) ---
-   echo -e "\n--- Processing storage volumes (Volumes) ---"
-   for pool in "${POOL_NAMES[@]}"; do
-      echo "Finding storage volumes in pool '${pool}'..."
-      sudo virsh vol-list "${pool}" --details | awk 'NR>2 {print $1}' | while read -r vol; do
-         if [[ -n "${vol}" ]]; then
-            echo "Deleting volume: ${vol} from pool ${pool}..."
-            sudo virsh vol-delete --pool "${pool}" "${vol}"
-         fi
-      done
-   done
-
-   # --- Process storage pools (Pools) ---
-   echo -e "\n--- Processing storage pools (Pools) ---"
-   for pool in "${POOL_NAMES[@]}"; do
-      echo "Processing pool: ${pool}..."
-      sudo virsh pool-destroy "${pool}" && sudo virsh pool-undefine "${pool}"
-   done
-
-   # --- Process networks (Networks) ---
-   echo -e "\n--- Processing networks (Networks) ---"
-   for prefix in "${NET_PREFIXES[@]}"; do
-      for suffix in "hostonly-net" "nat-net"; do
-         net_name="${prefix}-${suffix}"
-         echo "Processing network: ${net_name}..."
-         sudo virsh net-destroy "${net_name}" && sudo virsh net-undefine "${net_name}"
-      done
-   done
-
-   echo -e "\n--- Cleanup complete ---"
-   ```
 
 ## Section 2. Configuration
 
@@ -531,6 +501,8 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
 
    This architecture was designed primarily to conform to the structural specifications of the variables in the `terraform/modules/11-provisioner-kvm/variables.tf` module.
 
+   Because Postgres resources will be callable by other Terraform layers (e.g. GitLab and Harbor in the future), the `bridge_name` and virtual machine naming logic _may still_ be modified.
+
 **Note:** The `bridge_name` in `terraform.tfvars` must not exceed 15 characters due to the `IFNAMSIZ(15)` limitation.
 
 ### Step C. Build / Rebuild / Reset
@@ -545,24 +517,33 @@ Libvirt's settings directly impact Terraform's execution permissions, thus some 
 
    Deploying other Linux distro would be supported if I have time. I'm still a full-time university student.
 
-2. After completing all the above setup steps, you can use `entry.sh`, enter `12` to access _"Rebuild Kubeadm Cluster (Packer + TF)"_ to perform automated deployment of the Kubernetes cluster. Based on testing, the current complete deployment of a HA Kubernetes Cluster takes approximately 7 minutes from Packer to finished.
+2. **To deploy a complete HA Kubernetes cluster from scratch**:
 
-3. For isolated testing of Packer or Terraform, you can select options `10` through `18` in `entry.sh`. The Terraform tests can be run on Layer 10's `11-provisioner-kvm` module with option `14`, Layer 10's `12-bootstrapper-ansible` module with option `15`, or both modules together with option `13`.
+   -  **First Step**: Enter the main menu `11) Rebuild Packer Image`, then select `02-base-kubeadm` to build the base image required by Kubeadm.
 
-4. Option `16` is specifically designed for the following two scenarios:
+   -  **Second Step**: After the previous step is complete, return to the main menu and enter `12) Manage Terraform Layer`, then select `10-provision-kubeadm` to deploy the entire Kubernetes cluster.
 
-   1. To simply test the Layer 10 Ansible Playbook rather than through Terraform
-   2. To clean up all Kubernetes components in the Cluster. This is typically followed by executing option `17` _"Rebuild Terraform Layer 50: Kubernetes Addons"_ after completing option `16`
+      Based on testing, this complete process (from building the Packer image to completing the Terraform deployment) takes approximately 7 minutes.
 
-5. To test the cluster configuration by itself, you can use option `9`. This option will completely reset and clear the installer on every node in the Kubeadm Cluster and Registry Server, restoring them to a clean state. It is recommended to use this option if you need to perform isolated tests within the Ansible Playbook.
+3. **Isolated Testing and Development**:
 
-6. Option `17`'s Harbor Server is still under testing . . .
+   The `11`, `12`, and `13` menus can be used for separate testing
 
-7. Option `19` primarily uses polling to test if the virtual machine is connectable and generally serves as a preliminary step for option `15`, `16`, and `17`, and `18`. Alternatively, you can use the following command to check the virtual machine's operational status.
+   -  To test Packer image building independently, use `11) Rebuild Packer Image`.
 
-   ```shell
-   sudo virsh list --all
-   ```
+   -  To test or rebuild a specific Terraform module layer independently (such as Harbor or Postgres), use `12) Manage Terraform Layer`.
+
+   -  To repeatedly test Ansible Playbooks on existing machines without recreating virtual machines, use `13) [DEV] Run Ansible Playbook`.
+
+4. **Resource Cleanup**:
+
+   -  **`9) Purge All Libvirt Resources`**:
+
+      This option executes `purge_libvirt_resources "all"`, which **only deletes** all virtual machines, virtual networks, and storage pools created by this project, but **will preserve** Packer's output images and Terraform's local state files. This is suitable for scenarios where you only want to clean up virtualization resources without clearing the project state.
+
+   -  **`10) Reset Packer and Terraform`**:
+
+      This option deletes **all** Packer output images and **all** Terraform Layer local states, causing Packer and Terraform states in this project to be restored to an almost brand new state.
 
 ## Section 3. System Architecture
 
@@ -607,6 +588,8 @@ sequenceDiagram
 
 ### B. Toolchain Roles and Responsibilities
 
+**This is somewhat outdated, but since the architecture may still undergo significant adjustments, it will not be updated here for now.**
+
 > The setup process is based on the commands provided by Bibin Wilson (2025), which I implemented using an Ansible Playbook. Thanks to the author, Bibin Wilson, for the contribution on his article
 >
 > Work Cited: Bibin Wilson, B. (2025). _How To Setup Kubernetes Cluster Using Kubeadm._ devopscube. <https://devopscube.com/setup-kubernetes-cluster-kubeadm/#vagrantfile-kubeadm-scripts-manifests>
@@ -624,7 +607,7 @@ sequenceDiagram
       -  Based on `kubeadm_cluster_config` defined in `terraform/terraform.tfvars`, Terraform calculates the number of nodes that need to be created.
       -  Next, Terraform's libvirt provider will quickly clone virtual machines based on the `.qcow2` file. Under the hardware resources listed in Section 0, cloning 6 virtual machines can be completed in approximately 15 seconds.
 
-   -  **Cluster Configuration (Layer 20)**:
+   -  **Cluster Configuration (Layer 50)**:
       -  Once all nodes are ready, Terraform dynamically generates `ansible/inventory.yaml` list file.
       -  Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-cluster.yaml` Playbook to complete the initialization of the Kubernetes cluster.
 

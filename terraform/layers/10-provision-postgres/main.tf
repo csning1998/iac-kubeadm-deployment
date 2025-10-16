@@ -52,7 +52,8 @@ module "bootstrapper_ansible_cluster" {
   source = "../../modules/14-bootstrapper-ansible-postgres"
 
   ansible_config = {
-    root_path = local.ansible_root_path
+    root_path       = local.ansible_root_path
+    ssh_config_path = module.ssh_config_manager_postgres.ssh_config_file_path
     extra_vars = {
       postgres_allowed_subnet = var.postgres_infrastructure.postgres_allowed_subnet
     }

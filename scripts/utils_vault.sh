@@ -99,6 +99,8 @@ unseal_vault() {
     vault operator unseal -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" "${keys[1]}";
     vault operator unseal -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" "${keys[2]}";
     echo "#### Unseal process complete.";
+    export VAULT_TOKEN=$(cat "$VAULT_ROOT_TOKEN_FILE"); 
+    update_env_var "VAULT_TOKEN" "$VAULT_TOKEN"
   else
     echo "#### Vault is already unsealed or unreachable.";
   fi

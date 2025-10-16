@@ -9,6 +9,9 @@ set -e -u
 # Define base directory and load configuration
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPTS_LIB_DIR="${SCRIPT_DIR}/scripts"
+readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
+readonly PACKER_DIR="${SCRIPT_DIR}/packer"
+readonly USER_HOME_DIR="${HOME}"
 
 source "${SCRIPTS_LIB_DIR}/utils_environment.sh"
 
@@ -18,6 +21,7 @@ source "${SCRIPTS_LIB_DIR}/utils_environment.sh"
 check_os_details
 check_virtual_support
 generate_env_file
+discover_and_update_layers
 
 # Source the .env file to export its variables to any sub-processes
 set -o allexport
@@ -44,18 +48,14 @@ if [[ "${ENVIRONMENT_STRATEGY}" == "native" ]]; then
   fi
 fi
 
-###
-# DERIVED GLOBAL VARIABLES (From Config)
-###
-
 # Set user and other readonly variables after loading configs
 
 readonly ANSIBLE_DIR="${SCRIPT_DIR}/ansible"
 
 # Set Terraform directory based on the selected provider
-readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
-readonly PACKER_DIR="${SCRIPT_DIR}/packer"
-readonly USER_HOME_DIR="${HOME}"
+
+read -r -a ALL_PACKER_BASES <<< "$ALL_PACKER_BASES"
+read -r -a ALL_TERRAFORM_LAYERS <<< "$ALL_TERRAFORM_LAYERS"
 
 # Main menu
 echo
@@ -78,15 +78,10 @@ options+=("[ONCE-ONLY] Setup Core IaC Tools for Native")
 options+=("[ONCE-ONLY] Verify IaC Environment for Native")
 options+=("Unseal Vault")
 options+=("Switch Environment Strategy")
-options+=("Reset Packer and Terraform")
-options+=("Rebuild Packer: 02 Kubeadm Base Image")
-options+=("Rebuild Packer: 03 Microk8s Base Image")
-options+=("Rebuild Packer: 04 Postgres Base Image")
-options+=("Rebuild Kubeadm Cluster (Packer + TF)")
-options+=("Rebuild Terraform Layer 10: Kubeadm Cluster")
-options+=("Rebuild Terraform Layer 10: Harbor Server")
-options+=("Rebuild Terraform Layer 10: Postgres Service")
-options+=("Rebuild Terraform Layer 50: Kubernetes Addons")
+options+=("Purge All Libvirt Resources")
+options+=("Purge All Packer and Terraform Resources")
+options+=("Build Packer Base Image")
+options+=("Provision Terraform Layer 10")
 options+=("[DEV] Rebuild Layer 10 via Ansible Command")
 options+=("Verify SSH")
 options+=("Quit")
@@ -142,91 +137,29 @@ select opt in "${options[@]}"; do
     "Switch Environment Strategy")
       switch_environment_strategy_handler
       ;;
-    "Reset Packer and Terraform")
+    "Purge All Libvirt Resources")
+      ensure_libvirt_services_running
+      purge_libvirt_resources "all"
+      break
+      ;;
+    "Purge All Packer and Terraform Resources")
       echo "# Executing Reset All workflow..."
-      purge_libvirt_resources
-      destroy_terraform_layer "10-provision-kubeadm"
-      cleanup_packer_output "03-base-microk8s"
-      cleanup_packer_output "02-base-kubeadm"
-      cleanup_terraform_layer "10-provision-kubeadm"
+      cleanup_packer_output "all"
+      cleanup_terraform_layer "all"
       report_execution_time
       echo "# Reset All workflow completed."
       break
       ;;
-    "Rebuild Packer: 02 Kubeadm Base Image")
-      echo "# Executing Rebuild Packer workflow..."
-      if ! check_ssh_key_exists; then break; fi
+    "Build Packer Base Image")
+      echo "# Entering Packer build selection menu..."
       ensure_libvirt_services_running
-      cleanup_packer_output "02-base-kubeadm"
-      build_packer "02-base-kubeadm"
-      report_execution_time
+      selector_packer_build
       break
       ;;
-    "Rebuild Packer: 03 Microk8s Base Image")
-      echo "# Executing Rebuild Packer workflow for Microk8s Base Image..."
-      if ! check_ssh_key_exists; then break; fi
+    "Provision Terraform Layer 10")
+      echo "# Entering Terraform layer management menu..."
       ensure_libvirt_services_running
-      cleanup_packer_output "03-base-microk8s"
-      build_packer "03-base-microk8s"
-      report_execution_time
-      break
-      ;;
-    "Rebuild Packer: 04 Postgres Base Image")
-      echo "# Executing Rebuild Packer workflow..."
-      if ! check_ssh_key_exists; then break; fi
-      ensure_libvirt_services_running
-      cleanup_packer_output "04-base-postgres"
-      build_packer "04-base-postgres"
-      report_execution_time
-      break
-      ;;
-    "Rebuild Kubeadm Cluster (Packer + TF)")
-      echo "# Executing Rebuild All workflow for Kubernetes..."
-      if ! check_ssh_key_exists; then break; fi
-      purge_libvirt_resources
-      cleanup_packer_output "02-base-kubeadm"
-      build_packer "02-base-kubeadm"
-      cleanup_terraform_layer "10-provision-kubeadm"
-      apply_terraform_layer "10-provision-kubeadm"
-      report_execution_time
-      echo "# Rebuild All workflow completed."
-      break
-      ;;
-    "Rebuild Terraform Layer 10: Kubeadm Cluster")
-      echo "# Executing Rebuild Terraform workflow for the full cluster..."
-      if ! check_ssh_key_exists; then break; fi
-      purge_libvirt_resources
-      ensure_libvirt_services_running
-      destroy_terraform_layer "10-provision-kubeadm"
-      cleanup_terraform_layer "10-provision-kubeadm"
-      apply_terraform_layer "10-provision-kubeadm"
-      report_execution_time
-      echo "# Rebuild Terraform workflow completed."
-      break
-      ;;
-    "Rebuild Terraform Layer 10: Harbor Server")
-      echo "# Executing Rebuild Terraform workflow for Harbor Server..."
-      ensure_libvirt_services_running
-      reapply_terraform_layer "10-provision-harbor"
-      report_execution_time
-      echo "# Rebuild Terraform Harbor Server workflow completed."
-      break
-      ;;
-    "Rebuild Terraform Layer 10: Postgres Service")
-      echo "# Executing Rebuild Terraform workflow for Postgres Service..."
-      ensure_libvirt_services_running
-      reapply_terraform_layer "10-provision-postgres"
-      report_execution_time
-      echo "# Rebuild Terraform Postgres Service workflow completed."
-      break
-      ;;
-    "Rebuild Terraform Layer 50: Kubeadm Cluster Addons")
-      echo "# Executing Rebuild Terraform workflow for Kubernetes (Kubeadm) Addons..."
-      ensure_libvirt_services_running
-      verify_ssh
-      reapply_terraform_layer "50-provision-kubeadm-addons"
-      report_execution_time
-      echo "# Rebuild Terraform Kubernetes (Kubeadm) Addons workflow completed."
+      selector_terraform_layer
       break
       ;;
     "[DEV] Rebuild Layer 10 via Ansible Command")

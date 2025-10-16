@@ -6,17 +6,29 @@
 cleanup_packer_output() {
   echo ">>> STEP: Cleaning Packer artifacts..."
 
-  # --- Provider-Specific Cleanup ---
-  # With keep_registered = false, Packer handles unregistering the VM.
-  # We only need to delete the output directory from the filesystem.
-
-  local layer_name="$1"
-  if [ -z "$layer_name" ]; then
-    echo "FATAL: No Packer layer specified for build_packer function." >&2
+  local target_layer="$1"
+  if [ -z "$target_layer" ]; then
+    echo "FATAL: No Packer layer specified for cleanup_packer_output function." >&2
     return 1
   fi
 
-  rm -rf "${PACKER_DIR}/output/${layer_name}"
+  local layers_to_clean=()
+
+  if [[ "$target_layer" == "all" ]]; then
+    echo "#### Preparing to clean all Packer output directories..."
+    if [ ${#ALL_PACKER_BASES[@]} -eq 0 ]; then
+      echo "Warning: ALL_PACKER_BASES array is not defined. Cannot clean 'all'."
+    else
+      layers_to_clean=("${ALL_PACKER_BASES[@]}")
+    fi
+  else
+    layers_to_clean=("$target_layer")
+  fi
+
+  for layer_name in "${layers_to_clean[@]}"; do
+    echo "#### Cleaning output for layer: ${layer_name}"
+    rm -rf "${PACKER_DIR}/output/${layer_name}"
+  done
 
   # --- Generic Packer Cache Cleanup ---
   if [ -d ~/.cache/packer ]; then
@@ -63,4 +75,29 @@ build_packer() {
 
   echo "#### Packer build complete. New base image for [${layer_name}] is ready."
   echo "--------------------------------------------------"
+}
+
+# Function: Display a sub-menu to select and run a Packer build.
+selector_packer_build() {
+  # Source packer base array from .env file
+  local packer_build_options=("${ALL_PACKER_BASES[@]}" "Back to Main Menu")
+
+  local PS3_SUB=">>> Select a Packer build to run: "
+  echo
+  select build_layer in "${packer_build_options[@]}"; do
+    if [[ "$build_layer" == "Back to Main Menu" ]]; then
+      echo "# Returning to main menu..."
+      break
+    elif [[ " ${ALL_PACKER_BASES[*]} " =~ " ${build_layer} " ]]; then
+      echo "# Executing Rebuild Packer workflow for [${build_layer}]..."
+      if ! check_ssh_key_exists; then break; fi
+      ensure_libvirt_services_running
+      cleanup_packer_output "${build_layer}"
+      build_packer "${build_layer}"
+      report_execution_time
+      break 2
+    else
+      echo "Invalid option $REPLY"
+    fi
+  done
 }

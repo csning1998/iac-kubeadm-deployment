@@ -1,6 +1,19 @@
 
 # This file defines the single, data-driven build block.
 
+packer {
+  required_plugins {
+    ansible = {
+      version = "~> 1"
+      source  = "github.com/hashicorp/ansible"
+    }
+    qemu = {
+      version = "~> 1"
+      source  = "github.com/hashicorp/qemu"
+    }
+  }
+}
+
 build {
   sources = ["source.qemu.ubuntu"]
 
