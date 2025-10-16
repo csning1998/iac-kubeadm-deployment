@@ -36,7 +36,7 @@ module "provisioner_kvm" {
   }
 }
 
-module "ssh_config_manager" {
+module "ssh_config_manager_kubeadm" {
   source = "../../modules/81-ssh-config-manager"
 
   config_name = var.kubeadm_cluster_config.cluster_name
@@ -52,8 +52,9 @@ module "bootstrapper_ansible_cluster" {
   source = "../../modules/12-bootstrapper-ansible-kubeadm"
 
   ansible_config = {
-    root_path     = local.ansible_root_path
-    registry_host = var.kubeadm_cluster_config.registry_host
+    root_path       = local.ansible_root_path
+    registry_host   = var.kubeadm_cluster_config.registry_host
+    ssh_config_path = module.ssh_config_manager_kubeadm.ssh_config_file_path
     extra_vars = {
       k8s_master_ips        = local.k8s_master_ips
       k8s_ha_virtual_ip     = var.kubeadm_cluster_config.ha_virtual_ip
@@ -69,6 +70,6 @@ module "bootstrapper_ansible_cluster" {
 
   inventory = {
     nodes          = module.provisioner_kvm.all_nodes_map
-    status_trigger = module.ssh_config_manager.ssh_access_ready_trigger
+    status_trigger = module.ssh_config_manager_kubeadm.ssh_access_ready_trigger
   }
 }

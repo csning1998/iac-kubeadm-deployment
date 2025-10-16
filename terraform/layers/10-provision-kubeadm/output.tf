@@ -1,7 +1,3 @@
-output "ansible_log_path" {
-  description = "Path to the latest Ansible execution log"
-  value       = module.bootstrapper_ansible_cluster.ansible_log
-}
 
 output "kubeconfig_content" {
   description = "The kubeconfig content for the cluster."

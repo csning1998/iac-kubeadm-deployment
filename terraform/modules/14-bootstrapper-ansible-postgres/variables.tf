@@ -50,7 +50,8 @@ variable "db_credentials" {
 variable "ansible_config" {
   description = "Configurations for the Ansible execution environment and playbook."
   type = object({
-    root_path = string
+    root_path       = string
+    ssh_config_path = string
     extra_vars = object({
       postgres_allowed_subnet = string
     })
