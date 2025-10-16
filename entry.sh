@@ -78,6 +78,7 @@ options+=("[ONCE-ONLY] Setup Core IaC Tools for Native")
 options+=("[ONCE-ONLY] Verify IaC Environment for Native")
 options+=("Unseal Vault")
 options+=("Switch Environment Strategy")
+options+=("Purge All Libvirt Resources")
 options+=("Purge All Packer and Terraform Resources")
 options+=("Build Packer Base Image")
 options+=("Provision Terraform Layer 10")
@@ -136,9 +137,13 @@ select opt in "${options[@]}"; do
     "Switch Environment Strategy")
       switch_environment_strategy_handler
       ;;
+    "Purge All Libvirt Resources")
+      ensure_libvirt_services_running
+      purge_libvirt_resources "all"
+      break
+      ;;
     "Purge All Packer and Terraform Resources")
       echo "# Executing Reset All workflow..."
-      purge_libvirt_resources "all"
       cleanup_packer_output "all"
       cleanup_terraform_layer "all"
       report_execution_time
