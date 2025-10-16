@@ -76,3 +76,28 @@ build_packer() {
   echo "#### Packer build complete. New base image for [${layer_name}] is ready."
   echo "--------------------------------------------------"
 }
+
+# Function: Display a sub-menu to select and run a Packer build.
+selector_packer_build() {
+  # Source packer base array from .env file
+  local packer_build_options=("${ALL_PACKER_LAYERS[@]}" "Back to Main Menu")
+
+  local PS3_SUB=">>> Select a Packer build to run: "
+  echo
+  select build_layer in "${packer_build_options[@]}"; do
+    if [[ "$build_layer" == "Back to Main Menu" ]]; then
+      echo "# Returning to main menu..."
+      break
+    elif [[ " ${ALL_PACKER_LAYERS[*]} " =~ " ${build_layer} " ]]; then
+      echo "# Executing Rebuild Packer workflow for [${build_layer}]..."
+      if ! check_ssh_key_exists; then break; fi
+      ensure_libvirt_services_running
+      cleanup_packer_output "${build_layer}"
+      build_packer "${build_layer}"
+      report_execution_time
+      break 2
+    else
+      echo "Invalid option $REPLY"
+    fi
+  done
+}

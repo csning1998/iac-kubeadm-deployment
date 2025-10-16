@@ -72,3 +72,29 @@ apply_terraform_layer() {
   echo "#### Terraform apply for [${layer_name}] complete."
   echo "--------------------------------------------------"
 }
+
+# Function: Display a sub-menu to select a Terraform layer for a full rebuild.
+selector_terraform_layer() {
+  local layer_options=("${ALL_TERRAFORM_LAYERS[@]}" "Back to Main Menu")
+  local PS3_SUB_LAYER=">>> Select a Terraform layer to REBUILD: "
+
+  echo
+  select layer in "${layer_options[@]}"; do
+    if [[ "$layer" == "Back to Main Menu" ]]; then
+      echo "# Returning to main menu..."
+      break
+
+    elif [[ " ${ALL_TERRAFORM_LAYERS[*]} " =~ " ${layer} " ]]; then
+      echo "# Executing Full Rebuild for [${layer}]..."
+      if ! check_ssh_key_exists; then break; fi
+      purge_libvirt_resources "${layer}"
+      ensure_libvirt_services_running
+      cleanup_terraform_layer "${layer}"
+      apply_terraform_layer "${layer}"
+      report_execution_time
+      break
+    else
+      echo "Invalid option $REPLY"
+    fi
+  done
+}
