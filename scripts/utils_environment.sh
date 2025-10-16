@@ -1,3 +1,28 @@
+
+# Function: Scans project directories to find all Packer and Terraform layers.
+discover_and_update_layers() {
+  echo ">>> Discovering Packer Base and Terraform layers..."
+  cd "${SCRIPT_DIR}" || return 1
+
+  # Discover Packer Layers
+  local packer_layers_str=""
+  if [ -d "${PACKER_DIR}/output" ]; then
+    # Find all subdirectories for basenames and then join with spaces
+    packer_layers_str=$(find "${PACKER_DIR}/output" -mindepth 1 -maxdepth 1 -type d -printf '%f ')
+  fi
+  # Remove trailing space
+  update_env_var "ALL_PACKER_BASES" "${packer_layers_str% }"
+
+  # Discover Terraform Layers
+  local terraform_layers_str=""
+  if [ -d "${TERRAFORM_DIR}/layers" ]; then
+    terraform_layers_str=$(find "${TERRAFORM_DIR}/layers" -mindepth 1 -maxdepth 1 -type d -printf '%f ')
+  fi
+  update_env_var "ALL_TERRAFORM_LAYERS" "${terraform_layers_str% }"
+  
+  echo "#### Layer discovery complete and .env updated."
+}
+
 # Function: Check the host operating system
 check_os_details() {
   if [ -f /etc/os-release ]; then
@@ -54,6 +79,10 @@ generate_env_file() {
 # "container" or "native"
 ENVIRONMENT_STRATEGY="${default_strategy}"
 
+# --- Discovered Packer Base and Terraform Layers ---
+ALL_PACKER_BASES=""
+ALL_TERRAFORM_LAYERS=""
+
 # --- Vault Configuration ---
 VAULT_ADDR="https://127.0.0.1:8200"
 VAULT_CACERT="${PWD}/vault/tls/ca.pem"
@@ -76,6 +105,9 @@ LIBVIRT_GID=${default_libvirt_gid}
 EOF
 
   echo "#### .env file created successfully."
+
+  # 4. perform the initial discovery.
+  discover_and_update_layers
 }
 
 # Function to update a specific variable in the .env file

@@ -16,10 +16,10 @@ cleanup_packer_output() {
 
   if [[ "$target_layer" == "all" ]]; then
     echo "#### Preparing to clean all Packer output directories..."
-    if [ ${#ALL_PACKER_LAYERS[@]} -eq 0 ]; then
-      echo "Warning: ALL_PACKER_LAYERS array is not defined. Cannot clean 'all'."
+    if [ ${#ALL_PACKER_BASES[@]} -eq 0 ]; then
+      echo "Warning: ALL_PACKER_BASES array is not defined. Cannot clean 'all'."
     else
-      layers_to_clean=("${ALL_PACKER_LAYERS[@]}")
+      layers_to_clean=("${ALL_PACKER_BASES[@]}")
     fi
   else
     layers_to_clean=("$target_layer")

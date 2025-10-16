@@ -9,16 +9,9 @@ set -e -u
 # Define base directory and load configuration
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPTS_LIB_DIR="${SCRIPT_DIR}/scripts"
-readonly ALL_LAYERS=(
-    "10-provision-kubeadm"
-    "10-provision-harbor"
-    "10-provision-postgres"
-)
-readonly ALL_PACKER_LAYERS=(
-    "02-base-kubeadm"
-    "03-base-microk8s"
-    "04-base-postgres"
-)
+readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
+readonly PACKER_DIR="${SCRIPT_DIR}/packer"
+readonly USER_HOME_DIR="${HOME}"
 
 source "${SCRIPTS_LIB_DIR}/utils_environment.sh"
 
@@ -28,6 +21,7 @@ source "${SCRIPTS_LIB_DIR}/utils_environment.sh"
 check_os_details
 check_virtual_support
 generate_env_file
+discover_and_update_layers
 
 # Source the .env file to export its variables to any sub-processes
 set -o allexport
@@ -54,18 +48,14 @@ if [[ "${ENVIRONMENT_STRATEGY}" == "native" ]]; then
   fi
 fi
 
-###
-# DERIVED GLOBAL VARIABLES (From Config)
-###
-
 # Set user and other readonly variables after loading configs
 
 readonly ANSIBLE_DIR="${SCRIPT_DIR}/ansible"
 
 # Set Terraform directory based on the selected provider
-readonly TERRAFORM_DIR="${SCRIPT_DIR}/terraform"
-readonly PACKER_DIR="${SCRIPT_DIR}/packer"
-readonly USER_HOME_DIR="${HOME}"
+
+read -r -a ALL_PACKER_BASES <<< "$ALL_PACKER_BASES"
+read -r -a ALL_TERRAFORM_LAYERS <<< "$ALL_TERRAFORM_LAYERS"
 
 # Main menu
 echo
