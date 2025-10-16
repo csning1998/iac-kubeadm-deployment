@@ -144,11 +144,15 @@ select opt in "${options[@]}"; do
       ;;
     "Reset Packer and Terraform")
       echo "# Executing Reset All workflow..."
-      purge_libvirt_resources
+      purge_libvirt_resources "all"
       destroy_terraform_layer "10-provision-kubeadm"
+      cleanup_packer_output "04-base-postgres"
       cleanup_packer_output "03-base-microk8s"
       cleanup_packer_output "02-base-kubeadm"
       cleanup_terraform_layer "10-provision-kubeadm"
+      cleanup_terraform_layer "10-provision-harbor"
+      cleanup_terraform_layer "10-provision-postgres"
+
       report_execution_time
       echo "# Reset All workflow completed."
       break
@@ -183,7 +187,7 @@ select opt in "${options[@]}"; do
     "Rebuild Kubeadm Cluster (Packer + TF)")
       echo "# Executing Rebuild All workflow for Kubernetes..."
       if ! check_ssh_key_exists; then break; fi
-      purge_libvirt_resources
+      purge_libvirt_resources "10-provision-kubeadm"
       cleanup_packer_output "02-base-kubeadm"
       build_packer "02-base-kubeadm"
       cleanup_terraform_layer "10-provision-kubeadm"
@@ -195,7 +199,7 @@ select opt in "${options[@]}"; do
     "Rebuild Terraform Layer 10: Kubeadm Cluster")
       echo "# Executing Rebuild Terraform workflow for the full cluster..."
       if ! check_ssh_key_exists; then break; fi
-      purge_libvirt_resources
+      purge_libvirt_resources "10-provision-kubeadm"
       ensure_libvirt_services_running
       destroy_terraform_layer "10-provision-kubeadm"
       cleanup_terraform_layer "10-provision-kubeadm"
@@ -207,6 +211,7 @@ select opt in "${options[@]}"; do
     "Rebuild Terraform Layer 10: Harbor Server")
       echo "# Executing Rebuild Terraform workflow for Harbor Server..."
       ensure_libvirt_services_running
+      cleanup_terraform_layer "10-provision-harbor"
       reapply_terraform_layer "10-provision-harbor"
       report_execution_time
       echo "# Rebuild Terraform Harbor Server workflow completed."
@@ -215,6 +220,7 @@ select opt in "${options[@]}"; do
     "Rebuild Terraform Layer 10: Postgres Service")
       echo "# Executing Rebuild Terraform workflow for Postgres Service..."
       ensure_libvirt_services_running
+      cleanup_terraform_layer "10-provision-postgres"
       reapply_terraform_layer "10-provision-postgres"
       report_execution_time
       echo "# Rebuild Terraform Postgres Service workflow completed."
