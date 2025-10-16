@@ -80,7 +80,7 @@ build_packer() {
 # Function: Display a sub-menu to select and run a Packer build.
 selector_packer_build() {
   # Source packer base array from .env file
-  local packer_build_options=("${ALL_PACKER_LAYERS[@]}" "Back to Main Menu")
+  local packer_build_options=("${ALL_PACKER_BASES[@]}" "Back to Main Menu")
 
   local PS3_SUB=">>> Select a Packer build to run: "
   echo
@@ -88,7 +88,7 @@ selector_packer_build() {
     if [[ "$build_layer" == "Back to Main Menu" ]]; then
       echo "# Returning to main menu..."
       break
-    elif [[ " ${ALL_PACKER_LAYERS[*]} " =~ " ${build_layer} " ]]; then
+    elif [[ " ${ALL_PACKER_BASES[*]} " =~ " ${build_layer} " ]]; then
       echo "# Executing Rebuild Packer workflow for [${build_layer}]..."
       if ! check_ssh_key_exists; then break; fi
       ensure_libvirt_services_running

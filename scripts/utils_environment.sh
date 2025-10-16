@@ -6,9 +6,11 @@ discover_and_update_layers() {
 
   # Discover Packer Layers
   local packer_layers_str=""
-  if [ -d "${PACKER_DIR}/output" ]; then
-    # Find all subdirectories for basenames and then join with spaces
-    packer_layers_str=$(find "${PACKER_DIR}/output" -mindepth 1 -maxdepth 1 -type d -printf '%f ')
+  if [ -d "${PACKER_DIR}" ]; then
+    packer_layers_str=$(find "${PACKER_DIR}" -maxdepth 1 -name "*.pkrvars.hcl" ! -name "values.pkrvars.hcl" -printf '%f\n' | \
+      sed 's/\.pkrvars\.hcl//g' | \
+      sort | \
+      tr '\n' ' ') 
   fi
   # Remove trailing space
   update_env_var "ALL_PACKER_BASES" "${packer_layers_str% }"
@@ -16,7 +18,9 @@ discover_and_update_layers() {
   # Discover Terraform Layers
   local terraform_layers_str=""
   if [ -d "${TERRAFORM_DIR}/layers" ]; then
-    terraform_layers_str=$(find "${TERRAFORM_DIR}/layers" -mindepth 1 -maxdepth 1 -type d -printf '%f ')
+    terraform_layers_str=$(find "${TERRAFORM_DIR}/layers" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | \
+      sort | \
+      tr '\n' ' ')
   fi
   update_env_var "ALL_TERRAFORM_LAYERS" "${terraform_layers_str% }"
   

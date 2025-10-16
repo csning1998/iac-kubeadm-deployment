@@ -147,11 +147,13 @@ select opt in "${options[@]}"; do
       ;;
     "Build Packer Base Image")
       echo "# Entering Packer build selection menu..."
+      ensure_libvirt_services_running
       selector_packer_build
       break
       ;;
     "Provision Terraform Layer 10")
       echo "# Entering Terraform layer management menu..."
+      ensure_libvirt_services_running
       selector_terraform_layer
       break
       ;;
