@@ -1,0 +1,47 @@
+---
+- name: "Section B: Install Redis Server from Official Repository"
+  block:
+    - name: "Step B1. Install prerequisites for adding apt repository"
+      ansible.builtin.apt:
+        name:
+          - curl
+          - gpg
+        state: present
+        update_cache: true
+
+    - name: "Step B2. Create directory for apt keyrings"
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: "Step B3. Add Redis official GPG key"
+      ansible.builtin.shell:
+        cmd: "curl -fsSL https://packages.redis.io/gpg | gpg --dearmor -o /etc/apt/keyrings/redis.gpg"
+        creates: /etc/apt/keyrings/redis.gpg
+      changed_when: false
+
+    - name: "Step B4. Add Redis APT repository"
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/redis.gpg] https://packages.redis.io/deb {{ ansible_distribution_release }} main"
+        state: present
+        filename: redis
+
+    - name: "Step B5. Install Redis server package"
+      ansible.builtin.apt:
+        name: redis-server
+        state: present
+        update_cache: true
+
+    - name: "Step B6. Stop and disable redis-server service for packer image building stage"
+      ansible.builtin.systemd:
+        name: redis-server
+        state: stopped
+        enabled: false
+
+    - name: "Step B7. Stop and disable redis-sentinel service for packer image building stage"
+      ansible.builtin.systemd:
+        name: redis-sentinel
+        state: stopped
+        enabled: false
+      ignore_errors: true
