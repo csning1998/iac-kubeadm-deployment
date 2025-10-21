@@ -29,7 +29,9 @@
 
     - name: "Step B5. Install Redis server package"
       ansible.builtin.apt:
-        name: redis-server
+        name:
+          - redis-server
+          - redis-sentinel
         state: present
         update_cache: true
 

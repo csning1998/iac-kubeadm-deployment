@@ -1,0 +1,33 @@
+# Generic Redis Configuration
+# Bind to the node's specific IP and loopback, as per the reference configuration
+bind {{ ansible_host }} 127.0.0.1
+port 6379
+# Enable protected mode when not binding to 0.0.0.0
+protected-mode yes
+daemonize no
+pidfile /var/run/redis/redis-server.pid
+loglevel notice
+logfile /var/log/redis/redis-server.log
+
+# --- Systemd Integration ---
+supervised systemd
+
+# --- Working Directory ---
+dir /var/lib/redis
+
+# --- Persistence ---
+appendonly yes
+appendfsync everysec
+
+# --- Security ---
+requirepass {{ redis_requirepass }}
+
+# For replication, specify the user and pwd to authenticate with the master, where 'masteruser' is required for Redis 6+ with ACLs.
+masteruser default
+masterauth {{ redis_masterauth }}
+
+# --- Replication ---
+# This line is added only on replica nodes
+{% if inventory_hostname in groups['redis_replicas'] %}
+replicaof {{ redis_initial_master_ip }} 6379
+{% endif %}

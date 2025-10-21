@@ -1,18 +1,6 @@
 ---
-- name: "Play 1: Configure etcd Cluster"
-  hosts: etcd_nodes
+- name: "Play 1: Configure Redis High Availability Cluster"
+  hosts: all
   become: true
   roles:
-    - 31-configure-etcd
-
-- name: "Play 2: Configure Patroni and PostgreSQL Cluster"
-  hosts: postgres_nodes
-  become: true
-  roles:
-    - 32-configure-postgres-patroni
-
-- name: "Play 3: Configure HAProxy for Load Balancing"
-  hosts: haproxy_nodes
-  become: true
-  roles:
-    - 33-configure-haproxy
+    - 35-configure-redis-ha
