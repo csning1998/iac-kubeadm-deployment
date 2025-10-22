@@ -1,6 +1,5 @@
 
-# This file defines the variables for building the 'kubeadm-base' (cluster) image.
-
+# This file defines the variables for building the 'docker-base' image.
 build_spec = {
   suffix   = "01-base-docker"
   vnc_port = 5901
