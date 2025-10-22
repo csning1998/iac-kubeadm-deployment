@@ -143,8 +143,8 @@ selector_playbook() {
     
     elif [ -n "$inventory" ]; then
       
-      local target_key
-      target_key=$(echo "${inventory}" | sed -e 's/^inventory-//' -e 's/-cluster\.yaml$//')
+      local tmp=${inventory#inventory-}
+      local target_key=${tmp%-cluster.yaml}
       
       local playbook="10-provision-${target_key}.yaml"
       
