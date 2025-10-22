@@ -54,6 +54,6 @@ source "qemu" "ubuntu" {
   ]
   ssh_username     = local.ssh_username
   ssh_password     = local.ssh_password
-  ssh_timeout      = "10m"
+  ssh_timeout      = "30m"
   shutdown_command = "sudo shutdown -P now"
 }
