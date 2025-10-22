@@ -3,4 +3,4 @@
   hosts: all
   become: true
   roles:
-    - 35-configure-redis-ha
+    - 35-redis-sentinel
