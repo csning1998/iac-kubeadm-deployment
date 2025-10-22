@@ -3,7 +3,7 @@
 
 build_spec = {
   suffix   = "04-base-postgres"
-  vnc_port = 5997
+  vnc_port = 5904
 }
 
 # The following common variables are inherited from the main 'values.pkrvars.hcl'

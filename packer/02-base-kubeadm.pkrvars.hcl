@@ -3,7 +3,7 @@
 
 build_spec = {
   suffix   = "02-base-kubeadm"
-  vnc_port = 5999
+  vnc_port = 5902
 }
 
 # The following common variables are inherited from the main 'values.pkrvars.hcl'
