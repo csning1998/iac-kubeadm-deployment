@@ -109,7 +109,7 @@ Among options `11`, `12`, and `13`, there are submenus. These menus are dynamica
    #### Checking status of libvirt service...
    --> libvirt service is already running.
 
-   1) 10-provision-cluster.yaml   3) 10-provision-postgres.yaml
+   1) 10-provision-kubeadm.yaml   3) 10-provision-postgres.yaml
    2) 10-provision-harbor.yaml    4) Back to Main Menu
    >>> Please select an action:
    ```
@@ -578,7 +578,7 @@ sequenceDiagram
    Terraform->>+Libvirt: 2a. Create Network, Pool, Volumes (from .qcow2), Cloud-init ISOs
    Terraform->>+Libvirt: 2b. Create and Start VMs (Domains)
    note right of Terraform: Provisioner 'local-exec' is triggered
-   Terraform->>+Ansible: 2c. Execute Playbook<br>(10-provision-cluster.yaml)
+   Terraform->>+Ansible: 2c. Execute Playbook<br>(10-provision-kubeadm.yaml)
    Ansible->>Libvirt: (via SSH) 2d. Configure HA (Keepalived/HAProxy)
    Ansible->>Libvirt: (via SSH) 2e. Init/Join Kubernetes Cluster
    Ansible-->>-Terraform: Playbook execution complete
@@ -609,11 +609,11 @@ sequenceDiagram
 
    -  **Cluster Configuration (Layer 50)**:
       -  Once all nodes are ready, Terraform dynamically generates `ansible/inventory.yaml` list file.
-      -  Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-cluster.yaml` Playbook to complete the initialization of the Kubernetes cluster.
+      -  Then, Terraform invokes Ansible to execute the `ansible/playbooks/10-provision-kubeadm.yaml` Playbook to complete the initialization of the Kubernetes cluster.
 
 3. **Ansible: The Configuration Manager**
 
-   This is the twice call for Ansible, serving as the configuration manager at different stages. The project's Playbooks are stored in the `ansible/playbooks/ directory`. In terms of role assignment, Ansible is primarily responsible for cluster initialization (invoked by Terraform), executing the following tasks through the `10-provision-cluster.yaml` Playbook:
+   This is the twice call for Ansible, serving as the configuration manager at different stages. The project's Playbooks are stored in the `ansible/playbooks/ directory`. In terms of role assignment, Ansible is primarily responsible for cluster initialization (invoked by Terraform), executing the following tasks through the `10-provision-kubeadm.yaml` Playbook:
 
    1. Setup HA Load Balancer on all master nodes if it's not a cluster with single master node.
    2. Initialize the primary master node

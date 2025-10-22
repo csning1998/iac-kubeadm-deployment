@@ -53,7 +53,7 @@ extractor_confidential_var() {
 
 # [Dev] This function is for faster reset and re-execute the Ansible Playbook
 run_ansible_playbook() {
-  local playbook_file="$1"  # (e.g., "10-provision-cluster.yaml").
+  local playbook_file="$1"  # (e.g., "10-provision-kubeadm.yaml").
   local inventory_file="$2" # (e.g., "inventory-kubeadm-cluster.yaml").
 
   if [ -z "$playbook_file" ] || [ -z "$inventory_file" ]; then
@@ -135,7 +135,7 @@ selector_playbook() {
   select playbook in "${playbook_options[@]}"; do
     local inventory_file=""
     case $playbook in
-      "10-provision-cluster.yaml")
+      "10-provision-kubeadm.yaml")
         inventory_file="inventory-kubeadm-cluster.yaml"
         ;;
       "10-provision-harbor.yaml")
