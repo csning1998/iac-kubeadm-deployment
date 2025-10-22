@@ -3,43 +3,50 @@
 # Extracts confidential variables from Vault for specific playbooks.
 extractor_confidential_var() {
   local playbook_file="$1"
+  local vault_path="secret/on-premise-gitlab-deployment/databases"
   local extra_vars_string=""
+  local secrets_json
+  local keys_needed=() # Bash array to hold the keys that need
 
+  # 1. Determine the key to fetch by playbook
   case "${playbook_file}" in
     "10-provision-postgres.yaml")
-      echo "#### Postgres playbook detected. Fetching credentials from Vault..." >&2
-
-      local vault_path="secret/on-premise-gitlab-deployment/databases"
-      local secrets_json
-
-      if ! secrets_json=$(vault kv get -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" -format=json "${vault_path}"); then
-        echo "FATAL: Failed to fetch secrets from Vault at path '${vault_path}'. Is Vault unsealed?" >&2
-        return 1
-      fi
-
-      local superuser_pass
-      local replication_pass
-      superuser_pass=$(echo "${secrets_json}" | jq -r '.data.data.pg_superuser_password')
-      replication_pass=$(echo "${secrets_json}" | jq -r '.data.data.pg_replication_password')
-
-      if [[ -z "${superuser_pass}" || "${superuser_pass}" == "null" || -z "${replication_pass}" || "${replication_pass}" == "null" ]]; then
-        echo "FATAL: Could not find confidential vars in Vault at '${vault_path}'." >&2
-        return 1
-      fi
-
-      extra_vars_string="--extra-vars 'pg_superuser_password=${superuser_pass}' --extra-vars 'pg_replication_password=${replication_pass}'"
-
-      echo "#### Credentials fetched successfully." >&2
+      echo "#### Postgres playbook detected. Preparing credentials..." >&2
+      keys_needed=("pg_superuser_password" "pg_replication_password")
       ;;
 
-    # "10-provision-redis.yaml")
-    #   echo "#### Redis playbook detected. Fetching credentials..."
-    #   # fetch Redis passwords here in the future
-    #   ;;
+    "10-provision-redis.yaml")
+      echo "#### Redis playbook detected. Preparing credentials..." >&2
+      keys_needed=("redis_requirepass" "redis_masterauth")
+      ;;
+
     *)
+      echo "${extra_vars_string}"
+      return 0
       ;;
   esac
 
+  # 2. Once-only vault fetching if and only if the keys_needed (case) is non-null
+  if ! secrets_json=$(vault kv get -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" -format=json "${vault_path}"); then
+    echo "FATAL: Failed to fetch secrets from Vault at path '${vault_path}'. Is Vault unsealed?" >&2
+    return 1
+  fi
+
+  # 3. Process Key, validation, and then establish the extra-vars string
+  for key in "${keys_needed[@]}"; do
+    local value
+    value=$(echo "${secrets_json}" | jq -r ".data.data.${key}")
+
+    if [[ -z "${value}" || "${value}" == "null" ]]; then
+      echo "FATAL: Could not find required key '${key}' in Vault at '${vault_path}'." >&2
+      return 1
+    fi
+
+    extra_vars_string+=" --extra-vars '${key}=${value}'"
+  done
+
+  echo "#### Credentials fetched successfully." >&2
+  
   echo "${extra_vars_string}"
   return 0
 }
@@ -136,6 +143,9 @@ selector_playbook() {
         ;;
       "10-provision-postgres.yaml")
         inventory_file="inventory-postgres-cluster.yaml"
+        ;;
+      "10-provision-redis.yaml")
+        inventory_file="inventory-redis-cluster.yaml"
         ;;
       "Back to Main Menu")
         echo "# Returning to main menu..."
