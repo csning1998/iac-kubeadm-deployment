@@ -120,46 +120,43 @@ run_ansible_playbook() {
 
 # Function: Display a sub-menu to select and run a Layer 10 playbook.
 selector_playbook() {
-  local playbook_options=()
+  local inventory_options=()
+  
+  local inventory_dir="${ANSIBLE_DIR}" 
 
-  # find all playbooks starting with "10-"
-  for f in "${ANSIBLE_DIR}/playbooks/10-"*.yaml; do
+  for f in "${inventory_dir}/inventory-"*"-cluster.yaml"; do
     if [ -e "$f" ]; then
-      playbook_options+=("$(basename "$f")")
+      inventory_options+=("$(basename "$f")")
     fi
   done
-  playbook_options+=("Back to Main Menu")
+  inventory_options+=("Back to Main Menu")
 
-  local PS3_SUB=">>> Select a Playbook to run: "
+  local PS3_SUB=">>> Select a Cluster Inventory to run its Playbook: "
   echo
-  select playbook in "${playbook_options[@]}"; do
-    local inventory_file=""
-    case $playbook in
-      "10-provision-kubeadm.yaml")
-        inventory_file="inventory-kubeadm-cluster.yaml"
-        ;;
-      "10-provision-harbor.yaml")
-        inventory_file="inventory-harbor-cluster.yaml"
-        ;;
-      "10-provision-postgres.yaml")
-        inventory_file="inventory-postgres-cluster.yaml"
-        ;;
-      "10-provision-redis.yaml")
-        inventory_file="inventory-redis-cluster.yaml"
-        ;;
-      "Back to Main Menu")
-        echo "# Returning to main menu..."
-        break
-        ;;
-      *)
-        echo "Invalid option $REPLY"
-        continue
-        ;;
-    esac
+  select inventory in "${inventory_options[@]}"; do
+    
+    if [ "$inventory" == "Back to Main Menu" ]; then
+      echo "# Returning to main menu..."
+      break
+    
+    elif [ -n "$inventory" ]; then
+      
+      local target_key
+      target_key=$(echo "${inventory}" | sed -e 's/^inventory-//' -e 's/-cluster\.yaml$//')
+      
+      local playbook="10-provision-${target_key}.yaml"
+      
+      echo "==========================="
+      echo "Selected Inventory: ${inventory}"
+      echo "Derived Playbook:   ${playbook}"
+      echo "==========================="
+      
+      run_ansible_playbook "$playbook" "$inventory"
+      break
 
-    if [ -n "$inventory_file" ]; then
-        run_ansible_playbook "$playbook" "$inventory_file"
+    else
+      echo "Invalid option $REPLY"
+      continue
     fi
-    break
   done
 }
