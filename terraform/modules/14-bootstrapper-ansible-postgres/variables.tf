@@ -37,7 +37,7 @@ variable "vm_credentials" {
   })
 }
 
-variable "db_credentials" {
+variable "postgres_credentials" {
   description = "Credentials for Ansible to access the target Databases."
   type = object({
     superuser_password   = string

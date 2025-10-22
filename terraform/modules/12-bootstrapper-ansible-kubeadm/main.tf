@@ -46,7 +46,7 @@ resource "null_resource" "provision_cluster" {
         --ssh-common-args='-F ${var.ansible_config.ssh_config_path}' \
         --extra-vars "ansible_ssh_user=${nonsensitive(var.vm_credentials.username)}" \
         -v \
-        ${var.ansible_config.root_path}/playbooks/10-provision-cluster.yaml
+        ${var.ansible_config.root_path}/playbooks/10-provision-kubeadm.yaml
     EOT
 
     interpreter = ["/bin/bash", "-c"]

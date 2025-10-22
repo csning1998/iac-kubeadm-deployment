@@ -4,49 +4,58 @@
 extractor_confidential_var() {
   local playbook_file="$1"
   local extra_vars_string=""
+  local secrets_json
+  local keys_needed=() # Bash array to hold the keys that need
+  local vault_path=""
 
+  # 1. Determine the key and vault path to fetch by playbook
   case "${playbook_file}" in
     "10-provision-postgres.yaml")
-      echo "#### Postgres playbook detected. Fetching credentials from Vault..." >&2
-
-      local vault_path="secret/on-premise-gitlab-deployment/databases"
-      local secrets_json
-
-      if ! secrets_json=$(vault kv get -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" -format=json "${vault_path}"); then
-        echo "FATAL: Failed to fetch secrets from Vault at path '${vault_path}'. Is Vault unsealed?" >&2
-        return 1
-      fi
-
-      local superuser_pass
-      local replication_pass
-      superuser_pass=$(echo "${secrets_json}" | jq -r '.data.data.pg_superuser_password')
-      replication_pass=$(echo "${secrets_json}" | jq -r '.data.data.pg_replication_password')
-
-      if [[ -z "${superuser_pass}" || "${superuser_pass}" == "null" || -z "${replication_pass}" || "${replication_pass}" == "null" ]]; then
-        echo "FATAL: Could not find confidential vars in Vault at '${vault_path}'." >&2
-        return 1
-      fi
-
-      extra_vars_string="--extra-vars 'pg_superuser_password=${superuser_pass}' --extra-vars 'pg_replication_password=${replication_pass}'"
-
-      echo "#### Credentials fetched successfully." >&2
+      echo "#### Postgres playbook detected. Preparing credentials..." >&2
+      vault_path="secret/on-premise-gitlab-deployment/databases"
+      keys_needed=("pg_superuser_password" "pg_replication_password")
       ;;
 
-    # "10-provision-redis.yaml")
-    #   echo "#### Redis playbook detected. Fetching credentials..."
-    #   # fetch Redis passwords here in the future
-    #   ;;
+    "10-provision-redis.yaml")
+      echo "#### Redis playbook detected. Preparing credentials..." >&2
+      vault_path="secret/on-premise-gitlab-deployment/databases"
+      keys_needed=("redis_requirepass" "redis_masterauth")
+      ;;
+
     *)
+      echo "${extra_vars_string}"
+      return 0
       ;;
   esac
 
+  # 2. Once-only vault fetching if and only if the vault_path is set
+  if ! secrets_json=$(vault kv get -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" -format=json "${vault_path}"); then
+    echo "FATAL: Failed to fetch secrets from Vault at path '${vault_path}'. Is Vault unsealed?" >&2
+    return 1
+  fi
+
+  # 3. Process Key, validation, and then establish the extra-vars string
+  for key in "${keys_needed[@]}"; do
+    local value
+    value=$(echo "${secrets_json}" | jq -r ".data.data.${key}")
+
+    if [[ -z "${value}" || "${value}" == "null" ]]; then
+      echo "FATAL: Could not find required key '${key}' in Vault at '${vault_path}'." >&2
+      return 1
+    fi
+
+    extra_vars_string+=" --extra-vars '${key}=${value}'"
+  done
+
+  echo "#### Credentials fetched successfully." >&2
+  
   echo "${extra_vars_string}"
   return 0
 }
 
 # [Dev] This function is for faster reset and re-execute the Ansible Playbook
 run_ansible_playbook() {
-  local playbook_file="$1"  # (e.g., "10-provision-cluster.yaml").
+  local playbook_file="$1"  # (e.g., "10-provision-kubeadm.yaml").
   local inventory_file="$2" # (e.g., "inventory-kubeadm-cluster.yaml").
 
   if [ -z "$playbook_file" ] || [ -z "$inventory_file" ]; then
@@ -113,43 +122,43 @@ run_ansible_playbook() {
 
 # Function: Display a sub-menu to select and run a Layer 10 playbook.
 selector_playbook() {
-  local playbook_options=()
+  local inventory_options=()
+  
+  local inventory_dir="${ANSIBLE_DIR}" 
 
-  # find all playbooks starting with "10-"
-  for f in "${ANSIBLE_DIR}/playbooks/10-"*.yaml; do
+  for f in "${inventory_dir}/inventory-"*"-cluster.yaml"; do
     if [ -e "$f" ]; then
-      playbook_options+=("$(basename "$f")")
+      inventory_options+=("$(basename "$f")")
     fi
   done
-  playbook_options+=("Back to Main Menu")
+  inventory_options+=("Back to Main Menu")
 
-  local PS3_SUB=">>> Select a Playbook to run: "
+  local PS3_SUB=">>> Select a Cluster Inventory to run its Playbook: "
   echo
-  select playbook in "${playbook_options[@]}"; do
-    local inventory_file=""
-    case $playbook in
-      "10-provision-cluster.yaml")
-        inventory_file="inventory-kubeadm-cluster.yaml"
-        ;;
-      "10-provision-harbor.yaml")
-        inventory_file="inventory-harbor-cluster.yaml"
-        ;;
-      "10-provision-postgres.yaml")
-        inventory_file="inventory-postgres-cluster.yaml"
-        ;;
-      "Back to Main Menu")
-        echo "# Returning to main menu..."
-        break
-        ;;
-      *)
-        echo "Invalid option $REPLY"
-        continue
-        ;;
-    esac
+  select inventory in "${inventory_options[@]}"; do
+    
+    if [ "$inventory" == "Back to Main Menu" ]; then
+      echo "# Returning to main menu..."
+      break
+    
+    elif [ -n "$inventory" ]; then
+      
+      local tmp=${inventory#inventory-}
+      local target_key=${tmp%-cluster.yaml}
+      
+      local playbook="10-provision-${target_key}.yaml"
+      
+      echo "==========================="
+      echo "Selected Inventory: ${inventory}"
+      echo "Derived Playbook:   ${playbook}"
+      echo "==========================="
+      
+      run_ansible_playbook "$playbook" "$inventory"
+      break
 
-    if [ -n "$inventory_file" ]; then
-        run_ansible_playbook "$playbook" "$inventory_file"
+    else
+      echo "Invalid option $REPLY"
+      continue
     fi
-    break
   done
 }

@@ -3,7 +3,7 @@
 
 build_spec = {
   suffix   = "03-base-microk8s"
-  vnc_port = 5998
+  vnc_port = 5903
 }
 
 # The following common variables are inherited from the main 'values.pkrvars.hcl'

@@ -1,4 +1,10 @@
 ---
+- name: "Play: Provision Docker base image"
+  hosts: "01-base-docker"
+  become: true
+  roles:
+    - 01-base-docker
+
 - name: "Play: Provision Kubernetes (Kubeadm) base image"
   hosts: "02-base-kubeadm"
   become: true

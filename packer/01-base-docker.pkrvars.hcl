@@ -1,9 +1,8 @@
 
-# This file defines the variables for building the 'registry-base' image.
-
+# This file defines the variables for building the 'docker-base' image.
 build_spec = {
-  suffix   = "04-base-postgres"
-  vnc_port = 5904
+  suffix   = "01-base-docker"
+  vnc_port = 5901
 }
 
 # The following common variables are inherited from the main 'values.pkrvars.hcl'

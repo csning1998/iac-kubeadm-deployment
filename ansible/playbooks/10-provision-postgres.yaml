@@ -3,16 +3,16 @@
   hosts: etcd_nodes
   become: true
   roles:
-    - 31-configure-etcd
+    - 31-postgres-etcd
 
 - name: "Play 2: Configure Patroni and PostgreSQL Cluster"
   hosts: postgres_nodes
   become: true
   roles:
-    - 32-configure-postgres-patroni
+    - 32-postgres-patroni
 
 - name: "Play 3: Configure HAProxy for Load Balancing"
   hosts: haproxy_nodes
   become: true
   roles:
-    - 33-configure-haproxy
+    - 33-postgres-haproxy

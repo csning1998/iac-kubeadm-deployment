@@ -64,7 +64,7 @@ module "bootstrapper_ansible_cluster" {
     ssh_private_key_path = data.vault_generic_secret.iac_vars.data["ssh_private_key_path"]
   }
 
-  db_credentials = {
+  postgres_credentials = {
     superuser_password   = data.vault_generic_secret.db_vars.data["pg_superuser_password"]
     replication_password = data.vault_generic_secret.db_vars.data["pg_replication_password"]
   }
