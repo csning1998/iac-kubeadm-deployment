@@ -13,7 +13,7 @@ supervised systemd
 
 # --- Monitor Configuration ---
 # sentinel monitor <master-name> <ip> <port> <quorum>
-sentinel monitor {{ sentinel_master_name }} {{ redis_initial_master_ip }} 6379 2
+sentinel monitor {{ sentinel_master_name }} {{ redis_initial_master_ip }} 6379 {{ sentinel_quorum }}
 
 # --- Authentication ---
 requirepass {{ redis_requirepass }}

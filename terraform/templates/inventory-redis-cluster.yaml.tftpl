@@ -5,6 +5,7 @@ all:
     redis_cluster_ips: ${jsonencode([for node in redis_nodes : node.ip])}
     redis_initial_master_ip: "${redis_nodes[keys(redis_nodes)[0]].ip}"
     sentinel_master_name: "redis-master" 
+    sentinel_quorum: ${floor(length(redis_nodes)/2) + 1}
 
   children:
     redis_master:
