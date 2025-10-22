@@ -14,6 +14,10 @@ variable "redis_cluster_config" {
     })
     base_image_path = optional(string, "../../../packer/output/05-base-redis/ubuntu-server-24-05-base-redis.qcow2")
   })
+  validation {
+    condition     = length(var.redis_cluster_config.nodes.redis) % 2 != 0
+    error_message = "The number of master nodes must be an odd number (1, 3, 5, etc.) to ensure a stable Sentinel quorum."
+  }
 }
 
 # Registry Server Infrastructure Network Configuration

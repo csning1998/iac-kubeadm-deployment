@@ -24,6 +24,11 @@ variable "postgres_cluster_config" {
     })
     base_image_path = optional(string, "../../../packer/output/04-base-postgres/ubuntu-server-24-04-base-postgres.qcow2")
   })
+  # There is no odd number limit for the number of PostgreSQL nodes (e.g. one Primary and multiple Standby nodes)
+  validation {
+    condition     = length(var.postgres_cluster_config.nodes.etcd) % 2 != 0
+    error_message = "The number of master nodes must be an odd number (1, 3, 5, etc.) to ensure a stable etcd quorum."
+  }
 }
 
 # Registry Server Infrastructure Network Configuration
