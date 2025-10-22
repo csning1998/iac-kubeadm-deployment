@@ -3,20 +3,22 @@
 # Extracts confidential variables from Vault for specific playbooks.
 extractor_confidential_var() {
   local playbook_file="$1"
-  local vault_path="secret/on-premise-gitlab-deployment/databases"
   local extra_vars_string=""
   local secrets_json
   local keys_needed=() # Bash array to hold the keys that need
+  local vault_path=""
 
-  # 1. Determine the key to fetch by playbook
+  # 1. Determine the key and vault path to fetch by playbook
   case "${playbook_file}" in
     "10-provision-postgres.yaml")
       echo "#### Postgres playbook detected. Preparing credentials..." >&2
+      vault_path="secret/on-premise-gitlab-deployment/databases"
       keys_needed=("pg_superuser_password" "pg_replication_password")
       ;;
 
     "10-provision-redis.yaml")
       echo "#### Redis playbook detected. Preparing credentials..." >&2
+      vault_path="secret/on-premise-gitlab-deployment/databases"
       keys_needed=("redis_requirepass" "redis_masterauth")
       ;;
 
@@ -26,7 +28,7 @@ extractor_confidential_var() {
       ;;
   esac
 
-  # 2. Once-only vault fetching if and only if the keys_needed (case) is non-null
+  # 2. Once-only vault fetching if and only if the vault_path is set
   if ! secrets_json=$(vault kv get -address="${VAULT_ADDR}" -ca-cert="${VAULT_CACERT}" -format=json "${vault_path}"); then
     echo "FATAL: Failed to fetch secrets from Vault at path '${vault_path}'. Is Vault unsealed?" >&2
     return 1
