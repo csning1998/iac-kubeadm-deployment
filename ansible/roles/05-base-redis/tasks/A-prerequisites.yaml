@@ -1,0 +1,14 @@
+---
+- name: "Section A: Run OS prerequisites for Redis"
+  block:
+    - name: "Step A1. Disable swap if it is active"
+      ansible.builtin.command: swapoff -a
+      when: ansible_facts['swaptotal_mb'] | default(0) > 0
+      changed_when: true
+
+    - name: "Step A2. Comment out swap entries in /etc/fstab to persist change"
+      ansible.builtin.replace:
+        path: /etc/fstab
+        regexp: '^([^#].*?\sswap\s+.*)$'
+        replace: '# \1'
+      when: ansible_facts['swaptotal_mb'] | default(0) > 0

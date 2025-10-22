@@ -1,0 +1,49 @@
+- name: "Section A: Configure Redis Server and Sentinel"
+  block:
+    - name: "Step A1. Create Redis server configuration from template"
+      ansible.builtin.template:
+        src: redis.conf.j2
+        dest: /etc/redis/redis.conf
+        owner: redis
+        group: redis
+        mode: "0640"
+      notify: Restart redis-server
+
+    - name: "Step A2. Create Redis Sentinel configuration from template"
+      ansible.builtin.template:
+        src: sentinel.conf.j2
+        dest: /etc/redis/sentinel.conf
+        owner: redis
+        group: redis
+        mode: "0640"
+      notify: Restart redis-sentinel
+
+- name: "Section B: Ensure Redis directories exist with correct permissions"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: redis
+    group: redis
+    mode: "0755"
+  loop:
+    - /var/log/redis
+    - /var/run/redis
+    - /var/lib/redis
+
+- name: "Section C: Reload systemd and ensure services are running"
+  block:
+    - name: "Step C1. Reload systemd daemon to pick up changes"
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: "Step C2. Ensure redis-server service is started and enabled"
+      ansible.builtin.systemd:
+        name: redis-server
+        state: started
+        enabled: true
+
+    - name: "Step C3. Ensure redis-sentinel service is started and enabled"
+      ansible.builtin.systemd:
+        name: redis-sentinel
+        state: started
+        enabled: true

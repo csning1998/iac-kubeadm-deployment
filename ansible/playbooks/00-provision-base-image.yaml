@@ -17,6 +17,12 @@
   roles:
     - 04-base-postgres
 
+- name: "Play: Provision Redis (Singular) base image"
+  hosts: "05-base-redis"
+  become: true
+  roles:
+    - 05-base-redis
+
 - name: "Play: Final Permission Check and Clean up"
   hosts: "all"
   become: true

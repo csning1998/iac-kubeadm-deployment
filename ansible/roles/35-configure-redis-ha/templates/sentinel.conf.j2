@@ -1,0 +1,25 @@
+port 26379
+daemonize no
+loglevel notice
+logfile /var/log/redis/redis-sentinel.log
+pidfile /var/run/redis/redis-sentinel.pid
+
+# Bind to the node's specific IP and loopback
+bind {{ ansible_host }} 127.0.0.1
+protected-mode yes
+
+# --- Systemd Integration ---
+supervised systemd
+
+# --- Monitor Configuration ---
+# sentinel monitor <master-name> <ip> <port> <quorum>
+sentinel monitor {{ sentinel_master_name }} {{ redis_initial_master_ip }} 6379 {{ sentinel_quorum }}
+
+# --- Authentication ---
+requirepass {{ redis_requirepass }}
+sentinel auth-pass {{ sentinel_master_name }} {{ redis_requirepass }}
+
+# --- Failover Timing ---
+sentinel down-after-milliseconds {{ sentinel_master_name }} 30000
+sentinel parallel-syncs {{ sentinel_master_name }} 1
+sentinel failover-timeout {{ sentinel_master_name }} 180000

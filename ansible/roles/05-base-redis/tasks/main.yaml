@@ -1,0 +1,6 @@
+---
+- name: "Section A: Run OS prerequisites for Redis"
+  ansible.builtin.include_tasks: A-prerequisites.yaml
+
+- name: "Section B: Install Redis Server from Official Repository"
+  ansible.builtin.include_tasks: B-install-redis.yaml
