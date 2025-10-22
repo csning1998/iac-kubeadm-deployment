@@ -24,13 +24,4 @@ locals {
 
   postgres_nat_network_gateway       = cidrhost(var.postgres_infrastructure.network.nat.cidr, 1)
   postgres_nat_network_subnet_prefix = join(".", slice(split(".", split("/", var.postgres_infrastructure.network.nat.cidr)[0]), 0, 3))
-  ssh_content_registry = flatten([
-    for key, node in local.all_nodes_map : {
-      nodes = {
-        key = key
-        ip  = node.ip
-      }
-      config_name = var.postgres_cluster_config.cluster_name
-    }
-  ])
 }

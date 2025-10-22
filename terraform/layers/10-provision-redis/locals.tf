@@ -13,13 +13,4 @@ locals {
 
   redis_nat_network_gateway       = cidrhost(var.redis_infrastructure.network.nat.cidr, 1)
   redis_nat_network_subnet_prefix = join(".", slice(split(".", split("/", var.redis_infrastructure.network.nat.cidr)[0]), 0, 3))
-  ssh_content_redis = flatten([
-    for key, node in local.all_nodes_map : {
-      nodes = {
-        key = key
-        ip  = node.ip
-      }
-      config_name = var.redis_cluster_config.cluster_name
-    }
-  ])
 }

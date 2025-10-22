@@ -16,10 +16,10 @@
         mode: "0755"
 
     - name: "Step B3. Add Redis official GPG key"
-      ansible.builtin.shell:
-        cmd: "curl -fsSL https://packages.redis.io/gpg | gpg --dearmor -o /etc/apt/keyrings/redis.gpg"
-        creates: /etc/apt/keyrings/redis.gpg
-      changed_when: false
+      ansible.builtin.apt_key:
+        url: https://packages.redis.io/gpg
+        keyring: /etc/apt/keyrings/redis.gpg
+        state: present
 
     - name: "Step B4. Add Redis APT repository"
       ansible.builtin.apt_repository:
